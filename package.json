@@ -1,0 +1,18 @@
+{
+  "name": "cilkscreen-plugin",
+  "main": "./lib/cilkscreen-plugin",
+  "version": "0.0.0",
+  "description": "A short description of your package",
+  "keywords": [
+  ],
+  "activationCommands": {
+    "atom-workspace": "cilkscreen-plugin:toggle"
+  },
+  "repository": "https://github.com/Sakawa/cilkscreen-plugin",
+  "license": "MIT",
+  "engines": {
+    "atom": ">=1.0.0 <2.0.0"
+  },
+  "dependencies": {
+  }
+}

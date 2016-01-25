@@ -1,0 +1,53 @@
+// The ui-variables file is provided by base themes provided by Atom.
+//
+// See https://github.com/atom/atom-dark-ui/blob/master/styles/ui-variables.less
+// for a full listing of what's available.
+@import "ui-variables";
+@import "octicon-mixins";
+
+@modal-width: 800px;
+
+atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] {
+  width: 32px;
+}
+
+atom-text-editor::shadow .gutter .decoration .cilkscreen-marker {
+  background-color: @background-color-error;
+  width: 28px;
+  cursor: pointer;
+  text-align: center;
+  border-radius: 4px;
+  color: #ffffff;
+}
+
+.cilkscreen-detail-modal {
+  width: 810px !important; // don't ignore me, senpai
+}
+
+.cilkscreen-detail-view {
+  width: @modal-width;
+  font-size: 12pt;
+
+  .header {
+    width: @modal-width;
+    height: 24px;
+    overflow: hidden;
+    font-size: 16pt;
+  }
+
+  .header-title {
+    width: 780px;
+    float: left;
+    overflow: hidden;
+  }
+
+  .header-close {
+    width: 20px;
+    overflow:hidden;
+    cursor: pointer;
+  }
+
+  .highlighted {
+    color: @text-color-highlight;
+  }
+}

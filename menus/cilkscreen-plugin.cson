@@ -1,0 +1,22 @@
+# See https://atom.io/docs/latest/hacking-atom-package-word-count#menus for more details
+'context-menu':
+  'atom-text-editor': [
+    {
+      'label': 'Toggle cilkscreen-plugin'
+      'command': 'cilkscreen-plugin:toggle'
+    }
+  ]
+'menu': [
+  {
+    'label': 'Packages'
+    'submenu': [
+      'label': 'cilkscreen-plugin'
+      'submenu': [
+        {
+          'label': 'Toggle'
+          'command': 'cilkscreen-plugin:toggle'
+        }
+      ]
+    ]
+  }
+]
