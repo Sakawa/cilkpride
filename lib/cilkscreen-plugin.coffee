@@ -1,8 +1,9 @@
 CilkscreenMarkerView = require('./cilkscreen-marker-view')
 {CompositeDisposable} = require('atom')
-spawn = require('child_process').spawn
-path = require('path')
 fs = require('fs')
+path = require('path')
+process = require('process')
+exec = require('child_process').exec
 
 module.exports = CilkscreenPlugin =
   subscriptions: null
@@ -39,7 +40,7 @@ module.exports = CilkscreenPlugin =
     @idleTimeout = setTimeout(
       () =>
         console.log(new Date())
-        @startCilkscreen(id)
+        @makeExecutable(id)
       , 5000
     )
 
@@ -48,29 +49,46 @@ module.exports = CilkscreenPlugin =
     @killCilkscreen()
 
   startCilkscreen: (editorId) ->
-    # TODO: this currently mocks the data - this should really make the appropriate file and then
-    # run cilkscreen on it. For now, we'll just read the results from a prepared text file.
-    @cilkscreenThread = spawn('cat', ['C:\\Users\\Taiga\\github\\cilkscreen-plugin\\cilk_test.txt'])
-    currentProject = 'C:\\Users\\Taiga\\github\\cilkscreen-plugin'
-    cilkscreenOutput = ""
+    currentProjectPath = @editorToPath[editorId]
+    cilkLinkerPath = "/home/taiga/gcc/lib:/home/taiga/gcc/lib64:$LD_LIBRARY_PATH"
+    cilkLibPath = "/home/taiga/gcc/lib:/home/taiga/gcc/lib64:$LIBRARY_PATH"
 
-    @cilkscreenThread.stdout.on('data', (data) ->
-      console.log('stdout: ' + data)
-      cilkscreenOutput += data
+    @cilkscreenThread = exec("LD_LIBRARY_PATH=#{cilkLinkerPath} LIBRARY_PATH=#{cilkLibPath} cilkscreen ./cilkscreen",
+      (error, stdout, stderr) =>
+        console.log("stdout: #{stdout}")
+        console.log("stderr: #{stderr}")
+        if error isnt null
+          console.log('child process exited with code ' + error)
+        else
+          console.log("Killing old markers, if any...")
+          @destroyOldMarkers(currentProjectPath)
+          console.log("Parsing data...")
+          parsedResults = @parseCilkscreenOutput(stderr)
+          @createCilkscreenMarkers(parsedResults)
     )
+    console.log(process.env)
 
-    @cilkscreenThread.stderr.on('data', (data) ->
-      console.log('stderr: ' + data)
-    )
+  # Uses the cilkscreen target in the Makefile to make the executable so that
+  # we can use cilkscreen on a well-defined object.
+  makeExecutable: (editorId) ->
+    currentProjectPath = @editorToPath[editorId]
 
-    @cilkscreenThread.on('close', (code) =>
-      console.log('child process exited with code ' + code)
-      if code is 0
-        console.log("Killing old markers, if any...")
-        @destroyOldMarkers(currentProject)
-        console.log("Parsing data...")
-        parsedResults = @parseCilkscreenOutput(cilkscreenOutput)
-        @createCilkscreenMarkers(parsedResults)
+    # First change the directory to the folder where the Makefile is.
+    try
+      process.chdir(currentProjectPath)
+      console.log("Successfully changed pwd to: #{currentProjectPath}")
+    catch error
+      console.err("Could not change pwd to #{currentProjectPath}")
+
+    # Invoke the cilkscreen target to run cilkscreen on.
+    makeThread = exec('make cilkscreen',
+      (error, stdout, stderr) =>
+        console.log("stdout: #{stdout}")
+        console.log("stderr: #{stderr}")
+        if error isnt null
+          console.log('child process exited with code ' + error)
+        else if not stdout.includes("Nothing to be done")
+          @startCilkscreen(editorId)
     )
 
   killCilkscreen: () ->

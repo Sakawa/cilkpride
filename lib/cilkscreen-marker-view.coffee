@@ -9,14 +9,14 @@ class CilkscreenMarkerView
   constructor: (state) ->
     @state = state
     @pluginView = new CilkscreenPluginView(state, @onModalCloseClick)
+    # TODO: Replace this with a bottom panel or something - modals are not good.
     @modal = atom.workspace.addModalPanel(item: @pluginView.getElement(), visible: false)
-    # TODO: This really sucks, please save me from such horrors
     @modal.item.parentElement.classList.add("cilkscreen-detail-modal")
     console.log(@modal)
 
     # Create root element
-    @element = document.createElement('div')
-    @element.classList.add('cilkscreen-marker')
+    @element = document.createElement('span')
+    @element.classList.add('alert')
     @element.textContent = "1"
 
     @element.title = "Click to view more details."
