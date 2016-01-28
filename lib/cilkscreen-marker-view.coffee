@@ -17,7 +17,6 @@ class CilkscreenMarkerView
     # Create root element
     @element = document.createElement('span')
     @element.classList.add('alert')
-    @element.textContent = "1"
 
     @element.title = "Click to view more details."
 

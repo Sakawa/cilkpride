@@ -10,21 +10,23 @@
 @modal-width: 800px;
 
 atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] {
-  width: 32px;
+  width: 20px;
   text-align: center;
 }
 
 atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
-  width: 16px;
   text-align: center;
+  width: 100%;
+
+  .alert {
+    display: inline-block;
+    padding-left: .5em;    // aligns with the padding for line-number
+    cursor: pointer;
+  }
 
   .alert:after {
     .octicon-font();
     content: @alert;
-    color: @background-color-error;
-  }
-
-  .alert {
     color: @text-color-error;
   }
 }

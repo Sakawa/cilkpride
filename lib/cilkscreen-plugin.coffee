@@ -4,6 +4,8 @@ fs = require('fs')
 path = require('path')
 process = require('process')
 exec = require('child_process').exec
+spawn = require('child_process').spawn
+extend = require('util')._extend;
 
 module.exports = CilkscreenPlugin =
   subscriptions: null
@@ -50,23 +52,43 @@ module.exports = CilkscreenPlugin =
 
   startCilkscreen: (editorId) ->
     currentProjectPath = @editorToPath[editorId]
-    cilkLinkerPath = "/home/taiga/gcc/lib:/home/taiga/gcc/lib64:$LD_LIBRARY_PATH"
-    cilkLibPath = "/home/taiga/gcc/lib:/home/taiga/gcc/lib64:$LIBRARY_PATH"
+    # TODO: turn this into a config setting to allow users to designate cilk locations
+    cilkLinkerPath = "/home/taiga/gcc/lib:/home/taiga/gcc/lib64"
+    cilkLibPath = "/home/taiga/gcc/lib:/home/taiga/gcc/lib64"
 
-    @cilkscreenThread = exec("LD_LIBRARY_PATH=#{cilkLinkerPath} LIBRARY_PATH=#{cilkLibPath} cilkscreen ./cilkscreen",
-      (error, stdout, stderr) =>
-        console.log("stdout: #{stdout}")
-        console.log("stderr: #{stderr}")
-        if error isnt null
-          console.log('child process exited with code ' + error)
-        else
+    envCopy = extend({'LD_LIBRARY_PATH': cilkLinkerPath, 'LIBRARY_PATH': cilkLibPath}, process.env)
+
+    @cilkscreenThread = spawn('cilkscreen', ['./cilkscreen'], {env: envCopy})
+    cilkscreenOutput = ""
+
+    @cilkscreenThread.stderr.on('data', (data) ->
+      cilkscreenOutput += data
+    )
+
+    @cilkscreenThread.on('close', (code) =>
+        console.log("stderr: #{cilkscreenOutput}")
+        console.log("cilkscreen process exited with code #{code}")
+        if code is 0
           console.log("Killing old markers, if any...")
           @destroyOldMarkers(currentProjectPath)
           console.log("Parsing data...")
-          parsedResults = @parseCilkscreenOutput(stderr)
+          parsedResults = @parseCilkscreenOutput(cilkscreenOutput)
           @createCilkscreenMarkers(parsedResults)
     )
-    console.log(process.env)
+
+    # Debug event handlers
+    @cilkscreenThread.on('error', (err) =>
+      console.log("cilkscreen thread error: #{err}")
+    )
+
+    @cilkscreenThread.on('exit', (code, signal) =>
+      if code?
+        console.log("cilkscreen exit: code #{code}")
+      if signal?
+        console.log("cilkscreen exit: signal #{signal}")
+    )
+
+    console.log(envCopy)
 
   # Uses the cilkscreen target in the Makefile to make the executable so that
   # we can use cilkscreen on a well-defined object.
@@ -92,8 +114,13 @@ module.exports = CilkscreenPlugin =
     )
 
   killCilkscreen: () ->
-    if @cilkscreenThread and @cilkscreenThread.connected
+    console.log("Attempting to kill cilkscreen...")
+    if @cilkscreenThread
+      console.log(@cilkscreenThread)
+    if @cilkscreenThread
       @cilkscreenThread.kill('SIGKILL')
+      console.log("Killed thread...?")
+      console.log(@cilkscreenThread)
       @cilkscreenThread = null
 
   # Cilkscreen-related functions
