@@ -1,42 +1,27 @@
-CilkscreenPluginView = require('./cilkscreen-plugin-view')
+$ = require('jquery')
 
 module.exports =
 class CilkscreenMarkerView
   state: null
-  pluginView: null
-  modal: null
 
-  constructor: (state) ->
+  constructor: (state, onClickCallback) ->
     @state = state
-    @pluginView = new CilkscreenPluginView(state, @onModalCloseClick)
-    # TODO: Replace this with a bottom panel or something - modals are not good.
-    @modal = atom.workspace.addModalPanel(item: @pluginView.getElement(), visible: false)
-    @modal.item.parentElement.classList.add("cilkscreen-detail-modal")
-    console.log(@modal)
 
     # Create root element
     @element = document.createElement('span')
     @element.classList.add('alert')
-
     @element.title = "Click to view more details."
 
-    @element.onclick = (e) =>
-      @gutterOnClick()
+    $(@element).on('click', (e) =>
+      onClickCallback(@state.index)
+    )
 
   # Returns an object that can be retrieved when package is activated
-  serialize: ->
+  serialize: () ->
 
   # Tear down any state and detach
-  destroy: ->
-    @modal.destroy()
+  destroy: () ->
     @element.remove()
-    @pluginView.destroy()
 
-  getElement: ->
-    @element
-
-  gutterOnClick: () ->
-    @modal.show()
-
-  onModalCloseClick: (e) =>
-    @modal.hide()
+  getElement: () ->
+    return @element

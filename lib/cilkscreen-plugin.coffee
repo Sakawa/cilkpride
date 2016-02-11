@@ -1,4 +1,3 @@
-CilkscreenMarkerView = require('./cilkscreen-marker-view')
 {CompositeDisposable} = require('atom')
 fs = require('fs')
 path = require('path')
@@ -7,12 +6,17 @@ exec = require('child_process').exec
 spawn = require('child_process').spawn
 extend = require('util')._extend;
 
+CilkscreenMarkerView = require('./cilkscreen-marker-view')
+CilkscreenPluginView = require('./cilkscreen-plugin-view')
+
 module.exports = CilkscreenPlugin =
   subscriptions: null
   idleTimeout: null
   cilkscreenThread: null
   editorToPath: {}
   pathToEditor: {}
+  pluginView: null    # TODO: we should store the latest results for each distinct project
+  detailPanel: null
 
   activate: (state) ->
     # Events subscribed to in atom's system can be easily cleaned up with a CompositeDisposable
@@ -26,6 +30,10 @@ module.exports = CilkscreenPlugin =
       (editor) =>
         @registerEditor(editor)
     ))
+
+    @pluginView = new CilkscreenPluginView(state, (e) => @onPanelClose(e))
+    @detailPanel = atom.workspace.addBottomPanel(item: @pluginView.getElement(), visible: false)
+    console.log("Activated!")
 
   deactivate: ->
     @subscriptions.dispose()
@@ -77,11 +85,11 @@ module.exports = CilkscreenPlugin =
     )
 
     # Debug event handlers
-    @cilkscreenThread.on('error', (err) =>
+    @cilkscreenThread.on('error', (err) ->
       console.log("cilkscreen thread error: #{err}")
     )
 
-    @cilkscreenThread.on('exit', (code, signal) =>
+    @cilkscreenThread.on('exit', (code, signal) ->
       if code?
         console.log("cilkscreen exit: code #{code}")
       if signal?
@@ -179,6 +187,8 @@ module.exports = CilkscreenPlugin =
     for textEditor in editors
       editorCache[textEditor.getPath()] = textEditor
 
+    @pluginView.setViolations(results)
+
     # Go through each of the cilkscreen violations and make markers accordingly.
     for i in [0 .. results.length - 1]
       violation = results[i]
@@ -196,7 +206,23 @@ module.exports = CilkscreenPlugin =
     cilkscreenGutter = editor.gutterWithName('cilkscreen-lint')
     range = [[line - 1, 0], [line - 1, Infinity]]
     marker = editor.markBufferRange(range, {id: 'cilkscreen'})
-    cilkscreenGutter.decorateMarker(marker, {type: 'gutter', item: new CilkscreenMarkerView({violations: violations, index: i})})
+    cilkscreenGutter.decorateMarker(marker, {type: 'gutter', item: new CilkscreenMarkerView(
+      {index: i},
+      (index) =>
+        @onMarkerClick(index)
+    )})
+
+  onMarkerClick: (violationIndex) ->
+    console.log("Marker clicked")
+    console.log(violationIndex)
+    console.log(this)
+    console.log(@detailPanel)
+
+    @pluginView.highlightViolation(violationIndex)
+    @detailPanel.show() if not @detailPanel.isVisible()
+
+  onPanelClose: (e) ->
+    @detailPanel.hide()
 
   destroyOldMarkers: (project) ->
     console.log(@pathToEditor)
@@ -211,6 +237,11 @@ module.exports = CilkscreenPlugin =
       console.log(markers)
       for marker in markers
         marker.destroy()
+
+  getEditorFromPath: (path) ->
+    if path in @pathToEditor
+      return @pathToEditor[path]
+    return null
 
   # Event handlers
   registerEditor: (editor) ->

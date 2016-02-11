@@ -7,7 +7,9 @@
 @import "octicon-utf-codes";
 @import "octicon-mixins";
 
-@modal-width: 800px;
+@view-width: 100%;
+
+// Gutter CSS
 
 atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] {
   width: 20px;
@@ -31,31 +33,66 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
   }
 }
 
-.cilkscreen-detail-modal {
-  width: 810px !important; // don't ignore me, senpai
+// Detail View CSS
+
+.cilkscreen-detail-resize {
+  width: @view-width;
+  position: absolute;
+  height: 8px;
+  cursor: ns-resize;
+}
+
+.table {
+  display: table;
+}
+
+.table-row {
+  display: table-row;
 }
 
 .cilkscreen-detail-view {
-  width: @modal-width;
-  font-size: 12pt;
+  width: @view-width;
+  height: 200px;
+  margin-bottom: 0px;
 
   .header {
-    width: @modal-width;
-    height: 24px;
+    width: @view-width;
     overflow: hidden;
-    font-size: 16pt;
+    font-size: 12pt;
+    height: 24px;
   }
 
   .header-title {
-    width: 780px;
+    color: #ffffff;
     float: left;
     overflow: hidden;
   }
 
   .header-close {
     width: 20px;
+    float: right;
     overflow:hidden;
     cursor: pointer;
+  }
+
+  .violation-wrapper {
+    height: 100%;
+  }
+
+  .violation-content-wrapper {
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }
+
+  .violation-container {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    overflow: scroll;
+    font-size: 9pt;
   }
 
   .highlighted {
