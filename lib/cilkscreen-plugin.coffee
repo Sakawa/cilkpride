@@ -11,19 +11,20 @@ CilkscreenPluginView = require('./cilkscreen-plugin-view')
 
 module.exports = CilkscreenPlugin =
   subscriptions: null
-  idleTimeout: null
-  cilkscreenThread: null
+  idleTimeout: null  # TODO: there should be a timeout for each distinct project
+  cilkscreenThread: null # TODO: ditto: update this to allow cilkscreen for many projects
   editorToPath: {}
   pathToEditor: {}
+  fileToEditor: {}
   pluginView: null    # TODO: we should store the latest results for each distinct project
   detailPanel: null
 
   activate: (state) ->
     # Events subscribed to in atom's system can be easily cleaned up with a CompositeDisposable
-    @subscriptions = new CompositeDisposable
+    @subscriptions = new CompositeDisposable()
 
     # Register command that toggles this view
-    @subscriptions.add atom.commands.add 'atom-workspace', 'cilkscreen-plugin:toggle': => @toggle()
+    @subscriptions.add(atom.commands.add('atom-workspace', 'cilkscreen-plugin:toggle': => @toggle()))
 
     # Add a hook on every single text editor that is open (and will be opened in the future)
     @subscriptions.add(atom.workspace.observeTextEditors(
@@ -31,7 +32,7 @@ module.exports = CilkscreenPlugin =
         @registerEditor(editor)
     ))
 
-    @pluginView = new CilkscreenPluginView(state, (e) => @onPanelClose(e))
+    @pluginView = new CilkscreenPluginView(state, ((e) => @onPanelClose(e)), ((path) => @getEditorFromPath(path)))
     @detailPanel = atom.workspace.addBottomPanel(item: @pluginView.getElement(), visible: false)
     console.log("Activated!")
 
@@ -42,7 +43,7 @@ module.exports = CilkscreenPlugin =
     cilkscreenPluginViewState: @cilkscreenPluginView.serialize()
 
   toggle: ->
-    console.log 'CilkscreenPlugin was toggled!'
+    console.log('CilkscreenPlugin was toggled!')
 
   # Timer functions
 
@@ -160,7 +161,7 @@ module.exports = CilkscreenPlugin =
           lineData = {
             type: accessType,
             file: sourceCodeFile,
-            line: sourceCodeLine,
+            line: parseInt(sourceCodeLine),
             raw: line
           }
 
@@ -250,9 +251,16 @@ module.exports = CilkscreenPlugin =
     # Add the editor to the newly registered editor.
     editor.addGutter({name: 'cilkscreen-lint', priority: -1, visible: true})
 
-    # Register the editor with the package - if it has a Makefile.
+    @subscriptions.add(editor.onDidChangePath(()=>
+      console.log("Editor changed path: " + editor.id)
+    ))
+
+    # Register the editor with the package if it has a Makefile.
     # If it doesn't have a Makefile, then we don't register it with the plugin,
     # and none of the package callbacks will be called.
+    if not editor.getPath()?
+      return
+
     filePath = path.resolve(editor.getPath(), '..')
     rootDir = path.parse(filePath).root
     console.log("Root dir: ", rootDir)

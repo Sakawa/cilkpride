@@ -1,4 +1,8 @@
 $ = require('jquery')
+FileLineReader = require('./file-read-lines')
+{CompositeDisposable} = require('atom')
+Highlights = require('highlights')
+TextEditor = null
 
 module.exports =
 class CilkscreenPluginView
@@ -6,10 +10,20 @@ class CilkscreenPluginView
   element: null
   currentViolation: null
   violationContainer: null
+  onCloseCallback: null
+  getTextEditorCallback: null
+  highlighter: null
+  subscriptions: null
 
-  constructor: (state, onCloseCallback) ->
-    @index = state.index
-    @violations = state.violations
+  HALF_CONTEXT: 2
+
+  constructor: (state, onCloseCallback, getTextEditorCallback) ->
+    @onCloseCallback = onCloseCallback
+    @getTextEditorCallback = getTextEditorCallback
+
+    @subscriptions = new CompositeDisposable()
+
+    @highlighter = new Highlights()
 
     # Create root element
     @element = document.createElement('div')
@@ -73,17 +87,66 @@ class CilkscreenPluginView
   getViolationDivs: (violations) ->
     ## TODO: Unjank this up
     divs = []
+
+    console.log("getViolationDivs: start")
     console.log(violations)
-    for i in [0 .. violations.length - 1]
-      violation = violations[i]
-      divToAdd = document.createElement('div')
-      divToAdd.appendChild(@generateTextDiv(violation.location))
-      divToAdd.appendChild(@generateTextDiv(violation.line1.raw))
-      divToAdd.appendChild(@generateTextDiv(violation.line2.raw))
-      for trace in violation.stacktrace
-        divToAdd.appendChild(@generateTextDiv(trace))
-      divs.push(divToAdd)
-    return divs
+
+    readRequestArray = []
+    violations.forEach((item) =>
+      line1Request = [
+        item.line1.file,
+        [item.line1.line - @HALF_CONTEXT, item.line1.line + @HALF_CONTEXT]
+      ]
+      line2Request = [
+        item.line2.file,
+        [item.line2.line - @HALF_CONTEXT, item.line2.line + @HALF_CONTEXT]
+      ]
+      readRequestArray.push(line1Request)
+      readRequestArray.push(line2Request)
+    )
+
+    FileLineReader.readLineNumBatch(readRequestArray, (texts) =>
+      augmentedViolations = @groupCodeWithViolations(violations, texts)
+      @createViolationDivs(augmentedViolations)
+    )
+
+    return []
+
+  # TODO: fill out stub
+  createViolationDivs: (augmentedViolations) ->
+    console.log("createViolationDivs: called with ")
+    console.log(augmentedViolations)
+
+    violationDivs = []
+    # TODO: magic to make divs
+
+    # Remove any old children, if necessary
+    while @violationContainer.firstChild
+      @violationContainer.removeChild(@violationContainer.firstChild)
+
+    for violationDiv in violationDivs
+      @violationContainer.appendChild(violationDiv)
+
+  groupCodeWithViolations: (violations, texts) ->
+    augmentedViolationList = []
+    for violation in violations
+      augmentedViolation = { violation: violation }
+      codeSnippetsFound = 0
+      for text in texts
+        if codeSnippetsFound is 2
+          break
+        if violation.line1.filename is text.file and violation.line1.line - @HALF_CONTEXT is text.lineRange[0]
+          augmentedViolation.line1 = text
+          codeSnippetsFound++
+        if violation.line2.filename is text.file and violation.line2.line - @HALF_CONTEXT is text.lineRange[0]
+          augmentedViolation.line2 = text
+          codeSnippetsFound++
+      augmentedViolationList.push(augmentedViolation)
+      if codeSnippetsFound < 2
+        console.log("groupCodeWithViolations: too few texts found for a violation")
+    console.log("Finished groupCodeWithViolations")
+    console.log(augmentedViolationList)
+    return augmentedViolationList
 
   highlightViolation: (index) ->
     @currentViolation.classList.remove('highlighted') if @currentViolation isnt null
@@ -92,14 +155,7 @@ class CilkscreenPluginView
     @currentViolation.classList.add('highlighted')
 
   setViolations: (violations) ->
-    # Remove any old children, if necessary
-    while @violationContainer.firstChild
-      @violationContainer.removeChild(@violationContainer.firstChild)
-
-    # Get the violation text, and append the divs
-    violationDivs = @getViolationDivs(violations)
-    for violationDiv in violationDivs
-      @violationContainer.appendChild(violationDiv)
+    @getViolationDivs(violations)
 
   generateTextDiv: (text) ->
     div = document.createElement('div')

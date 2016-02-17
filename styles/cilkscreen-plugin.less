@@ -98,4 +98,26 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
   .highlighted {
     color: @text-color-highlight;
   }
+
+  .code-container {
+    width: 48%;
+    height: 100%;
+
+    .line-number-container {
+      height: 100%;
+
+      > .line-number {
+        height: 50%;
+
+        > code {
+          font-family: Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+          background-color: @app-background-color;
+          position: relative;
+          display: block;
+          top: 50%;
+          transform: translateY(-50%);
+        }
+      }
+    }
+  }
 }
