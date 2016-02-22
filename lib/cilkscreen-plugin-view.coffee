@@ -1,8 +1,7 @@
 $ = require('jquery')
 FileLineReader = require('./file-read-lines')
 {CompositeDisposable} = require('atom')
-Highlights = require('highlights')
-TextEditor = null
+DetailCodeView = require('./detail-code-view')
 
 module.exports =
 class CilkscreenPluginView
@@ -12,7 +11,6 @@ class CilkscreenPluginView
   violationContainer: null
   onCloseCallback: null
   getTextEditorCallback: null
-  highlighter: null
   subscriptions: null
 
   HALF_CONTEXT: 2
@@ -22,8 +20,6 @@ class CilkscreenPluginView
     @getTextEditorCallback = getTextEditorCallback
 
     @subscriptions = new CompositeDisposable()
-
-    @highlighter = new Highlights()
 
     # Create root element
     @element = document.createElement('div')
@@ -117,15 +113,13 @@ class CilkscreenPluginView
     console.log("createViolationDivs: called with ")
     console.log(augmentedViolations)
 
-    violationDivs = []
-    # TODO: magic to make divs
-
     # Remove any old children, if necessary
     while @violationContainer.firstChild
       @violationContainer.removeChild(@violationContainer.firstChild)
 
-    for violationDiv in violationDivs
-      @violationContainer.appendChild(violationDiv)
+    for violation in augmentedViolations
+      violationView = new DetailCodeView(violation)
+      @violationContainer.appendChild(violationView.getElement())
 
   groupCodeWithViolations: (violations, texts) ->
     augmentedViolationList = []

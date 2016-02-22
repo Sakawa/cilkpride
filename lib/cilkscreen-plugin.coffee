@@ -5,22 +5,22 @@ process = require('process')
 exec = require('child_process').exec
 spawn = require('child_process').spawn
 extend = require('util')._extend;
+$ = require('jquery')
 
 CilkscreenMarkerView = require('./cilkscreen-marker-view')
 CilkscreenPluginView = require('./cilkscreen-plugin-view')
 
 module.exports = CilkscreenPlugin =
   subscriptions: null
-  idleTimeout: null  # TODO: there should be a timeout for each distinct project
-  cilkscreenThread: null # TODO: ditto: update this to allow cilkscreen for many projects
+  idleTimeout: {}
+  cilkscreenThread: {}
   editorToPath: {}
   pathToEditor: {}
   fileToEditor: {}
-  pluginView: null    # TODO: we should store the latest results for each distinct project
+  pluginView: {}
   detailPanel: null
 
   activate: (state) ->
-    # Events subscribed to in atom's system can be easily cleaned up with a CompositeDisposable
     @subscriptions = new CompositeDisposable()
 
     # Register command that toggles this view
@@ -32,8 +32,6 @@ module.exports = CilkscreenPlugin =
         @registerEditor(editor)
     ))
 
-    @pluginView = new CilkscreenPluginView(state, ((e) => @onPanelClose(e)), ((path) => @getEditorFromPath(path)))
-    @detailPanel = atom.workspace.addBottomPanel(item: @pluginView.getElement(), visible: false)
     console.log("Activated!")
 
   deactivate: ->
@@ -47,25 +45,23 @@ module.exports = CilkscreenPlugin =
 
   # Timer functions
 
-  initializeCilkscreenTimer: (id) ->
-    @idleTimeout = setTimeout(
+  initializeCilkscreenTimer: (path) ->
+    @idleTimeout[path] = setTimeout(
       () =>
         console.log(new Date())
-        @makeExecutable(id)
-      , 5000
+        @makeExecutable(path)
+      , atom.config.get('cilkscreen-plugin.idleSeconds') * 1000
     )
 
-  clearCilkscreenTimer: () ->
-    clearInterval(@idleTimeout)
-    @killCilkscreen()
+  clearCilkscreenTimer: (path) ->
+    clearInterval(@idleTimeout[path])
+    @killCilkscreen(path)
 
-  startCilkscreen: (editorId) ->
-    currentProjectPath = @editorToPath[editorId]
-    # TODO: turn this into a config setting to allow users to designate cilk locations
-    cilkLinkerPath = "/home/taiga/gcc/lib:/home/taiga/gcc/lib64"
-    cilkLibPath = "/home/taiga/gcc/lib:/home/taiga/gcc/lib64"
+  startCilkscreen: (currentProjectPath) ->
+    # TODO: add the cilktool path
+    cilkLibPath = atom.config.get('cilkscreen-plugin.cilkLibPath')
 
-    envCopy = extend({'LD_LIBRARY_PATH': cilkLinkerPath, 'LIBRARY_PATH': cilkLibPath}, process.env)
+    envCopy = extend({'LD_LIBRARY_PATH': cilkLibPath, 'LIBRARY_PATH': cilkLibPath}, process.env)
 
     @cilkscreenThread = spawn('cilkscreen', ['./cilkscreen'], {env: envCopy})
     cilkscreenOutput = ""
@@ -82,7 +78,7 @@ module.exports = CilkscreenPlugin =
           @destroyOldMarkers(currentProjectPath)
           console.log("Parsing data...")
           parsedResults = @parseCilkscreenOutput(cilkscreenOutput)
-          @createCilkscreenMarkers(parsedResults)
+          @createCilkscreenMarkers(currentProjectPath, parsedResults)
     )
 
     # Debug event handlers
@@ -101,9 +97,7 @@ module.exports = CilkscreenPlugin =
 
   # Uses the cilkscreen target in the Makefile to make the executable so that
   # we can use cilkscreen on a well-defined object.
-  makeExecutable: (editorId) ->
-    currentProjectPath = @editorToPath[editorId]
-
+  makeExecutable: (currentProjectPath) ->
     # First change the directory to the folder where the Makefile is.
     try
       process.chdir(currentProjectPath)
@@ -119,18 +113,18 @@ module.exports = CilkscreenPlugin =
         if error isnt null
           console.log('child process exited with code ' + error)
         else if not stdout.includes("Nothing to be done")
-          @startCilkscreen(editorId)
+          @startCilkscreen(currentProjectPath)
     )
 
-  killCilkscreen: () ->
+  killCilkscreen: (path) ->
     console.log("Attempting to kill cilkscreen...")
     if @cilkscreenThread
       console.log(@cilkscreenThread)
-    if @cilkscreenThread
-      @cilkscreenThread.kill('SIGKILL')
+    if @cilkscreenThread[path]
+      @cilkscreenThread[path].kill('SIGKILL')
       console.log("Killed thread...?")
-      console.log(@cilkscreenThread)
-      @cilkscreenThread = null
+      console.log(@cilkscreenThread[path])
+      delete @cilkscreenThread[path]
 
   # Cilkscreen-related functions
   parseCilkscreenOutput: (text) ->
@@ -181,14 +175,20 @@ module.exports = CilkscreenPlugin =
     console.log(violations)
     return violations
 
-  createCilkscreenMarkers: (results) ->
+  createCilkscreenMarkers: (path, results) ->
     # Build a small cache of file path -> editor
     editorCache = {}
     editors = atom.workspace.getTextEditors()
     for textEditor in editors
-      editorCache[textEditor.getPath()] = textEditor
+      textEditorPath = textEditor.getPath()
+      if textEditor.getPath() in editorCache
+        editorCache[textEditorPath].push(textEditor)
+      else
+        editorCache[textEditorPath] = [textEditor]
 
-    @pluginView.setViolations(results)
+    pluginView = new CilkscreenPluginView({}, ((e) => @onPanelClose(e)), ((path) => @getEditorFromPath(path)))
+    @pluginView[path] = pluginView
+    pluginView.setViolations(results)
 
     # Go through each of the cilkscreen violations and make markers accordingly.
     for i in [0 .. results.length - 1]
@@ -198,29 +198,40 @@ module.exports = CilkscreenPlugin =
       line1 = parseInt(violation.line1.line, 10)
       line2 = parseInt(violation.line2.line, 10)
 
-      if editorCache[path1]?
-        @createCilkscreenMarker(editorCache[path1], line1, results, i)
-      if editorCache[path2]?
-        @createCilkscreenMarker(editorCache[path2], line2, results, i)
+      editorCache[path1].forEach((textEditor) =>
+        @createCilkscreenMarker(path, textEditor, line1, results, i)
+      )
+      editorCache[path2].forEach((textEditor) =>
+        @createCilkscreenMarker(path, textEditor, line2, results, i)
+      )
 
-  createCilkscreenMarker: (editor, line, violations, i) ->
+  createCilkscreenMarker: (path, editor, line, violations, i) ->
     cilkscreenGutter = editor.gutterWithName('cilkscreen-lint')
     range = [[line - 1, 0], [line - 1, Infinity]]
     marker = editor.markBufferRange(range, {id: 'cilkscreen'})
     cilkscreenGutter.decorateMarker(marker, {type: 'gutter', item: new CilkscreenMarkerView(
       {index: i},
       (index) =>
-        @onMarkerClick(index)
+        @onMarkerClick(path, index)
     )})
 
-  onMarkerClick: (violationIndex) ->
+  onMarkerClick: (path, violationIndex) ->
     console.log("Marker clicked")
     console.log(violationIndex)
     console.log(this)
     console.log(@detailPanel)
 
-    @pluginView.highlightViolation(violationIndex)
-    @detailPanel.show() if not @detailPanel.isVisible()
+    pluginView = @pluginView[path]
+    pluginView.highlightViolation(violationIndex)
+    # TODO: what is going on here? why is a reflow necessary?
+    if @detailPanel
+      @detailPanel.destroy()
+    @detailPanel = atom.workspace.addBottomPanel(item: pluginView.getElement(), visible: true)
+    setTimeout( () =>
+      @detailPanel.item.offsetHeight
+    , 100)
+    # atom.workspace.getActiveTextEditor().insertText('\u200B')
+    # atom.workspace.getActiveTextEditor().backspace()
 
   onPanelClose: (e) ->
     @detailPanel.hide()
@@ -255,12 +266,12 @@ module.exports = CilkscreenPlugin =
       console.log("Editor changed path: " + editor.id)
     ))
 
-    # Register the editor with the package if it has a Makefile.
-    # If it doesn't have a Makefile, then we don't register it with the plugin,
-    # and none of the package callbacks will be called.
     if not editor.getPath()?
       return
 
+    # Register the editor with the package if it has a Makefile.
+    # If it doesn't have a Makefile, then we don't register it with the plugin,
+    # and none of the package callbacks will be called.
     filePath = path.resolve(editor.getPath(), '..')
     rootDir = path.parse(filePath).root
     console.log("Root dir: ", rootDir)
@@ -290,10 +301,12 @@ module.exports = CilkscreenPlugin =
     @subscriptions.add(editor.onDidStopChanging(()=>
       console.log("Editor stopped changing: " + editor.id)
       console.log(new Date())
-      @initializeCilkscreenTimer(editor.id)
+      currentProjectPath = @editorToPath[editor.id]
+      @initializeCilkscreenTimer(currentProjectPath)
     ))
     @subscriptions.add(editor.onDidChange(()=>
-      @clearCilkscreenTimer()
+      currentProjectPath = @editorToPath[editor.id]
+      @clearCilkscreenTimer(currentProjectPath)
     ))
     @subscriptions.add(editor.onDidSave(()=>
       console.log("Saved!")

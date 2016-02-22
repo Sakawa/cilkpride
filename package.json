@@ -5,9 +5,6 @@
   "description": "A short description of your package",
   "keywords": [
   ],
-  "activationCommands": {
-    "atom-workspace": "cilkscreen-plugin:toggle"
-  },
   "repository": "https://github.com/Sakawa/cilkscreen-plugin",
   "license": "MIT",
   "engines": {
@@ -15,5 +12,26 @@
   },
   "dependencies": {
     "jquery": "2.2.0"
+  },
+  "configSchema": {
+    "idleSeconds": {
+        "type": "integer",
+        "default": 300,
+        "minimum": 1,
+        "title": "Idle Length",
+        "description": "Changes the number of seconds the text editor must be idle before running cilkscreen."
+    },
+    "cilktoolsPath": {
+        "type": "string",
+        "default": "",
+        "title": "Cilktools Executable Path",
+        "description": "The location of the Cilktools executables, to run cilkscreen."
+    },
+    "cilkLibPath": {
+        "type": "string",
+        "default": "",
+        "title": "Cilk Library Path",
+        "description": "The location of the Cilk lib files, so that the plugin can appropriately build executables."
+    }
   }
 }

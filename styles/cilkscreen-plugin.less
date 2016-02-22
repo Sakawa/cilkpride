@@ -54,18 +54,29 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
   width: @view-width;
   height: 200px;
   margin-bottom: 0px;
+  border-collapse: collapse;
 
   .header {
     width: @view-width;
     overflow: hidden;
     font-size: 12pt;
     height: 24px;
+    border-bottom: 1px solid gray;
+  }
+
+  .filename-line-number {
+    display: inline-block;
+    font-size: 15px;
+    padding: 0px 5px 5px 5px;
+    text-decoration: underline;
+    cursor: pointer;
   }
 
   .header-title {
     color: #ffffff;
     float: left;
     overflow: hidden;
+    padding: 5px 15px;
   }
 
   .header-close {
@@ -73,10 +84,45 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
     float: right;
     overflow:hidden;
     cursor: pointer;
+    padding: 5px 25px;
   }
 
   .violation-wrapper {
     height: 100%;
+  }
+
+  .stacktrace-container {
+    padding: 5px 5px 5px 5px;
+    font-size: 14px;
+
+    &.empty {
+      font-style: italic;
+    }
+
+    .stacktrace-line {
+      &.first {
+        display: inline-block;
+      }
+    }
+
+    .additional-stacktrace {
+      white-space:pre-wrap;
+      display: none;
+
+      &.clicked {
+        display: block;
+      }
+
+    }
+
+    .full-stacktrace-button {
+      display: inline-block;
+      float: right;
+      font-style: italic;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
   }
 
   .violation-content-wrapper {
@@ -99,23 +145,53 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
     color: @text-color-highlight;
   }
 
+  .violation-div {
+    border-bottom: 1px solid gray;
+  }
+
+  .code-container-table {
+    width: 50%;
+    display: inline-block;
+    padding: 5px 15px 5px 15px;
+    vertical-align: top;
+
+    &.right {
+      border-right: 1px solid gray;
+      border-left: 1px solid gray;
+    }
+  }
+
   .code-container {
-    width: 48%;
+    width: 90%;
     height: 100%;
+
+    atom-text-editor.mini {
+      float: left;
+      display: inline-block;
+      width: 100%;
+    }
 
     .line-number-container {
       height: 100%;
+      padding-right: 5px;
+      display: inline-block;
 
       > .line-number {
-        height: 50%;
+        height: 20%;
 
         > code {
           font-family: Menlo, Consolas, 'DejaVu Sans Mono', monospace;
           background-color: @app-background-color;
+          color: @text-color-subtle;
+          font-size: 14px;
           position: relative;
           display: block;
           top: 50%;
           transform: translateY(-50%);
+
+          &.highlighted {
+            color: @text-color-highlight;
+          }
         }
       }
     }

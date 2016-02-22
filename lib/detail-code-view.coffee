@@ -1,99 +1,136 @@
+TextEditor = null
+$ = require('jquery')
+
 module.exports =
 class DetailCodeView
-  displayCode: null
-  filename: null
   element: null
+  violation: null
 
   constructor: (augmentedViolation) ->
+    @violation = augmentedViolation
+    @element = @createViolationView(@violation)
 
-    return
-    for i in [0 .. violations.length - 1]
-      violation = violations[i]
-      divToAdd = document.createElement('div')
-      FileLineReader.readLineNumBatch([[violation.line1.file, [violation.line1.line - 2, violation.line1.line + 2], () -> ]])
-      for editor in atom.workspace.getTextEditors()
-        console.log("Looking at text editor with path #{editor.getPath()}")
-        if editor.getPath() is violation.line1.file
-          line1Code = editor.lineTextForBufferRow(violation.line1.line - 1)
-          line2Code = editor.lineTextForBufferRow(violation.line1.line - 2)
-          line1Html = @highlighter.highlightSync({
-              fileContents: line1Code,
-              scopeName: 'source.c',
-          })
+  createViolationView: (violation) ->
+    violationView = document.createElement('div')
+    violationView.classList.add('violation-div')
 
-          lineNumber = document.createElement('div')
-          lineNumber.classList.add('line-number')
-          lineNumber.textContent = violation.line1.line
+    violationView.appendChild(@constructCodePreview(violation.line1, null, true))
+    violationView.appendChild(@constructCodePreview(violation.line2, @parseStacktrace(violation.violation.stacktrace), false))
 
-          codeContainer = document.createElement('table')
-          codeRow = document.createElement('tr')
-          lineNumberCell = document.createElement('td')
-          lineNumberContainer = document.createElement('div')
-          codeContainer.classList.add('code-container')
-          codeRow.appendChild(lineNumberCell)
-          codeContainer.appendChild(codeRow)
-          lineNumberContainer.classList.add('line-number-container')
-          lineNumberCell.appendChild(lineNumberContainer)
-          lineNum = 35
-          for i in [-2..-1]
-            lineNumberDiv = document.createElement('div')
-            lineNumberDiv.classList.add('line-number')
-            lineNumberDiv.innerHTML = "<code>#{lineNum + i}</code>"
-            lineNumberContainer.appendChild(lineNumberDiv)
+    return violationView
 
-          params = { mini: true }
-          if atom.workspace.buildTextEditor?
-            lineEditor = atom.workspace.buildTextEditor(params)
-          else
-            TextEditor ?= require("atom").TextEditor
-            lineEditor= new TextEditor(params)
+  constructCodePreview: (lineInfo, stacktrace, isLeft) ->
+    if stacktrace?
+      console.log("Called constructCodePreview with stack trace: ")
+      console.log(stacktrace)
 
-          lineEditorView = atom.views.getView(lineEditor)
-          # lineEditorView = document.createElement('atom-text-editor')
-          lineEditorView.removeAttribute('tabindex')
-          # lineEditor = lineEditorView.getModel()
-          # @subscriptions.add(lineEditor.onDidStopChanging(() ->
-          #   console.log("Line editor did change.")
-          #   lineNumberElements = lineEditorView.rootElement.querySelectorAll('.line-number')
-          #   console.log(lineNumberElements)
-          #   console.log(lineEditorView)
-          #   # TODO : Doesn't work for large line numbers
-          #   for lineNumberElement in lineNumberElements
-          #     console.log("Line Number Element: ")
-          #     console.log(lineNumberElement)
-          #     row = parseInt(lineNumberElement.getAttribute('data-buffer-row'), 10)
-          #     relative = row + violation.line1.line - 3
-          #     lineNumberElement.setAttribute('data-buffer-row', relative)
-          #     console.log(row)
-          #     console.log(relative)
-          #     console.log lineNumberElement.innerHTML
-          #     lineNumberElement.innerHTML = "#{relative}<div class=\"icon-right\"></div>"
-          # ))
-          lineEditor.setText(line2Code + "\n" + line1Code)
-          lineEditor.setGrammar(atom.grammars.grammarForScopeName('source.c'))
-          lineEditor.getDecorations({class: 'cursor-line', type: 'line'})[0].destroy()
-          console.log(lineEditor)
+    lineCode = lineInfo.text.join('\n')
+    filenamePath = lineInfo.filename.split('/')
+    filename = filenamePath[filenamePath.length - 1]
+    minLineNum = lineInfo.lineRange[0]
+    maxLineNum = lineInfo.lineRange[1]
+    originalLineNum = minLineNum + 2
 
-          divToAdd.appendChild(lineNumber)
-          editorCell = document.createElement('td')
-          editorCell.appendChild(lineEditorView)
-          codeRow.appendChild(editorCell)
-          divToAdd.appendChild(codeContainer)
+    divToAdd = document.createElement('div')
+    divToAdd.classList.add('code-container-table')
+    if not isLeft
+      divToAdd.classList.add('right')
+    filenameDiv = document.createElement('div')
+    $(filenameDiv).click((e) ->
+      atom.workspace.open(lineInfo.filename, {initialLine: +originalLineNum - 1})
+    )
+    filenameDiv.classList.add('filename-line-number')
+    filenameDiv.textContent = "#{filename}:#{originalLineNum}"
+    divToAdd.appendChild(filenameDiv)
+    codeContainer = document.createElement('table')
+    codeContainer.classList.add('code-container')
+    codeRow = document.createElement('tr')
+    codeContainer.appendChild(codeRow)
+    lineNumberCell = document.createElement('td')
+    codeRow.appendChild(lineNumberCell)
+    lineNumberContainer = document.createElement('div')
+    lineNumberContainer.classList.add('line-number-container')
+    lineNumberCell.appendChild(lineNumberContainer)
 
-          console.log("Getting line 1: #{line1Html}")
-          console.log("Line Editor Height")
-          console.log($(lineEditorView).height())
-        if editor.getPath() is violation.line2.file
-          line2Code = editor.lineTextForBufferRow(violation.line2.line - 1)
-          console.log("Getting line 2: #{editor.lineTextForBufferRow(violation.line2.line - 1)}")
+    for lineNum in [minLineNum ..maxLineNum]
+      lineNumberDiv = document.createElement('div')
+      lineNumberDiv.classList.add('line-number')
+      if lineNum is originalLineNum
+        lineNumberDiv.innerHTML = "<code class='highlighted'>#{lineNum}</code>"
+      else
+        lineNumberDiv.innerHTML = "<code>#{lineNum}</code>"
+      lineNumberContainer.appendChild(lineNumberDiv)
 
-      divToAdd.appendChild(@generateTextDiv(violation.location))
-      divToAdd.appendChild(@generateTextDiv(violation.line1.raw))
-      divToAdd.appendChild(@generateTextDiv(violation.line2.raw))
-      for trace in violation.stacktrace
-        divToAdd.appendChild(@generateTextDiv(trace))
-      divs.push(divToAdd)
-    return divs
+    lineEditor = @constructTextEditor({ mini: true })
+    lineEditorView = atom.views.getView(lineEditor)
+    lineEditorView.removeAttribute('tabindex')
+    lineEditor.setText(lineCode)
+    lineEditor.setGrammar(atom.grammars.grammarForScopeName('source.c'))
+    lineEditor.getDecorations({class: 'cursor-line', type: 'line'})[0].destroy()
+
+    editorCell = document.createElement('td')
+    editorCell.appendChild(lineEditorView)
+    codeRow.appendChild(editorCell)
+
+    stacktraceDiv = document.createElement('div')
+    stacktraceDiv.classList.add('stacktrace-container')
+    if stacktrace?
+      firstLineDiv = document.createElement('div')
+      firstLineDiv.classList.add('stacktrace-line')
+      firstLineDiv.classList.add('first')
+      stacktraceDiv.appendChild(firstLineDiv)
+      firstLineDiv.innerHTML = "called by: <span class='entity name function c'>#{stacktrace[0][1]}</span> (#{stacktrace[0][0]})"
+      additionalInfoButton = document.createElement('div')
+      stacktraceDiv.appendChild(additionalInfoButton)
+      additionalInfoButton.classList.add('full-stacktrace-button')
+      additionalInfoButton.textContent = "(see full stack trace)"
+
+      additionalInfoContainer = document.createElement('div')
+      stacktraceDiv.appendChild(additionalInfoContainer)
+      additionalInfoContainer.classList.add('additional-stacktrace')
+      html = ""
+      stacktrace.slice(1).forEach((item) ->
+        html += "\t<span class='entity name function c'>#{item[1]}</span> (#{item[0]})\n"
+      )
+      additionalInfoContainer.innerHTML = html.slice(0, -1)
+
+      $(additionalInfoButton).click((e) =>
+        console.log("Hello world!")
+        $(additionalInfoContainer).toggleClass('clicked')
+        if $(additionalInfoContainer).hasClass('clicked')
+          additionalInfoButton.textContent = "(hide full stack trace)"
+        else
+          additionalInfoButton.textContent = "(see full stack trace)"
+      )
+
+    else
+      stacktraceDiv.classList.add('empty')
+      stacktraceDiv.textContent = "(no stack trace available for this access)"
+
+    divToAdd.appendChild(codeContainer)
+    divToAdd.appendChild(stacktraceDiv)
+
+    return divToAdd
+
+  constructTextEditor: (params) ->
+    if atom.workspace.buildTextEditor?
+      lineEditor = atom.workspace.buildTextEditor(params)
+    else
+      TextEditor ?= require("atom").TextEditor
+      lineEditor= new TextEditor(params)
+    return lineEditor
+
+  parseStacktrace: (stacktrace) ->
+    return stacktrace.map((item) ->
+      paren = item.indexOf('(')
+      comma = item.indexOf(',')
+      filename = item.slice(paren + 1, comma)
+      functionName = item.slice(comma + 2, item.length - 1)
+      filenamePath = filename.split('/')
+      filename = filenamePath[filenamePath.length - 1]
+      functionName = functionName.split('+')[0]
+      return [filename, functionName]
+    )
 
   getElement: () ->
     return @element
