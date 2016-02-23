@@ -1,11 +1,6 @@
-// The ui-variables file is provided by base themes provided by Atom.
-//
-// See https://github.com/atom/atom-dark-ui/blob/master/styles/ui-variables.less
-// for a full listing of what's available.
-@import "ui-mixins";
 @import "ui-variables";
-@import "octicon-utf-codes";
 @import "octicon-mixins";
+@import "octicon-utf-codes";
 
 @view-width: 100%;
 
@@ -99,6 +94,11 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
       font-style: italic;
     }
 
+    .stacktrace-line-ref {
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
     .stacktrace-line {
       &.first {
         display: inline-block;
@@ -141,12 +141,18 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
     font-size: 9pt;
   }
 
-  .highlighted {
-    color: @text-color-highlight;
-  }
-
   .violation-div {
     border-bottom: 1px solid gray;
+
+    &.highlighted {
+      background-color: @background-color-highlight;
+      color: @text-color-highlight;
+
+      code, atom-text-editor.mini {
+        background-color: @background-color-highlight !important;
+      }
+
+    }
   }
 
   .code-container-table {
@@ -157,7 +163,7 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
 
     &.right {
       border-right: 1px solid gray;
-      border-left: 1px solid gray;
+      border-left: 1px solid #3C3C3C;
     }
   }
 
@@ -178,6 +184,7 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
 
       > .line-number {
         height: 20%;
+        cursor: pointer;
 
         > code {
           font-family: Menlo, Consolas, 'DejaVu Sans Mono', monospace;

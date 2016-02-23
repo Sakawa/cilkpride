@@ -151,6 +151,10 @@ class CilkscreenPluginView
   setViolations: (violations) ->
     @getViolationDivs(violations)
 
+  scrollToViolation: () ->
+    violationTop = @currentViolation.offsetTop
+    @violationContainer.scrollTop = violationTop - 10
+
   generateTextDiv: (text) ->
     div = document.createElement('div')
     div.textContent = text

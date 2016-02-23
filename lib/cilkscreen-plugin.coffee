@@ -227,9 +227,7 @@ module.exports = CilkscreenPlugin =
     if @detailPanel
       @detailPanel.destroy()
     @detailPanel = atom.workspace.addBottomPanel(item: pluginView.getElement(), visible: true)
-    setTimeout( () =>
-      @detailPanel.item.offsetHeight
-    , 100)
+    pluginView.scrollToViolation()
     # atom.workspace.getActiveTextEditor().insertText('\u200B')
     # atom.workspace.getActiveTextEditor().backspace()
 
