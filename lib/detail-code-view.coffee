@@ -1,18 +1,33 @@
 TextEditor = null
 $ = require('jquery')
 
+VERBS_PT = {
+  "read": "read",
+  "write": "written"
+}
+
 module.exports =
 class DetailCodeView
   element: null
   violation: null
+  onViolationClickCallback: null
 
-  constructor: (augmentedViolation) ->
+  constructor: (augmentedViolation, onViolationClickCallback) ->
     @violation = augmentedViolation
     @element = @createViolationView(@violation)
+    @onViolationClickCallback = onViolationClickCallback
 
   createViolationView: (violation) ->
     violationView = document.createElement('div')
     violationView.classList.add('violation-div')
+    $(violationView).click((e) =>
+      @onViolationClickCallback(violationView)
+    )
+
+    summaryDiv = document.createElement('div')
+    summaryDiv.classList.add('summary-div')
+    summaryDiv.textContent = "A variable was concurrently #{VERBS_PT[violation.violation.line1.type]} at #{@parseAbsolutePathname(violation.line1.filename)}:#{violation.violation.line1.line}, and #{VERBS_PT[violation.violation.line2.type]} at #{@parseAbsolutePathname(violation.line2.filename)}:#{violation.violation.line2.line}."
+    violationView.appendChild(summaryDiv)
 
     violationView.appendChild(@constructCodePreview(violation.line1, null, true))
     violationView.appendChild(@constructCodePreview(violation.line2, @parseStacktrace(violation.violation.stacktrace), false))
@@ -60,6 +75,8 @@ class DetailCodeView
         lineNumberDiv.innerHTML = "<code>#{lineNum}</code>"
       lineNumberContainer.appendChild(lineNumberDiv)
 
+    #### Text Editor
+
     lineEditor = @constructTextEditor({ mini: true })
     lineEditorView = atom.views.getView(lineEditor)
     lineEditorView.removeAttribute('tabindex')
@@ -68,7 +85,19 @@ class DetailCodeView
     lineEditor.getDecorations({class: 'cursor-line', type: 'line'})[0].destroy()
 
     editorCell = document.createElement('td')
-    editorCell.appendChild(lineEditorView)
+    editorContainer = document.createElement('div')
+    editorContainer.classList.add('editor-container')
+    DetailCodeView.attachFileOpenListener(editorContainer, lineInfo.filename, originalLineNum)
+    editorCell.appendChild(editorContainer)
+    editorContainer.appendChild(lineEditorView)
+
+    editorOverlay = document.createElement('div')
+    editorOverlay.classList.add('editor-overlay')
+    lineHighlightOverlay = document.createElement('div')
+    lineHighlightOverlay.classList.add('line-highlight-overlay')
+    editorContainer.appendChild(editorOverlay)
+    editorContainer.appendChild(lineHighlightOverlay)
+
     codeRow.appendChild(editorCell)
 
     stacktraceDiv = document.createElement('div')
@@ -145,8 +174,14 @@ class DetailCodeView
 
   @attachFileOpenListener: (node, filename, lineNum) ->
     $(node).click((e) ->
+      console.log("Clicked on a file open div: #{node.classList}")
       atom.workspace.open(filename, {initialLine: +lineNum - 1, initialColumn: Infinity})
+      e.stopPropagation()
     )
+
+  parseAbsolutePathname: (filename) ->
+    splitName = filename.split('/')
+    return splitName[splitName.length - 1]
 
   getElement: () ->
     return @element

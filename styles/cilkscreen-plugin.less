@@ -89,6 +89,9 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
   .stacktrace-container {
     padding: 5px 5px 5px 5px;
     font-size: 14px;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
 
     &.empty {
       font-style: italic;
@@ -117,10 +120,10 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
 
     .full-stacktrace-button {
       display: inline-block;
-      float: right;
       font-style: italic;
       cursor: pointer;
       text-decoration: underline;
+      padding-left: 15px;
     }
 
   }
@@ -129,6 +132,7 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
     width: 100%;
     height: 100%;
     position: relative;
+    border-bottom: 1px solid #3C3C3C;
   }
 
   .violation-container {
@@ -143,10 +147,17 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
 
   .violation-div {
     border-bottom: 1px solid gray;
+    cursor: pointer;
+
+    .summary-div {
+      padding: 5px 20px 5px 20px;
+      font-size: 11pt;
+    }
 
     &.highlighted {
       background-color: @background-color-highlight;
       color: @text-color-highlight;
+      cursor: auto;
 
       code, atom-text-editor.mini {
         background-color: @background-color-highlight !important;
@@ -170,6 +181,35 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
   .code-container {
     width: 90%;
     height: 100%;
+
+    .editor-container {
+      display: block;
+      width: 100%;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+
+      .line-highlight-overlay {
+        position: absolute;
+        height: 20%;
+        width: 98%;
+        border-radius: 2px;
+        background: rgba(255,255,255,0.2);
+        border: 1px solid gray;
+        top: 40%;
+        left: 1%;
+      }
+
+      .editor-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 100%;
+        z-index: 1;
+        cursor: pointer;
+      }
+    }
 
     atom-text-editor.mini {
       float: left;

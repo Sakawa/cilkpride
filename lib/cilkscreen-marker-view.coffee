@@ -10,7 +10,7 @@ class CilkscreenMarkerView
     # Create root element
     @element = document.createElement('span')
     @element.classList.add('alert')
-    @element.title = "Click to view more details."
+    @element.title = "Race condition detected at this line. Click for details."
 
     $(@element).on('click', (e) =>
       onClickCallback(@state.index)

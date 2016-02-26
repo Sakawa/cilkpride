@@ -223,13 +223,11 @@ module.exports = CilkscreenPlugin =
 
     pluginView = @pluginView[path]
     pluginView.highlightViolation(violationIndex)
-    # TODO: what is going on here? why is a reflow necessary?
+    # TODO: possibly further investigate flow issue here
     if @detailPanel
       @detailPanel.destroy()
     @detailPanel = atom.workspace.addBottomPanel(item: pluginView.getElement(), visible: true)
     pluginView.scrollToViolation()
-    # atom.workspace.getActiveTextEditor().insertText('\u200B')
-    # atom.workspace.getActiveTextEditor().backspace()
 
   onPanelClose: (e) ->
     @detailPanel.hide()

@@ -37,7 +37,7 @@ class CilkscreenPluginView
     header.classList.add('table-row')
     title = document.createElement('div')
     title.classList.add('header-title')
-    title.textContent = "Cilkscreen Race Condition Detector - Detailed View"
+    title.textContent = "Cilkscreen Detected Race Conditions"
     close = document.createElement('div')
     close.classList.add('header-close')
     close.classList.add('icon')
@@ -118,7 +118,7 @@ class CilkscreenPluginView
       @violationContainer.removeChild(@violationContainer.firstChild)
 
     for violation in augmentedViolations
-      violationView = new DetailCodeView(violation)
+      violationView = new DetailCodeView(violation, ((node) => @onViolationClickCallback(node)))
       @violationContainer.appendChild(violationView.getElement())
 
   groupCodeWithViolations: (violations, texts) ->
@@ -146,7 +146,16 @@ class CilkscreenPluginView
     @currentViolation.classList.remove('highlighted') if @currentViolation isnt null
 
     @currentViolation = @violationContainer.children[index]
+    if not @currentViolation
+      console.log("Uh oh, current violation not found but highlightViolation triggered")
     @currentViolation.classList.add('highlighted')
+
+  onViolationClickCallback: (node) ->
+    if @currentViolation is node
+      return
+    @currentViolation.classList.remove('highlighted') if @currentViolation isnt null
+    node.classList.add('highlighted')
+    @currentViolation = node
 
   setViolations: (violations) ->
     @getViolationDivs(violations)
