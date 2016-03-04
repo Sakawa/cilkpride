@@ -11,16 +11,16 @@ class FileLineReader
       fd: null,
       mode: 0o666,
       bufferSize: 64 * 1024
-    });
+    })
 
     minLineNum = +lineRange[0]
     maxLineNum = +lineRange[1]
 
-    fileData = '';
+    fileData = ''
     stream.on('data', (data) ->
-      fileData += data;
+      fileData += data
 
-      lines = fileData.split("\n");
+      lines = fileData.split("\n")
 
       if lines.length >= maxLineNum
         stream.destroy()
@@ -34,6 +34,9 @@ class FileLineReader
     stream.on('end', () ->
       callback({ code: 'eof', filename: filename, lineRange: lineRange, text: [] })
     )
+
+  @readFile: (filename) ->
+    return fs.readFileSync(filename, { encoding: 'utf-8' })
 
   @readLineNumBatch: (readRequestArray, callback) ->
     requests = readRequestArray.map((item) =>

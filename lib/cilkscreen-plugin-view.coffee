@@ -54,6 +54,7 @@ class CilkscreenPluginView
 
     violationContentWrapper = document.createElement('div')
     violationContentWrapper.classList.add('violation-content-wrapper')
+    violationContentWrapper.classList.add('visual')
     violationWrapper.appendChild(violationContentWrapper)
 
     @violationContainer = document.createElement('div')

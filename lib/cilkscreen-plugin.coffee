@@ -9,16 +9,24 @@ $ = require('jquery')
 
 CilkscreenMarkerView = require('./cilkscreen-marker-view')
 CilkscreenPluginView = require('./cilkscreen-plugin-view')
+StatusBarView = require('./status-bar-view')
 
 module.exports = CilkscreenPlugin =
   subscriptions: null
   idleTimeout: {}
-  cilkscreenThread: {}
+  # cilkscreenThread: {}
+  # cilkscreenTime: {}
+  # lastRunTime: {}
+  currentCilkscreenState: {}
   editorToPath: {}
   pathToEditor: {}
   fileToEditor: {}
   pluginView: {}
+
+  # Singleton UI elements
   detailPanel: null
+  statusBarElement: null
+  statusBarTile: null
 
   activate: (state) ->
     @subscriptions = new CompositeDisposable()
@@ -32,10 +40,28 @@ module.exports = CilkscreenPlugin =
         @registerEditor(editor)
     ))
 
+    # Add a hook when we're changing active panes so that the status tile can show the correct
+    # race condition status for the current project.
+    @subscriptions.add(atom.workspace.onDidChangeActivePaneItem((item) =>
+      if atom.workspace.getActiveTextEditor()
+        @statusBarElement.show()
+        @updateStatusTile()
+      else
+        @statusBarElement.hide()
+    ))
+
     console.log("Activated!")
+
+  consumeStatusBar: (statusBar) ->
+    # Figure this thing out.
+    @statusBarElement = new StatusBarView( (() => @onStatusTileClick()) )
+    @statusBarElement.updatePath(@getActivePanePath())
+    @statusBarTile = statusBar.addLeftTile(item: @statusBarElement.getElement(), priority: -1)
 
   deactivate: ->
     @subscriptions.dispose()
+    @statusBarTile.destroy()
+    @statusBarTile = null
 
   serialize: ->
     cilkscreenPluginViewState: @cilkscreenPluginView.serialize()
@@ -48,13 +74,15 @@ module.exports = CilkscreenPlugin =
   initializeCilkscreenTimer: (path) ->
     @idleTimeout[path] = setTimeout(
       () =>
-        console.log(new Date())
+        console.log("Idle timeout start! #{new Date()}")
         @makeExecutable(path)
       , atom.config.get('cilkscreen-plugin.idleSeconds') * 1000
     )
 
   clearCilkscreenTimer: (path) ->
     clearInterval(@idleTimeout[path])
+    if @currentCilkscreenState[path].start?
+      @currentCilkscreenState[path].start = null;
     @killCilkscreen(path)
 
   startCilkscreen: (currentProjectPath) ->
@@ -63,14 +91,23 @@ module.exports = CilkscreenPlugin =
 
     envCopy = extend({'LD_LIBRARY_PATH': cilkLibPath, 'LIBRARY_PATH': cilkLibPath}, process.env)
 
-    @cilkscreenThread = spawn('cilkscreen', ['./cilkscreen'], {env: envCopy})
+    @currentCilkscreenState[currentProjectPath].start = Date.now()
+    console.log("Just set cilkscreenTime #{currentProjectPath} to #{@currentCilkscreenState[currentProjectPath].start}")
+    console.log("Last runtime: #{@currentCilkscreenState[currentProjectPath].lastRuntime}")
+    if @editorToPath[atom.workspace.getActiveTextEditor().id] is currentProjectPath
+      if estTime = @currentCilkscreenState[currentProjectPath].lastRuntime?
+        @statusBarElement.displayCountdown(@currentCilkscreenState[currentProjectPath].start + estTime)
+      else
+        @statusBarElement.displayUnknownCountdown()
+    cilkscreenThread = spawn('cilkscreen', ['./cilkscreen'], {env: envCopy})
+    @currentCilkscreenState[currentProjectPath].thread = cilkscreenThread
     cilkscreenOutput = ""
 
-    @cilkscreenThread.stderr.on('data', (data) ->
+    cilkscreenThread.stderr.on('data', (data) ->
       cilkscreenOutput += data
     )
 
-    @cilkscreenThread.on('close', (code) =>
+    cilkscreenThread.on('close', (code) =>
         console.log("stderr: #{cilkscreenOutput}")
         console.log("cilkscreen process exited with code #{code}")
         if code is 0
@@ -78,15 +115,26 @@ module.exports = CilkscreenPlugin =
           @destroyOldMarkers(currentProjectPath)
           console.log("Parsing data...")
           parsedResults = @parseCilkscreenOutput(cilkscreenOutput)
+          @currentCilkscreenState[currentProjectPath].lastRuntime = Date.now() - @currentCilkscreenState[currentProjectPath].start
+          @currentCilkscreenState[currentProjectPath].start = null
+          console.log("Just set lastRuntime #{currentProjectPath} to #{@currentCilkscreenState[currentProjectPath].lastRuntime}")
+          @currentCilkscreenState[currentProjectPath].numViolations = parsedResults.length
+          currentPath = @getActivePanePath()
+          if currentPath is currentProjectPath
+            if parsedResults.length > 0
+              @statusBarElement.displayErrors(parsedResults.length)
+            else
+              @statusBarElement.displayNoErrors()
+          console.log("The last run took #{@currentCilkscreenState[currentProjectPath].lastRuntime / 1000} seconds.")
           @createCilkscreenMarkers(currentProjectPath, parsedResults)
     )
 
     # Debug event handlers
-    @cilkscreenThread.on('error', (err) ->
+    cilkscreenThread.on('error', (err) ->
       console.log("cilkscreen thread error: #{err}")
     )
 
-    @cilkscreenThread.on('exit', (code, signal) ->
+    cilkscreenThread.on('exit', (code, signal) ->
       if code?
         console.log("cilkscreen exit: code #{code}")
       if signal?
@@ -118,13 +166,13 @@ module.exports = CilkscreenPlugin =
 
   killCilkscreen: (path) ->
     console.log("Attempting to kill cilkscreen...")
-    if @cilkscreenThread
-      console.log(@cilkscreenThread)
-    if @cilkscreenThread[path]
-      @cilkscreenThread[path].kill('SIGKILL')
+    thread = @currentCilkscreenState[path].thread
+    if thread
+      console.log(thread)
+      thread.kill('SIGKILL')
       console.log("Killed thread...?")
-      console.log(@cilkscreenThread[path])
-      delete @cilkscreenThread[path]
+      console.log(thread)
+      delete @currentCilkscreenState[path].thread
 
   # Cilkscreen-related functions
   parseCilkscreenOutput: (text) ->
@@ -229,6 +277,33 @@ module.exports = CilkscreenPlugin =
     @detailPanel = atom.workspace.addBottomPanel(item: pluginView.getElement(), visible: true)
     pluginView.scrollToViolation()
 
+  onStatusTileClick: () ->
+    path = @editorToPath[atom.workspace.getActiveTextEditor().id]
+
+    pluginView = @pluginView[path]
+    # TODO: possibly further investigate flow issue here
+    if @detailPanel
+      @detailPanel.destroy()
+    @detailPanel = atom.workspace.addBottomPanel(item: pluginView.getElement(), visible: true)
+
+  updateStatusTile: () ->
+    path = @getActivePanePath()
+    if @currentCilkscreenState[path]
+      if path and path isnt @statusBarElement.getCurrentPath()
+        @statusBarElement.updatePath(@getActivePanePath())
+        # Change the violation status...?
+        if @currentCilkscreenState[path].start
+          if @currentCilkscreenState[path].lastRuntime
+            @statusBarElement.displayCountdown(@currentCilkscreenState[path].start + @currentCilkscreenState[path].lastRuntime)
+          else
+            @statusBarElement.displayUnknownCountdown()
+        else if @currentCilkscreenState[path].numViolations
+          @statusBarElement.displayErrors(@currentCilkscreenState[path].numViolations)
+        else
+          @statusBarElement.displayNoErrors()
+    else
+      @statusBarElement.displayNoErrors()
+
   onPanelClose: (e) ->
     @detailPanel.hide()
 
@@ -250,6 +325,9 @@ module.exports = CilkscreenPlugin =
     if path in @pathToEditor
       return @pathToEditor[path]
     return null
+
+  getActivePanePath: () ->
+    return @editorToPath[atom.workspace.getActiveTextEditor()?.id]
 
   # Event handlers
   registerEditor: (editor) ->
@@ -291,6 +369,8 @@ module.exports = CilkscreenPlugin =
     else
       @pathToEditor[filePath] = [editor.id]
     console.log(@editorToPath)
+
+    @currentCilkscreenState[filePath] = {}
 
     # After the user stops changing the text, we start the timer to when we
     # initiate cilkscreen.
