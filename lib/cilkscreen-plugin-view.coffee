@@ -2,29 +2,29 @@ $ = require('jquery')
 FileLineReader = require('./file-read-lines')
 {CompositeDisposable} = require('atom')
 DetailCodeView = require('./detail-code-view')
+MinimapView = require('./minimap-view')
 
 module.exports =
 class CilkscreenPluginView
-  index: null
   element: null
   currentViolation: null
   violationContainer: null
+  minimapContainer: null
+  minimaps: null
+
+  # Properties from parents
+  props: null
   onCloseCallback: null
-  getTextEditorCallback: null
-  subscriptions: null
 
   HALF_CONTEXT: 2
 
-  constructor: (state, onCloseCallback, getTextEditorCallback) ->
-    @onCloseCallback = onCloseCallback
-    @getTextEditorCallback = getTextEditorCallback
-
-    @subscriptions = new CompositeDisposable()
+  constructor: (props) ->
+    @props = props
+    @onCloseCallback = props.onCloseCallback
 
     # Create root element
     @element = document.createElement('div')
-    @element.classList.add('cilkscreen-detail-view')
-    @element.classList.add('table')
+    @element.classList.add('cilkscreen-detail-view', 'table')
 
     resizeDiv = document.createElement('div')
     resizeDiv.classList.add('cilkscreen-detail-resize')
@@ -33,29 +33,30 @@ class CilkscreenPluginView
     $(resizeDiv).on('mousedown', @resizeStart)
 
     header = document.createElement('div')
-    header.classList.add('header')
-    header.classList.add('table-row')
+    header.classList.add('header', 'table-row')
     title = document.createElement('div')
     title.classList.add('header-title')
     title.textContent = "Cilkscreen Detected Race Conditions"
     close = document.createElement('div')
-    close.classList.add('header-close')
-    close.classList.add('icon')
-    close.classList.add('icon-x')
-    $(close).on('click', onCloseCallback)
+    close.classList.add('header-close', 'icon', 'icon-x')
+    $(close).on('click', @onCloseCallback)
     header.appendChild(title)
     header.appendChild(close)
 
     @element.appendChild(header)
 
     violationWrapper = document.createElement('div')
-    violationWrapper.classList.add('violation-wrapper')
-    violationWrapper.classList.add('table-row')
+    violationWrapper.classList.add('violation-wrapper', 'table-row')
 
     violationContentWrapper = document.createElement('div')
     violationContentWrapper.classList.add('violation-content-wrapper')
+    # TODO: need a better way to switch visual/non-visual
     violationContentWrapper.classList.add('visual')
     violationWrapper.appendChild(violationContentWrapper)
+
+    @minimapContainer = document.createElement('div')
+    @minimapContainer.classList.add('minimap-container')
+    violationWrapper.appendChild(@minimapContainer)
 
     @violationContainer = document.createElement('div')
     @violationContainer.classList.add('violation-container')
@@ -81,21 +82,18 @@ class CilkscreenPluginView
     height = element.offset().top + element.outerHeight() - event.pageY
     element.height(height)
 
-  getViolationDivs: (violations) ->
-    ## TODO: Unjank this up
-    divs = []
-
-    console.log("getViolationDivs: start")
+  update: (violations) ->
+    console.log("updating plugin view: start")
     console.log(violations)
 
     readRequestArray = []
     violations.forEach((item) =>
       line1Request = [
-        item.line1.file,
+        item.line1.filename,
         [item.line1.line - @HALF_CONTEXT, item.line1.line + @HALF_CONTEXT]
       ]
       line2Request = [
-        item.line2.file,
+        item.line2.filename,
         [item.line2.line - @HALF_CONTEXT, item.line2.line + @HALF_CONTEXT]
       ]
       readRequestArray.push(line1Request)
@@ -107,34 +105,46 @@ class CilkscreenPluginView
       @createViolationDivs(augmentedViolations)
     )
 
-    return []
-
-  # TODO: fill out stub
   createViolationDivs: (augmentedViolations) ->
     console.log("createViolationDivs: called with ")
     console.log(augmentedViolations)
 
-    # Remove any old children, if necessary
-    while @violationContainer.firstChild
-      @violationContainer.removeChild(@violationContainer.firstChild)
+    @clearChildren()
 
+    # TODO: figure out a better way to store the visual stuff here
+    @minimaps = {}
     for violation in augmentedViolations
-      violationView = new DetailCodeView(violation, ((node) => @onViolationClickCallback(node)))
+      violationView = new DetailCodeView({
+        isVisual: true,
+        violation: violation,
+        onViolationClickCallback: ((node) => @onViolationClickCallback(node))
+      })
       @violationContainer.appendChild(violationView.getElement())
+
+      if violation.line1.filename not in @minimaps
+        @minimaps[violation.line1.filename] = new MinimapView({filename: violation.line1.filename})
+        @minimapContainer.appendChild(@minimaps[violation.line1.filename].getElement())
+      if violation.line2.filename not in @minimaps
+        @minimaps[violation.line2.filename] = new MinimapView({filename: violation.line2.filename})
+        @minimapContainer.appendChild(@minimaps[violation.line2.filename].getElement())
 
   groupCodeWithViolations: (violations, texts) ->
     augmentedViolationList = []
     for violation in violations
-      augmentedViolation = { violation: violation }
+      augmentedViolation = violation
       codeSnippetsFound = 0
+      console.log(violation)
       for text in texts
+        console.log(text)
         if codeSnippetsFound is 2
           break
-        if violation.line1.filename is text.file and violation.line1.line - @HALF_CONTEXT is text.lineRange[0]
-          augmentedViolation.line1 = text
+        if violation.line1.filename is text.filename and violation.line1.line - @HALF_CONTEXT is text.lineRange[0]
+          augmentedViolation.line1.text = text.text
+          augmentedViolation.line1.lineRange = text.lineRange
           codeSnippetsFound++
-        if violation.line2.filename is text.file and violation.line2.line - @HALF_CONTEXT is text.lineRange[0]
-          augmentedViolation.line2 = text
+        if violation.line2.filename is text.filename and violation.line2.line - @HALF_CONTEXT is text.lineRange[0]
+          augmentedViolation.line2.text = text.text
+          augmentedViolation.line2.lineRange = text.lineRange
           codeSnippetsFound++
       augmentedViolationList.push(augmentedViolation)
       if codeSnippetsFound < 2
@@ -159,19 +169,22 @@ class CilkscreenPluginView
     @currentViolation = node
 
   setViolations: (violations) ->
-    @getViolationDivs(violations)
+    @update(violations)
 
   scrollToViolation: () ->
     violationTop = @currentViolation.offsetTop
     @violationContainer.scrollTop = violationTop - 10
 
-  generateTextDiv: (text) ->
-    div = document.createElement('div')
-    div.textContent = text
-    return div
-
   # Returns an object that can be retrieved when package is activated
   serialize: ->
+
+  clearChildren: () ->
+    # Remove any old children, if necessary
+    while @violationContainer and @violationContainer.firstChild
+      @violationContainer.removeChild(@violationContainer.firstChild)
+
+    while @minimapContainer and @minimapContainer.firstChild
+      @minimapContainer.removeChild(@minimapContainer.firstChild)
 
   # Tear down any state and detach
   destroy: ->

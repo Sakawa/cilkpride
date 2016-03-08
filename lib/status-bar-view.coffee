@@ -10,14 +10,19 @@ class StatusBarView
   icon: null
   interval: null
   currentPath: null
+
+  # Properties from parents
+  props: null
   onErrorClickCallback: null
 
-  constructor: (clickCallback) ->
+  constructor: (props) ->
+    @props = props
+    @onErrorClickCallback = props.onErrorClickCallback
+
     @element = document.createElement('div')
     @element.classList.add('cilkscreen-status-view', 'inline-block')
     @icon = document.createElement('span')
     @element.appendChild(@icon)
-    @onErrorClickCallback = clickCallback
 
     @displayNoErrors()
 

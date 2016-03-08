@@ -1,6 +1,5 @@
 TextEditor = null
 $ = require('jquery')
-MinimapView = require('./minimap-view')
 
 VERBS_PT = {
   "read": "read",
@@ -10,27 +9,36 @@ VERBS_PT = {
 module.exports =
 class DetailCodeView
   element: null
+
+  # Properties from parent
+  props: null
   violation: null
   onViolationClickCallback: null
 
-  constructor: (augmentedViolation, onViolationClickCallback) ->
-    @violation = augmentedViolation
-    @element = @createVisualViolationView(@violation)
-    @onViolationClickCallback = onViolationClickCallback
+  constructor: (props) ->
+    @props = props
+    @violation = props.violation
+    @onViolationClickCallback = props.onViolationClickCallback
 
-  createVisualViolationView: (violation) ->
+    if @props.isVisual
+      @element = @createVisualViolationView()
+    else
+      @element = @createViolationView()
+
+  # Creates a visual version of the race conditions.
+  createVisualViolationView: () ->
     violationView = document.createElement('div')
-    violationView.classList.add('violation-div')
-    violationView.classList.add('visual')
+    violationView.classList.add('violation-div', 'visual')
     $(violationView).click((e) =>
       @onViolationClickCallback(violationView)
     )
-    violationView.appendChild(@constructVisualPreview(violation.line1, violation.violation.line1.type, null, true))
-    violationView.appendChild(@constructVisualPreview(violation.line2, violation.violation.line2.type, @parseStacktrace(violation.violation.stacktrace), false))
+    violationView.appendChild(@constructVisualPreview(@violation.line1, null, true))
+    violationView.appendChild(@constructVisualPreview(@violation.line2, @parseStacktrace(@violation.stacktrace), false))
 
     return violationView
 
-  createViolationView: (violation) ->
+  # Creates a non-visual version of the race conditions with mostly text only.
+  createViolationView: () ->
     violationView = document.createElement('div')
     violationView.classList.add('violation-div')
     $(violationView).click((e) =>
@@ -39,11 +47,11 @@ class DetailCodeView
 
     summaryDiv = document.createElement('div')
     summaryDiv.classList.add('summary-div')
-    summaryDiv.textContent = "A variable was concurrently #{VERBS_PT[violation.violation.line1.type]} at #{@parseAbsolutePathname(violation.line1.filename)}:#{violation.violation.line1.line}, and #{VERBS_PT[violation.violation.line2.type]} at #{@parseAbsolutePathname(violation.line2.filename)}:#{violation.violation.line2.line}."
+    summaryDiv.textContent = "A variable was concurrently #{VERBS_PT[@violation.line1.accessType]} at #{@parseAbsolutePathname(@violation.line1.filename)}:#{@violation.line1.line}, and #{VERBS_PT[@violation.line2.accessType]} at #{@parseAbsolutePathname(@violation.line2.filename)}:#{@violation.line2.line}."
     violationView.appendChild(summaryDiv)
 
-    violationView.appendChild(@constructCodePreview(violation.line1, null, true))
-    violationView.appendChild(@constructCodePreview(violation.line2, @parseStacktrace(violation.violation.stacktrace), false))
+    violationView.appendChild(@constructCodePreview(@violation.line1, null, true))
+    violationView.appendChild(@constructCodePreview(@violation.line2, @parseStacktrace(@violation.stacktrace), false))
 
     return violationView
 
@@ -57,7 +65,7 @@ class DetailCodeView
     filename = filenamePath[filenamePath.length - 1]
     minLineNum = lineInfo.lineRange[0]
     maxLineNum = lineInfo.lineRange[1]
-    originalLineNum = minLineNum + 2
+    originalLineNum = lineInfo.line
 
     divToAdd = document.createElement('div')
     divToAdd.classList.add('code-container-table')
@@ -68,6 +76,7 @@ class DetailCodeView
     filenameDiv.classList.add('filename-line-number')
     filenameDiv.textContent = "#{filename}:#{originalLineNum}"
     divToAdd.appendChild(filenameDiv)
+
     codeContainer = document.createElement('table')
     codeContainer.classList.add('code-container')
     codeRow = document.createElement('tr')
@@ -90,12 +99,7 @@ class DetailCodeView
 
     #### Text Editor
 
-    lineEditor = @constructTextEditor({ mini: true })
-    lineEditorView = atom.views.getView(lineEditor)
-    lineEditorView.removeAttribute('tabindex')
-    lineEditor.setText(lineCode)
-    lineEditor.setGrammar(atom.grammars.grammarForScopeName('source.c'))
-    lineEditor.getDecorations({class: 'cursor-line', type: 'line'})[0].destroy()
+    @createMiniEditorWithCode(lineCode)
 
     editorCell = document.createElement('td')
     editorContainer = document.createElement('div')
@@ -117,12 +121,11 @@ class DetailCodeView
     stacktraceDiv.classList.add('stacktrace-container')
     if stacktrace?
       firstLineDiv = document.createElement('div')
-      firstLineDiv.classList.add('stacktrace-line')
-      firstLineDiv.classList.add('first')
+      firstLineDiv.classList.add('stacktrace-line', 'first')
       stacktraceDiv.appendChild(firstLineDiv)
       firstLineDiv.innerHTML = "called by: <span class='entity name function c'>#{stacktrace[0].functionName}</span> (<span class='stacktrace-line-ref'>#{stacktrace[0].filename}:#{stacktrace[0].lineNum}</span>)"
-      stacktraceLocation = firstLineDiv.children[1]
-      DetailCodeView.attachFileOpenListener(stacktraceLocation, stacktrace[0].rawFilename, stacktrace[0].lineNum)
+      stacktraceLocationSpan = firstLineDiv.children[1]
+      DetailCodeView.attachFileOpenListener(stacktraceLocationSpan, stacktrace[0].rawFilename, stacktrace[0].lineNum)
 
       additionalInfoContainer = document.createElement('div')
       additionalInfoContainer.classList.add('additional-stacktrace')
@@ -130,11 +133,10 @@ class DetailCodeView
       stacktrace.slice(1).forEach((item) ->
         html += "\t<span class='entity name function c'>#{item.functionName}</span> (<span class='stacktrace-line-ref'>#{item.filename}:#{item.lineNum}</span>)\n"
       )
+      # Go through the extra stacktrace lines to attach our file-opening listener.
       additionalInfoContainer.innerHTML = html.slice(0, -1)
-      for i in [0 .. additionalInfoContainer.children.length]
-        if i % 2 is 0
-          continue
-        stacktraceIndex = Math.floor(i / 2) + 1
+      for i in [1 .. additionalInfoContainer.children.length - 1] by 2
+        stacktraceIndex = Math.ceil(i / 2)
         DetailCodeView.attachFileOpenListener(additionalInfoContainer.children[i], stacktrace[stacktraceIndex].rawFilename, stacktrace[stacktraceIndex].lineNum)
 
       if stacktrace.length > 1
@@ -144,7 +146,7 @@ class DetailCodeView
         additionalInfoButton.textContent = "(see full stack trace)"
 
         $(additionalInfoButton).click((e) =>
-          console.log("Hello world!")
+          console.log("Toggling the stacktrace.")
           $(additionalInfoContainer).toggleClass('clicked')
           if $(additionalInfoContainer).hasClass('clicked')
             additionalInfoButton.textContent = "(hide full stack trace)"
@@ -162,7 +164,7 @@ class DetailCodeView
 
     return divToAdd
 
-  constructVisualPreview: (lineInfo, type, stacktrace, isFirst) ->
+  constructVisualPreview: (lineInfo, stacktrace, isFirst) ->
     if stacktrace?
       console.log("Called constructVisualPreview with stack trace: ")
       console.log(stacktrace)
@@ -173,11 +175,10 @@ class DetailCodeView
     filename = filenamePath[filenamePath.length - 1]
     minLineNum = lineInfo.lineRange[0]
     maxLineNum = lineInfo.lineRange[1]
-    originalLineNum = minLineNum + 2
+    originalLineNum = lineInfo.line
 
     divToAdd = document.createElement('div')
-    divToAdd.classList.add('code-container-table')
-    divToAdd.classList.add('visual-detail')
+    divToAdd.classList.add('code-container-table', 'visual-detail')
     if not isFirst
       divToAdd.classList.add('bottom')
 
@@ -185,7 +186,7 @@ class DetailCodeView
     codeLineDiv.classList.add('code-line-container')
     readWriteDiv = document.createElement('div')
     readWriteDiv.classList.add('read-write-div')
-    if type is 'read'
+    if lineInfo.accessType is 'read'
       readWriteDiv.textContent = "(R)"
       readWriteDiv.title = "read"
     else
@@ -204,12 +205,8 @@ class DetailCodeView
 
     #### Text Editor
 
-    lineEditor = @constructTextEditor({ mini: true })
-    lineEditor.setGrammar(atom.grammars.grammarForScopeName('source.c'))
+    lineEditor = @createMiniEditorWithCode(lineCode)
     lineEditorView = atom.views.getView(lineEditor)
-    lineEditorView.removeAttribute('tabindex')
-    lineEditor.setText(lineCode)
-    lineEditor.getDecorations({class: 'cursor-line', type: 'line'})[0].destroy()
 
     editorContainer = document.createElement('div')
     editorContainer.classList.add('editor-container')
@@ -224,12 +221,11 @@ class DetailCodeView
       stacktraceDiv = document.createElement('div')
       stacktraceDiv.classList.add('stacktrace-container')
       firstLineDiv = document.createElement('div')
-      firstLineDiv.classList.add('stacktrace-line')
-      firstLineDiv.classList.add('first')
+      firstLineDiv.classList.add('stacktrace-line', 'first')
       stacktraceDiv.appendChild(firstLineDiv)
       firstLineDiv.innerHTML = "called by: <span class='entity name function c'>#{stacktrace[0].functionName}</span> (<span class='stacktrace-line-ref'>#{stacktrace[0].filename}:#{stacktrace[0].lineNum}</span>)"
-      stacktraceLocation = firstLineDiv.children[1]
-      DetailCodeView.attachFileOpenListener(stacktraceLocation, stacktrace[0].rawFilename, stacktrace[0].lineNum)
+      stacktraceLocationSpan = firstLineDiv.children[1]
+      DetailCodeView.attachFileOpenListener(stacktraceLocationSpan, stacktrace[0].rawFilename, stacktrace[0].lineNum)
 
       additionalInfoContainer = document.createElement('div')
       additionalInfoContainer.classList.add('additional-stacktrace')
@@ -238,10 +234,8 @@ class DetailCodeView
         html += "\t<span class='entity name function c'>#{item.functionName}</span> (<span class='stacktrace-line-ref'>#{item.filename}:#{item.lineNum}</span>)\n"
       )
       additionalInfoContainer.innerHTML = html.slice(0, -1)
-      for i in [0 .. additionalInfoContainer.children.length]
-        if i % 2 is 0
-          continue
-        stacktraceIndex = Math.floor(i / 2) + 1
+      for i in [1 .. additionalInfoContainer.children.length] by 2
+        stacktraceIndex = Math.ceil(i / 2)
         DetailCodeView.attachFileOpenListener(additionalInfoContainer.children[i], stacktrace[stacktraceIndex].rawFilename, stacktrace[stacktraceIndex].lineNum)
 
       if stacktrace.length > 1
@@ -251,7 +245,7 @@ class DetailCodeView
         additionalInfoButton.textContent = "(see full stack trace)"
 
         $(additionalInfoButton).click((e) =>
-          console.log("Hello world!")
+          console.log("Toggled the stacktrace.")
           $(additionalInfoContainer).toggleClass('clicked')
           if $(additionalInfoContainer).hasClass('clicked')
             additionalInfoButton.textContent = "(hide full stack trace)"
@@ -263,6 +257,15 @@ class DetailCodeView
       divToAdd.appendChild(stacktraceDiv)
 
     return divToAdd
+
+  createMiniEditorWithCode: (code) ->
+    lineEditor = @constructTextEditor({ mini: true })
+    lineEditor.setGrammar(atom.grammars.grammarForScopeName('source.c'))
+    lineEditorView = atom.views.getView(lineEditor)
+    lineEditorView.removeAttribute('tabindex')
+    lineEditor.setText(code)
+    lineEditor.getDecorations({class: 'cursor-line', type: 'line'})[0].destroy()
+    return lineEditor
 
   constructTextEditor: (params) ->
     if atom.workspace.buildTextEditor?

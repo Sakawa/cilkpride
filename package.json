@@ -33,5 +33,12 @@
         "title": "Cilk Library Path",
         "description": "The location of the Cilk lib files, so that the plugin can appropriately build executables."
     }
+  },
+  "consumedServices": {
+    "status-bar": {
+      "versions": {
+        "^1.0.0": "consumeStatusBar"
+      }
+    }
   }
 }
