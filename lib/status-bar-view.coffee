@@ -83,6 +83,7 @@ class StatusBarView
     return timerText
 
   updatePath: (path) ->
+    console.log("Updating status bar tile path to #{path}.")
     @currentPath = path
 
   getCurrentPath: () ->

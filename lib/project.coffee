@@ -15,6 +15,7 @@ class Project
   editorSubscriptions: null
   editorIds: null
   projectView: null
+  markers: null
 
   # Properties from parent
   props: null
@@ -36,6 +37,7 @@ class Project
     @editorIds = []
     @currentState = {}
     @subscriptions = new CompositeDisposable()
+    @markers = {}
 
     @projectView = new ProjectView({
       onCloseCallback: (() => @onPanelCloseCallback())
@@ -89,10 +91,10 @@ class Project
         @currentState.lastRuntime = Date.now() - @currentState.start
         console.log("Just set lastRuntime #{@path} to #{@currentState.lastRuntime}")
         @currentState.numViolations = parsedResults.length
-        @updateStatusTile()
         console.log("The last run took #{@currentState.lastRuntime / 1000} seconds.")
         @createMarkers(parsedResults)
       @currentState.start = null
+      @updateStatusTile()
     )
 
     # Debug event handlers
@@ -179,8 +181,9 @@ class Project
       console.log(thread)
       delete @currentState.thread
 
-  destroyOldMarkers: (project) ->
+  destroyOldMarkers: () ->
     for editorId in @editorIds
+      console.log("Trying to find editor id #{editorId}")
       editor = null
       for tEditor in atom.workspace.getTextEditors()
         if tEditor.id is editorId
@@ -273,7 +276,7 @@ class Project
     @editorIds.splice(index, 1)
 
   updateStatusTile: () ->
-    console.log("Updating status bar for #{@path}")
+    console.log("Updating status bar for #{@path}, current path being #{@statusBar.getCurrentPath()}")
     console.log(@statusBar)
     if @path is @statusBar.getCurrentPath()
       if @currentState.start
@@ -285,3 +288,12 @@ class Project
         @statusBar.displayErrors(@currentState.numViolations)
       else
         @statusBar.displayNoErrors()
+
+  highlightViolationInDetailPanel: (index) ->
+    @projectView.highlightViolation(index)
+
+  scrollToViolation: () ->
+    @projectView.scrollToViolation()
+
+  getDetailPanel: () ->
+    return @projectView.getElement()

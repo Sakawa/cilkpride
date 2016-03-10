@@ -3,6 +3,7 @@ FileLineReader = require('./file-read-lines')
 {CompositeDisposable} = require('atom')
 DetailCodeView = require('./detail-code-view')
 MinimapView = require('./minimap-view')
+CanvasUtil = require('./canvas-util')
 
 module.exports =
 class CilkscreenPluginView
@@ -11,6 +12,7 @@ class CilkscreenPluginView
   violationContainer: null
   minimapContainer: null
   minimaps: null
+  minimapIndex: null
 
   # Properties from parents
   props: null
@@ -111,8 +113,17 @@ class CilkscreenPluginView
 
     @clearChildren()
 
+    @minimapOverlay = document.createElement('canvas')
+    @minimapOverlay.classList.add('minimap-canvas-overlay')
+    @minimapContainer.appendChild(@minimapOverlay)
+    $(@minimapOverlay).mousemove((e) =>
+      @minimapOnClick(e)
+    )
+
     # TODO: figure out a better way to store the visual stuff here
     @minimaps = {}
+    @minimapIndex = {}
+    minimapPromises = []
     for violation in augmentedViolations
       violationView = new DetailCodeView({
         isVisual: true,
@@ -121,12 +132,62 @@ class CilkscreenPluginView
       })
       @violationContainer.appendChild(violationView.getElement())
 
-      if violation.line1.filename not in @minimaps
+      if not @minimaps[violation.line1.filename]
         @minimaps[violation.line1.filename] = new MinimapView({filename: violation.line1.filename})
+        minimapPromises.push(@minimaps[violation.line1.filename].init())
+        @minimapIndex[violation.line1.filename] = minimapPromises.length - 1
         @minimapContainer.appendChild(@minimaps[violation.line1.filename].getElement())
-      if violation.line2.filename not in @minimaps
+      if not @minimaps[violation.line2.filename]
         @minimaps[violation.line2.filename] = new MinimapView({filename: violation.line2.filename})
+        minimapPromises.push(@minimaps[violation.line2.filename].init())
+        @minimapIndex[violation.line2.filename] = minimapPromises.length - 1
         @minimapContainer.appendChild(@minimaps[violation.line2.filename].getElement())
+
+      @minimaps[violation.line1.filename].addDecoration(violation.line1.line)
+      @minimaps[violation.line2.filename].addDecoration(violation.line2.line)
+
+    Promise.all(minimapPromises).then(() =>
+      console.log("All promises done!")
+      console.log(@minimaps)
+      console.log(Object.getOwnPropertyNames(@minimaps))
+      maxHeight = -1
+      minimaps = Object.getOwnPropertyNames(@minimaps)
+      for minimap in minimaps
+        height = @minimaps[minimap].getHeight()
+        if maxHeight < height
+          maxHeight = height
+      @minimapOverlay.style.height = maxHeight + "px"
+      @minimapOverlay.style.width = (minimaps.length * 240) + "px"
+      @minimapOverlay.height = maxHeight
+      @minimapOverlay.width = (minimaps.length * 240)
+
+      for violation in augmentedViolations
+        @drawViolationConnector(violation)
+    )
+
+  minimapOnClick: (e) ->
+    console.log(e)
+
+  drawViolationConnector: (violation) ->
+    console.log("Drawing violation connector.")
+    console.log(violation)
+
+    # The violation is within the same file, so we'll have to draw a curved line.
+    if violation.line1.filename is violation.line2.filename
+      console.log(@minimapIndex)
+      console.log(@minimapIndex[violation.line1.filename])
+      startX = CanvasUtil.getLeftSide(@minimapIndex[violation.line1.filename])
+      line1Y = CanvasUtil.getLineTop(violation.line1.line)
+      line2Y = CanvasUtil.getLineTop(violation.line2.line)
+      console.log("Drawing a curve from #{startX},#{line1Y} to #{startX}, #{line2Y}")
+      console.log("The control point will be #{startX - 15}, #{(line1Y + line2Y) / 2}")
+      ctx = @minimapOverlay.getContext("2d")
+      ctx.strokeStyle = 'red'
+      ctx.lineWidth = 3
+      ctx.beginPath()
+      ctx.moveTo(startX, line1Y)
+      ctx.quadraticCurveTo(startX - 15, (line1Y + line2Y) / 2, startX, line2Y)
+      ctx.stroke()
 
   groupCodeWithViolations: (violations, texts) ->
     augmentedViolationList = []

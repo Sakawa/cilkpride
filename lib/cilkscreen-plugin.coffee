@@ -11,6 +11,7 @@ module.exports = CilkscreenPlugin =
 
   # Editor/path bookkeeping
   editorToPath: {}
+  pathToPath: {}
 
   # Singleton UI elements
   detailPanel: null
@@ -37,6 +38,8 @@ module.exports = CilkscreenPlugin =
       if atom.workspace.getActiveTextEditor()
         editor = atom.workspace.getActiveTextEditor()
         @statusBarElement.show()
+        console.log("Switched active panes. Editor id is #{editor.id}.")
+        console.log(@editorToPath)
         projectPath = @editorToPath[editor.id]
         if projectPath
           @statusBarElement.updatePath(projectPath)
@@ -105,7 +108,8 @@ module.exports = CilkscreenPlugin =
       console.log("Editor changed path: " + editor.id)
       console.log("The new path is now: #{editor.getPath?()}")
       oldPath = @editorToPath[editor.id]
-      @projects[oldPath].unregisterEditor(editor.id)
+      if oldPath
+        @projects[oldPath].unregisterEditor(editor.id)
       newPath = editor.getPath?()
       if newPath
         newProjectPath = @findMakefile(newPath)
@@ -123,22 +127,32 @@ module.exports = CilkscreenPlugin =
     if not projectPath
       return
 
+    @editorToPath[editor.id] = projectPath
     @registerEditorWithProject(projectPath, editor)
 
   findMakefile: (filePath) ->
+    traversedPaths = []
     projectPath = path.resolve(filePath, '..')
     rootDir = path.parse(projectPath).root
     console.log("Root dir: ", rootDir)
     loop
       console.log("Testing for Makefile: " + projectPath)
+      traversedPaths.push(projectPath)
+      if @pathToPath[projectPath] isnt undefined
+        console.log("Quick escape: #{@pathToPath[projectPath]}")
+        return @pathToPath[projectPath]
       try
         stats = fs.statSync(path.resolve(projectPath, 'Makefile'))
         if stats.isFile()
+          for tpath in traversedPaths
+            @pathToPath[tpath] = projectPath
           return projectPath
       catch error
         projectPath = path.resolve(projectPath, '..')
       finally
         if projectPath is rootDir
+          for tpath in traversedPaths
+            @pathToPath[tpath] = null
           return null
 
   registerEditorWithProject: (projectPath, editor) ->
