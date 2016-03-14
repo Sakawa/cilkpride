@@ -90,16 +90,16 @@ class CilkscreenPluginView
 
     readRequestArray = []
     violations.forEach((item) =>
-      line1Request = [
-        item.line1.filename,
-        [item.line1.line - @HALF_CONTEXT, item.line1.line + @HALF_CONTEXT]
-      ]
-      line2Request = [
-        item.line2.filename,
-        [item.line2.line - @HALF_CONTEXT, item.line2.line + @HALF_CONTEXT]
-      ]
-      readRequestArray.push(line1Request)
-      readRequestArray.push(line2Request)
+      if item.line1.filename
+        readRequestArray.push([
+          item.line1.filename,
+          [item.line1.line - @HALF_CONTEXT, item.line1.line + @HALF_CONTEXT]
+        ])
+      if item.line2.filename
+        readRequestArray.push([
+          item.line2.filename,
+          [item.line2.line - @HALF_CONTEXT, item.line2.line + @HALF_CONTEXT]
+        ])
     )
 
     FileLineReader.readLineNumBatch(readRequestArray, (texts) =>
@@ -132,19 +132,20 @@ class CilkscreenPluginView
       })
       @violationContainer.appendChild(violationView.getElement())
 
-      if not @minimaps[violation.line1.filename]
-        @minimaps[violation.line1.filename] = new MinimapView({filename: violation.line1.filename})
-        minimapPromises.push(@minimaps[violation.line1.filename].init())
-        @minimapIndex[violation.line1.filename] = minimapPromises.length - 1
-        @minimapContainer.appendChild(@minimaps[violation.line1.filename].getElement())
-      if not @minimaps[violation.line2.filename]
-        @minimaps[violation.line2.filename] = new MinimapView({filename: violation.line2.filename})
-        minimapPromises.push(@minimaps[violation.line2.filename].init())
-        @minimapIndex[violation.line2.filename] = minimapPromises.length - 1
-        @minimapContainer.appendChild(@minimaps[violation.line2.filename].getElement())
-
-      @minimaps[violation.line1.filename].addDecoration(violation.line1.line)
-      @minimaps[violation.line2.filename].addDecoration(violation.line2.line)
+      if violation.line1.filename
+        if not @minimaps[violation.line1.filename]
+          @minimaps[violation.line1.filename] = new MinimapView({filename: violation.line1.filename})
+          minimapPromises.push(@minimaps[violation.line1.filename].init())
+          @minimapIndex[violation.line1.filename] = minimapPromises.length - 1
+          @minimapContainer.appendChild(@minimaps[violation.line1.filename].getElement())
+        @minimaps[violation.line1.filename].addDecoration(violation.line1.line)
+      if violation.line2.filename
+        if not @minimaps[violation.line2.filename]
+          @minimaps[violation.line2.filename] = new MinimapView({filename: violation.line2.filename})
+          minimapPromises.push(@minimaps[violation.line2.filename].init())
+          @minimapIndex[violation.line2.filename] = minimapPromises.length - 1
+          @minimapContainer.appendChild(@minimaps[violation.line2.filename].getElement())
+        @minimaps[violation.line2.filename].addDecoration(violation.line2.line)
 
     Promise.all(minimapPromises).then(() =>
       console.log("All promises done!")
@@ -166,6 +167,10 @@ class CilkscreenPluginView
     )
 
   minimapOnClick: (e) ->
+    rect = @minimapOverlay.getBoundingClientRect();
+    parentTop = @minimapOverlay.offsetTop
+    parentLeft = @minimapOverlay.offsetLeft
+    console.log("left: #{e.pageX - rect.left}, top: #{e.pageY - rect.top}")
     console.log(e)
 
   drawViolationConnector: (violation) ->

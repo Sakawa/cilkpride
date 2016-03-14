@@ -1,6 +1,8 @@
 {CompositeDisposable} = require('atom')
+fs = require('fs')
 exec = require('child_process').exec
 extend = require('util')._extend;
+path = require('path');
 process = require('process')
 spawn = require('child_process').spawn
 
@@ -16,6 +18,7 @@ class Project
   editorIds: null
   projectView: null
   markers: null
+  settings: null
 
   # Properties from parent
   props: null
@@ -38,6 +41,14 @@ class Project
     @currentState = {}
     @subscriptions = new CompositeDisposable()
     @markers = {}
+    @settings = JSON.parse(fs.readFileSync(
+      path.resolve(@path, 'cilkscreen-conf.json'),
+      {
+        flags: 'r',
+        encoding: 'utf-8',
+      }
+    ))
+    console.log(@settings)
 
     @projectView = new ProjectView({
       onCloseCallback: (() => @onPanelCloseCallback())
@@ -71,7 +82,7 @@ class Project
     console.log("Just set cilkscreenTime #{@path} to #{@currentState.start}")
     console.log("Last runtime: #{@currentState.lastRuntime}")
     @updateStatusTile()
-    @currentState.thread = spawn('cilkscreen', ['./cilkscreen'], {env: envCopy})
+    @currentState.thread = spawn('cilkscreen', @settings.commandArgs, {env: envCopy})
     thread = @currentState.thread
     cilkscreenOutput = ""
 
@@ -122,7 +133,7 @@ class Project
 
     # Invoke the cilkscreen target to run cilkscreen on.
     # TODO: potentially allow the user to specify a make target
-    makeThread = exec('make cilkscreen',
+    makeThread = exec(@settings.makeCommand,
       (error, stdout, stderr) =>
         console.log("stdout: #{stdout}")
         console.log("stderr: #{stderr}")
@@ -154,10 +165,10 @@ class Project
       line1 = +violation.line1.line
       line2 = +violation.line2.line
 
-      editorCache[path1].forEach((textEditor) =>
+      editorCache[path1]?.forEach((textEditor) =>
         @createCilkscreenMarker(textEditor, line1, i)
       )
-      editorCache[path2].forEach((textEditor) =>
+      editorCache[path2]?.forEach((textEditor) =>
         @createCilkscreenMarker(textEditor, line2, i)
       )
 
@@ -188,7 +199,7 @@ class Project
       for tEditor in atom.workspace.getTextEditors()
         if tEditor.id is editorId
           editor = tEditor
-      markers = editor.findMarkers({id: 'cilkscreen'})
+      markers = editor?.findMarkers({id: 'cilkscreen'})
       console.log("Removing markers...")
       console.log(markers)
       for marker in markers
@@ -214,16 +225,23 @@ class Project
           console.log(splitLine)
           sourceCodeLine = splitLine[4].slice(1, -1)
           console.log(sourceCodeLine)
-          sourceCodeLine = sourceCodeLine.split(',')[0]
-          console.log(sourceCodeLine)
-          splitIndex = sourceCodeLine.lastIndexOf(':')
-          sourceCodeFile = sourceCodeLine.substr(0, splitIndex)
-          sourceCodeLine = sourceCodeLine.substr(splitIndex + 1)
+          splitSC = sourceCodeLine.split(',')
+          # There will be 6 elements if the line has a source code annotation.
+          if splitLine.length is 6
+            sourceCodeLine = splitSC[0]
+            console.log(sourceCodeLine)
+            splitIndex = sourceCodeLine.lastIndexOf(':')
+            sourceCodeFile = sourceCodeLine.substr(0, splitIndex)
+            sourceCodeLine = +sourceCodeLine.substr(splitIndex + 1)
+          # Otherwise, for some cilk_for calls, there is no extra information.
+          else
+            sourceCodeFile = null
+            sourceCodeLine = null;
 
           lineData = {
             accessType: accessType,
             filename: sourceCodeFile,
-            line: +sourceCodeLine,
+            line: sourceCodeLine,
             rawText: line
           }
 

@@ -103,34 +103,35 @@ module.exports = CilkscreenPlugin =
     # Add the gutter to the newly registered editor.
     editor.addGutter({name: 'cilkscreen-lint', priority: -1, visible: true})
 
-    @subscriptions.add(editor.onDidChangePath(()=>
-      # TODO: finish this
-      console.log("Editor changed path: " + editor.id)
-      console.log("The new path is now: #{editor.getPath?()}")
-      oldPath = @editorToPath[editor.id]
-      if oldPath
-        @projects[oldPath].unregisterEditor(editor.id)
-      newPath = editor.getPath?()
-      if newPath
-        newProjectPath = @findMakefile(newPath)
-        @editorToPath[editor.id] = newProjectPath
-        @registerEditorWithProject(newProjectPath, editor)
-      else
-        delete @editorToPath[editor.id]
+    @subscriptions.add(editor.onDidChangePath(
+      () =>
+        # TODO: finish this
+        console.log("Editor changed path: " + editor.id)
+        console.log("The new path is now: #{editor.getPath?()}")
+        oldPath = @editorToPath[editor.id]
+        if oldPath
+          @projects[oldPath].unregisterEditor(editor.id)
+        newPath = editor.getPath?()
+        if newPath
+          newProjectPath = @findConfFile(newPath)
+          @editorToPath[editor.id] = newProjectPath
+          @registerEditorWithProject(newProjectPath, editor)
+        else
+          delete @editorToPath[editor.id]
     ))
 
     filePath = editor.getPath?()
     if not filePath
       return
 
-    projectPath = @findMakefile(filePath)
+    projectPath = @findConfFile(filePath)
     if not projectPath
       return
 
     @editorToPath[editor.id] = projectPath
     @registerEditorWithProject(projectPath, editor)
 
-  findMakefile: (filePath) ->
+  findConfFile: (filePath) ->
     traversedPaths = []
     projectPath = path.resolve(filePath, '..')
     rootDir = path.parse(projectPath).root
@@ -142,7 +143,7 @@ module.exports = CilkscreenPlugin =
         console.log("Quick escape: #{@pathToPath[projectPath]}")
         return @pathToPath[projectPath]
       try
-        stats = fs.statSync(path.resolve(projectPath, 'Makefile'))
+        stats = fs.statSync(path.resolve(projectPath, 'cilkscreen-conf.json'))
         if stats.isFile()
           for tpath in traversedPaths
             @pathToPath[tpath] = projectPath

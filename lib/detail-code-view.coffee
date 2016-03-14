@@ -60,6 +60,19 @@ class DetailCodeView
       console.log("Called constructCodePreview with stack trace: ")
       console.log(stacktrace)
 
+    divToAdd = document.createElement('div')
+    divToAdd.classList.add('code-container-table')
+    if not isLeft
+      divToAdd.classList.add('right')
+
+    # First we check if there is a source annotation to use.
+    if lineInfo.text is undefined
+      emptyDiv = document.createElement('div')
+      emptyDiv.classList.add('empty')
+      emptyDiv.textContent = "No information on this access."
+      divToAdd.appendChild(emptyDiv)
+      return divToAdd
+
     lineCode = lineInfo.text.join('\n')
     filenamePath = lineInfo.filename.split('/')
     filename = filenamePath[filenamePath.length - 1]
@@ -67,10 +80,6 @@ class DetailCodeView
     maxLineNum = lineInfo.lineRange[1]
     originalLineNum = lineInfo.line
 
-    divToAdd = document.createElement('div')
-    divToAdd.classList.add('code-container-table')
-    if not isLeft
-      divToAdd.classList.add('right')
     filenameDiv = document.createElement('div')
     DetailCodeView.attachFileOpenListener(filenameDiv, lineInfo.filename, originalLineNum)
     filenameDiv.classList.add('filename-line-number')
@@ -170,17 +179,25 @@ class DetailCodeView
       console.log(stacktrace)
     console.log(lineInfo)
 
+    divToAdd = document.createElement('div')
+    divToAdd.classList.add('code-container-table', 'visual-detail')
+    if not isFirst
+      divToAdd.classList.add('bottom')
+
+    # First we check if there is a source annotation to use.
+    if lineInfo.text is undefined
+      emptyDiv = document.createElement('div')
+      emptyDiv.classList.add('empty')
+      emptyDiv.textContent = "No information on this access."
+      divToAdd.appendChild(emptyDiv)
+      return divToAdd
+
     lineCode = lineInfo.text[2]
     filenamePath = lineInfo.filename.split('/')
     filename = filenamePath[filenamePath.length - 1]
     minLineNum = lineInfo.lineRange[0]
     maxLineNum = lineInfo.lineRange[1]
     originalLineNum = lineInfo.line
-
-    divToAdd = document.createElement('div')
-    divToAdd.classList.add('code-container-table', 'visual-detail')
-    if not isFirst
-      divToAdd.classList.add('bottom')
 
     codeLineDiv = document.createElement('div')
     codeLineDiv.classList.add('code-line-container')
