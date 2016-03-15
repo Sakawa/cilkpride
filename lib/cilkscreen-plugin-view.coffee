@@ -119,6 +119,9 @@ class CilkscreenPluginView
     @minimapOverlay.classList.add('minimap-canvas-overlay')
     @minimapContainer.appendChild(@minimapOverlay)
     $(@minimapOverlay).mousemove((e) =>
+      @minimapHover(e)
+    )
+    $(@minimapOverlay).click((e) =>
       @minimapOnClick(e)
     )
 
@@ -164,18 +167,41 @@ class CilkscreenPluginView
       @minimapOverlay.height = maxHeight
       @minimapOverlay.width = (minimaps.length * 240)
 
-      for violation in augmentedViolations
-        @drawViolationConnector(violation)
+      for index in [0 .. augmentedViolations.length - 1]
+        @drawViolationConnector(augmentedViolations[index], index)
     )
+
+  minimapHover: (e) ->
+    rect = @minimapOverlay.getBoundingClientRect();
+    parentTop = @minimapOverlay.offsetTop
+    parentLeft = @minimapOverlay.offsetLeft
+    left = Math.round(e.pageX - rect.left)
+    top = Math.round(e.pageY - rect.top)
+    console.log("left: #{e.pageX - rect.left}, top: #{e.pageY - rect.top}")
+    ctx = @minimapOverlay.getContext('2d')
+    data = ctx.getImageData(left, top, 1, 1).data
+    if data[3] isnt 0
+      @minimapOverlay.style.cursor = "pointer"
+    else
+      @minimapOverlay.style.cursor = "auto"
 
   minimapOnClick: (e) ->
     rect = @minimapOverlay.getBoundingClientRect();
     parentTop = @minimapOverlay.offsetTop
     parentLeft = @minimapOverlay.offsetLeft
-    console.log("left: #{e.pageX - rect.left}, top: #{e.pageY - rect.top}")
-    console.log(e)
+    left = Math.round(e.pageX - rect.left)
+    top = Math.round(e.pageY - rect.top)
+    console.log("clicked: left: #{e.pageX - rect.left}, top: #{e.pageY - rect.top}")
+    ctx = @minimapOverlay.getContext('2d')
+    data = ctx.getImageData(left, top, 1, 1).data
+    if data[3] is 0
+      e.stopPropagation()
+    else if data[0] is 255
+      console.log("clicked violation: #{data[1]}")
+      @highlightViolation(data[1])
 
-  drawViolationConnector: (violation) ->
+  drawViolationConnector: (violation, index) ->
+    # TODO: assuming < 256 conditions here...
     console.log("Drawing violation connector.")
     console.log(violation)
 
@@ -192,7 +218,7 @@ class CilkscreenPluginView
       console.log("Drawing a curve from #{startX},#{line1Y} to #{startX}, #{line2Y}")
       console.log("The control point will be #{startX - 15}, #{(line1Y + line2Y) / 2}")
       ctx = @minimapOverlay.getContext("2d")
-      ctx.strokeStyle = 'red'
+      ctx.strokeStyle = "rgb(255,#{index},0)"
       ctx.lineWidth = 1
       ctx.beginPath()
       ctx.moveTo(startX - 2, line1Y)
@@ -212,7 +238,7 @@ class CilkscreenPluginView
       line2Y = CanvasUtil.getLineTop(violation.line2.line)
       console.log("Drawing a curve from #{startX},#{line1Y} to #{endX}, #{line2Y}")
       ctx = @minimapOverlay.getContext("2d")
-      ctx.strokeStyle = 'red'
+      ctx.strokeStyle = "rgb(255,#{index},0)"
       ctx.lineWidth = 1
       ctx.beginPath()
       ctx.moveTo(startX, line1Y)
@@ -251,6 +277,7 @@ class CilkscreenPluginView
     if not @currentViolation
       console.log("Uh oh, current violation not found but highlightViolation triggered")
     @currentViolation.classList.add('highlighted')
+    @scrollToViolation()
 
   onViolationClickCallback: (node) ->
     if @currentViolation is node
