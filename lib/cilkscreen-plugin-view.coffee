@@ -102,6 +102,8 @@ class CilkscreenPluginView
         ])
     )
 
+    console.log("Sending violations off to read: ")
+    console.log(readRequestArray)
     FileLineReader.readLineNumBatch(readRequestArray, (texts) =>
       augmentedViolations = @groupCodeWithViolations(violations, texts)
       @createViolationDivs(augmentedViolations)
@@ -177,6 +179,9 @@ class CilkscreenPluginView
     console.log("Drawing violation connector.")
     console.log(violation)
 
+    if not violation.line1.filename or not violation.line2.filename
+      return
+
     # The violation is within the same file, so we'll have to draw a curved line.
     if violation.line1.filename is violation.line2.filename
       console.log(@minimapIndex)
@@ -188,10 +193,30 @@ class CilkscreenPluginView
       console.log("The control point will be #{startX - 15}, #{(line1Y + line2Y) / 2}")
       ctx = @minimapOverlay.getContext("2d")
       ctx.strokeStyle = 'red'
-      ctx.lineWidth = 3
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.moveTo(startX - 2, line1Y)
+      ctx.quadraticCurveTo(startX - 15, (line1Y + line2Y) / 2, startX - 2, line2Y)
+      ctx.stroke()
+    # Otherwise draw a straight line.
+    else
+      startX = 0
+      endX = 0
+      if @minimapIndex[violation.line1.filename] > @minimapIndex[violation.line2.filename]
+        startX = CanvasUtil.getLeftSide(@minimapIndex[violation.line1.filename]) - 2
+        endX = CanvasUtil.getRightSide(@minimapIndex[violation.line2.filename]) + 2
+      else
+        startX = CanvasUtil.getRightSide(@minimapIndex[violation.line1.filename]) + 2
+        endX = CanvasUtil.getLeftSide(@minimapIndex[violation.line2.filename]) - 2
+      line1Y = CanvasUtil.getLineTop(violation.line1.line)
+      line2Y = CanvasUtil.getLineTop(violation.line2.line)
+      console.log("Drawing a curve from #{startX},#{line1Y} to #{endX}, #{line2Y}")
+      ctx = @minimapOverlay.getContext("2d")
+      ctx.strokeStyle = 'red'
+      ctx.lineWidth = 1
       ctx.beginPath()
       ctx.moveTo(startX, line1Y)
-      ctx.quadraticCurveTo(startX - 15, (line1Y + line2Y) / 2, startX, line2Y)
+      ctx.lineTo(endX , line2Y)
       ctx.stroke()
 
   groupCodeWithViolations: (violations, texts) ->

@@ -185,6 +185,9 @@ class DetailCodeView
       divToAdd.classList.add('bottom')
 
     # First we check if there is a source annotation to use.
+    console.log("LineInfoText: ")
+    console.log(lineInfo.text)
+    console.log(lineInfo.text is undefined)
     if lineInfo.text is undefined
       emptyDiv = document.createElement('div')
       emptyDiv.classList.add('empty')
