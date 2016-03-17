@@ -15,6 +15,8 @@ class CilkscreenPluginView
   minimaps: null
   minimapIndex: null
 
+  violationMarkers: null
+
   # Properties from parents
   props: null
   onCloseCallback: null
@@ -42,7 +44,7 @@ class CilkscreenPluginView
     title.textContent = "Cilkscreen Detected Race Conditions"
     close = document.createElement('div')
     close.classList.add('header-close', 'icon', 'icon-x')
-    $(close).on('click', @onCloseCallback)
+    $(close).on('click', (() => @onClosePanel()))
     header.appendChild(title)
     header.appendChild(close)
 
@@ -127,6 +129,7 @@ class CilkscreenPluginView
     @minimaps = {}
     @minimapIndex = {}
     minimapPromises = []
+    @violationMarkers = []
     for index in [0 .. augmentedViolations.length - 1]
       violation = augmentedViolations[index]
       violationView = new DetailCodeView({
@@ -136,6 +139,9 @@ class CilkscreenPluginView
         onViolationClickCallback: ((index) => @highlightViolation(index, false))
       })
       @violationContainer.appendChild(violationView.getElement())
+      @violationMarkers.push(violation.markers)
+      console.log("vDec: ")
+      console.log(@violationMarkers)
 
       if violation.line1.filename
         if not @minimaps[violation.line1.filename]
@@ -264,7 +270,7 @@ class CilkscreenPluginView
       violationDiv = @violationContainer.children[@currentHighlightedIndex]
       violationDiv.classList.remove('highlighted')
       $("[violation-id=#{@currentHighlightedIndex}-visible]").css("stroke", "#ff0000")
-      # TODO: something for markers as well...
+      @resetMarkers()
       @currentHighlightedIndex = null
 
   setHighlight: (index) ->
@@ -272,6 +278,22 @@ class CilkscreenPluginView
     violationDiv = @violationContainer.children[index]
     violationDiv.classList.add('highlighted')
     $("[violation-id=#{index}-visible]").css("stroke", "#ffff00")
+    @highlightMarkers(index)
+
+  highlightMarkers: (index) ->
+    if @violationMarkers isnt null
+      for marker in @violationMarkers[index]
+        console.log("Highlighting marker...")
+        marker.highlightMarker()
+
+  resetMarkers: () ->
+    console.log("in reset markers")
+    console.log(@currentHighlightedIndex)
+    if @currentHighlightedIndex isnt null and @violationMarkers isnt null
+      console.log(@violationMarkers)
+      for marker in @violationMarkers[@currentHighlightedIndex]
+        console.log("Resetting marker...")
+        marker.resetMarker()
 
   setViolations: (violations) ->
     @update(violations)
@@ -282,6 +304,10 @@ class CilkscreenPluginView
 
   # Returns an object that can be retrieved when package is activated
   serialize: ->
+
+  onClosePanel: (e) ->
+    @resetHighlight()
+    @onCloseCallback()
 
   clearChildren: () ->
     console.log("Clearing children...")

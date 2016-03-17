@@ -155,8 +155,6 @@ class Project
         else
           editorCache[editorPath] = [textEditor]
 
-    @projectView.setViolations(results)
-
     # Go through each of the cilkscreen violations and make markers accordingly.
     for i in [0 .. results.length - 1]
       violation = results[i]
@@ -164,23 +162,28 @@ class Project
       path2 = violation.line2.filename
       line1 = +violation.line1.line
       line2 = +violation.line2.line
+      violation.markers = []
 
       editorCache[path1]?.forEach((textEditor) =>
-        @createCilkscreenMarker(textEditor, line1, i)
+        violation.markers.push(@createCilkscreenMarker(textEditor, line1, i))
       )
       editorCache[path2]?.forEach((textEditor) =>
-        @createCilkscreenMarker(textEditor, line2, i)
+        violation.markers.push(@createCilkscreenMarker(textEditor, line2, i))
       )
+
+    @projectView.setViolations(results)
 
   createCilkscreenMarker: (editor, line, i) ->
     cilkscreenGutter = editor.gutterWithName('cilkscreen-lint')
     range = [[line - 1, 0], [line - 1, Infinity]]
     marker = editor.markBufferRange(range, {id: 'cilkscreen'})
-    cilkscreenGutter.decorateMarker(marker, {type: 'gutter', item: new MarkerView(
+    markerView = new MarkerView(
       {index: i},
       (index) =>
         @onMarkerClickCallback(index)
-    )})
+    )
+    cilkscreenGutter.decorateMarker(marker, {type: 'gutter', item: markerView})
+    return markerView
 
   killCilkscreen: () ->
     console.log("Attempting to kill cilkscreen for path #{@path}...")

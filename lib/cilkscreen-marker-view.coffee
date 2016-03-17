@@ -25,3 +25,9 @@ class CilkscreenMarkerView
 
   getElement: () ->
     return @element
+
+  highlightMarker: () ->
+    @element.classList.add('highlighted')
+
+  resetMarker: () ->
+    @element.classList.remove('highlighted')

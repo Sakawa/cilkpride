@@ -19,12 +19,16 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
     display: inline-block;
     padding-left: .5em;    // aligns with the padding for line-number
     cursor: pointer;
-  }
 
-  .alert:after {
-    .octicon-font();
-    content: @alert;
-    color: @text-color-error;
+    &:after {
+      .octicon-font();
+      content: @alert;
+      color: @text-color-error;
+    }
+
+    &.highlighted:after {
+      color: @text-color-warning;
+    }
   }
 }
 
