@@ -3,12 +3,13 @@ FileLineReader = require('./file-read-lines')
 {CompositeDisposable} = require('atom')
 DetailCodeView = require('./detail-code-view')
 MinimapView = require('./minimap-view')
-CanvasUtil = require('./canvas-util')
+{MinimapUtil} = require('./utils')
+SVG = require('./svg')
 
 module.exports =
 class CilkscreenPluginView
   element: null
-  currentViolation: null
+  currentHighlightedIndex: null
   violationContainer: null
   minimapContainer: null
   minimaps: null
@@ -115,12 +116,9 @@ class CilkscreenPluginView
 
     @clearChildren()
 
-    @minimapOverlay = document.createElement('canvas')
+    @minimapOverlay = SVG.createSVGObject(0, 32)
     @minimapOverlay.classList.add('minimap-canvas-overlay')
     @minimapContainer.appendChild(@minimapOverlay)
-    $(@minimapOverlay).mousemove((e) =>
-      @minimapHover(e)
-    )
     $(@minimapOverlay).click((e) =>
       @minimapOnClick(e)
     )
@@ -129,11 +127,13 @@ class CilkscreenPluginView
     @minimaps = {}
     @minimapIndex = {}
     minimapPromises = []
-    for violation in augmentedViolations
+    for index in [0 .. augmentedViolations.length - 1]
+      violation = augmentedViolations[index]
       violationView = new DetailCodeView({
         isVisual: true,
+        index: index,
         violation: violation,
-        onViolationClickCallback: ((node) => @onViolationClickCallback(node))
+        onViolationClickCallback: ((index) => @highlightViolation(index, false))
       })
       @violationContainer.appendChild(violationView.getElement())
 
@@ -160,6 +160,7 @@ class CilkscreenPluginView
       minimaps = Object.getOwnPropertyNames(@minimaps)
       for minimap in minimaps
         height = @minimaps[minimap].getHeight()
+        console.log("looking at: #{height} height")
         if maxHeight < height
           maxHeight = height
       @minimapOverlay.style.height = maxHeight + "px"
@@ -171,20 +172,6 @@ class CilkscreenPluginView
         @drawViolationConnector(augmentedViolations[index], index)
     )
 
-  minimapHover: (e) ->
-    rect = @minimapOverlay.getBoundingClientRect();
-    parentTop = @minimapOverlay.offsetTop
-    parentLeft = @minimapOverlay.offsetLeft
-    left = Math.round(e.pageX - rect.left)
-    top = Math.round(e.pageY - rect.top)
-    console.log("left: #{e.pageX - rect.left}, top: #{e.pageY - rect.top}")
-    ctx = @minimapOverlay.getContext('2d')
-    data = ctx.getImageData(left, top, 1, 1).data
-    if data[3] isnt 0
-      @minimapOverlay.style.cursor = "pointer"
-    else
-      @minimapOverlay.style.cursor = "auto"
-
   minimapOnClick: (e) ->
     rect = @minimapOverlay.getBoundingClientRect();
     parentTop = @minimapOverlay.offsetTop
@@ -192,67 +179,52 @@ class CilkscreenPluginView
     left = Math.round(e.pageX - rect.left)
     top = Math.round(e.pageY - rect.top)
     console.log("clicked: left: #{e.pageX - rect.left}, top: #{e.pageY - rect.top}")
-    ctx = @minimapOverlay.getContext('2d')
-    data = ctx.getImageData(left, top, 1, 1).data
-    if data[3] is 0
+    violationId = e.target.getAttribute('violation-id')
+    console.log("clicked on id: #{violationId}")
+    if violationId
+      @highlightViolation(+violationId, true)
+    else
       e.stopPropagation()
-    else if data[0] is 255
-      console.log("clicked violation: #{data[1]}")
-      @highlightViolation(data[1])
 
   drawViolationConnector: (violation, index) ->
-    # TODO: assuming < 256 conditions here...
-    console.log("Drawing violation connector.")
-    console.log(violation)
+    DEBUG = false
+    console.log("Drawing violation connector.") if DEBUG
+    console.log(violation) if DEBUG
 
     if not violation.line1.filename or not violation.line2.filename
       return
 
     # The violation is within the same file, so we'll have to draw a curved line.
     if violation.line1.filename is violation.line2.filename
-      console.log(@minimapIndex)
-      console.log(@minimapIndex[violation.line1.filename])
-      startX = CanvasUtil.getLeftSide(@minimapIndex[violation.line1.filename])
-      line1Y = CanvasUtil.getLineTop(violation.line1.line)
-      line2Y = CanvasUtil.getLineTop(violation.line2.line)
-      console.log("Drawing a curve from #{startX},#{line1Y} to #{startX}, #{line2Y}")
-      console.log("The control point will be #{startX - 15}, #{(line1Y + line2Y) / 2}")
-      ctx = @minimapOverlay.getContext("2d")
-      ctx.strokeStyle = "rgb(255,#{index},0)"
-      ctx.lineWidth = 1
-      ctx.beginPath()
-      ctx.moveTo(startX - 2, line1Y)
-      ctx.quadraticCurveTo(startX - 15, (line1Y + line2Y) / 2, startX - 2, line2Y)
-      ctx.stroke()
+      console.log(@minimapIndex) if DEBUG
+      console.log(@minimapIndex[violation.line1.filename]) if DEBUG
+      startX = MinimapUtil.getLeftSide(@minimapIndex[violation.line1.filename])
+      line1Y = MinimapUtil.getLineTop(violation.line1.line)
+      line2Y = MinimapUtil.getLineTop(violation.line2.line)
+      SVG.addSVGCurve(@minimapOverlay, "#{index}", startX, line1Y, startX, line2Y)
     # Otherwise draw a straight line.
     else
       startX = 0
       endX = 0
       if @minimapIndex[violation.line1.filename] > @minimapIndex[violation.line2.filename]
-        startX = CanvasUtil.getLeftSide(@minimapIndex[violation.line1.filename]) - 2
-        endX = CanvasUtil.getRightSide(@minimapIndex[violation.line2.filename]) + 2
+        startX = MinimapUtil.getLeftSide(@minimapIndex[violation.line1.filename]) - 2
+        endX = MinimapUtil.getRightSide(@minimapIndex[violation.line2.filename]) + 2
       else
-        startX = CanvasUtil.getRightSide(@minimapIndex[violation.line1.filename]) + 2
-        endX = CanvasUtil.getLeftSide(@minimapIndex[violation.line2.filename]) - 2
-      line1Y = CanvasUtil.getLineTop(violation.line1.line)
-      line2Y = CanvasUtil.getLineTop(violation.line2.line)
-      console.log("Drawing a curve from #{startX},#{line1Y} to #{endX}, #{line2Y}")
-      ctx = @minimapOverlay.getContext("2d")
-      ctx.strokeStyle = "rgb(255,#{index},0)"
-      ctx.lineWidth = 1
-      ctx.beginPath()
-      ctx.moveTo(startX, line1Y)
-      ctx.lineTo(endX , line2Y)
-      ctx.stroke()
+        startX = MinimapUtil.getRightSide(@minimapIndex[violation.line1.filename]) + 2
+        endX = MinimapUtil.getLeftSide(@minimapIndex[violation.line2.filename]) - 2
+      line1Y = MinimapUtil.getLineTop(violation.line1.line)
+      line2Y = MinimapUtil.getLineTop(violation.line2.line)
+      console.log("Drawing a curve from #{startX},#{line1Y} to #{endX}, #{line2Y}") if DEBUG
+      SVG.addSVGLine(@minimapOverlay, "#{index}", startX, line1Y, endX, line2Y)
 
   groupCodeWithViolations: (violations, texts) ->
     augmentedViolationList = []
     for violation in violations
       augmentedViolation = violation
       codeSnippetsFound = 0
-      console.log(violation)
+      # console.log(violation)
       for text in texts
-        console.log(text)
+        # console.log(text)
         if codeSnippetsFound is 2
           break
         if violation.line1.filename is text.filename and violation.line1.line - @HALF_CONTEXT is text.lineRange[0]
@@ -270,39 +242,52 @@ class CilkscreenPluginView
     console.log(augmentedViolationList)
     return augmentedViolationList
 
-  highlightViolation: (index) ->
-    @currentViolation.classList.remove('highlighted') if @currentViolation isnt null
-
-    @currentViolation = @violationContainer.children[index]
-    if not @currentViolation
-      console.log("Uh oh, current violation not found but highlightViolation triggered")
-    @currentViolation.classList.add('highlighted')
-    @scrollToViolation()
-
-  onViolationClickCallback: (node) ->
-    if @currentViolation is node
+  highlightViolation: (index, shouldScroll) ->
+    if @currentHighlightedIndex is index
+      @scrollToViolation()
       return
-    @currentViolation.classList.remove('highlighted') if @currentViolation isnt null
-    node.classList.add('highlighted')
-    @currentViolation = node
+
+    @resetHighlight()
+
+    console.log("Highlighting violation: #{index}")
+    if not @violationContainer.children[index]
+      console.log("Uh oh, current violation not found but highlightViolation triggered")
+    else
+      console.log($("[violation-id=#{index}]"))
+      @setHighlight(index)
+      if shouldScroll
+        @scrollToViolation()
+
+  resetHighlight: () ->
+    console.log("resetHighlight: #{@currentHighlightedIndex}")
+    if @currentHighlightedIndex isnt null
+      violationDiv = @violationContainer.children[@currentHighlightedIndex]
+      violationDiv.classList.remove('highlighted')
+      $("[violation-id=#{@currentHighlightedIndex}-visible]").css("stroke", "#ff0000")
+      # TODO: something for markers as well...
+      @currentHighlightedIndex = null
+
+  setHighlight: (index) ->
+    @currentHighlightedIndex = index
+    violationDiv = @violationContainer.children[index]
+    violationDiv.classList.add('highlighted')
+    $("[violation-id=#{index}-visible]").css("stroke", "#ffff00")
 
   setViolations: (violations) ->
     @update(violations)
 
   scrollToViolation: () ->
-    violationTop = @currentViolation.offsetTop
+    violationTop = @violationContainer.children[@currentHighlightedIndex].offsetTop
     @violationContainer.scrollTop = violationTop - 10
 
   # Returns an object that can be retrieved when package is activated
   serialize: ->
 
   clearChildren: () ->
-    # Remove any old children, if necessary
-    while @violationContainer and @violationContainer.firstChild
-      @violationContainer.removeChild(@violationContainer.firstChild)
+    console.log("Clearing children...")
 
-    while @minimapContainer and @minimapContainer.firstChild
-      @minimapContainer.removeChild(@minimapContainer.firstChild)
+    $(@violationContainer).empty()
+    $(@minimapContainer).empty()
 
   # Tear down any state and detach
   destroy: ->

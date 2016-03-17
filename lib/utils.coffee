@@ -1,10 +1,8 @@
-VERTICAL_PADDING = 5
-HORIZONTAL_PADDING = 20
-CANVAS_WIDTH = 200
-LINE_HEIGHT = 4
-
-module.exports =
-class CanvasUtil
+class MinimapUtil
+  VERTICAL_PADDING = 5
+  HORIZONTAL_PADDING = 20
+  CANVAS_WIDTH = 200
+  LINE_HEIGHT = 4
 
   constructor: () ->
 
@@ -16,3 +14,5 @@ class CanvasUtil
 
   @getLineTop: (line) ->
     return line * LINE_HEIGHT - 2
+
+module.exports = {MinimapUtil}

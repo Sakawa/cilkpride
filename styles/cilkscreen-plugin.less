@@ -47,7 +47,7 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
 
 .cilkscreen-detail-view {
   width: @view-width;
-  height: 200px;
+  height: 400px;
   margin-bottom: 0px;
   border-collapse: collapse;
 
@@ -92,6 +92,10 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
         top: 32px;
 
         z-index: 11;
+
+        .svg-path, .svg-line {
+          cursor: pointer;
+        }
       }
 
       .cs-minimap-element {
@@ -167,6 +171,7 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
         .read-write-div {
           order: -2;
           flex-basis: auto;
+          cursor: default;
         }
 
         .line-number {

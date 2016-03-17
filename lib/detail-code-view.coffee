@@ -13,11 +13,13 @@ class DetailCodeView
   # Properties from parent
   props: null
   violation: null
+  index: null
   onViolationClickCallback: null
 
   constructor: (props) ->
     @props = props
     @violation = props.violation
+    @index = props.index
     @onViolationClickCallback = props.onViolationClickCallback
 
     if @props.isVisual
@@ -30,7 +32,7 @@ class DetailCodeView
     violationView = document.createElement('div')
     violationView.classList.add('violation-div', 'visual')
     $(violationView).click((e) =>
-      @onViolationClickCallback(violationView)
+      @onViolationClickCallback(@index)
     )
     violationView.appendChild(@constructVisualPreview(@violation.line1, null, true))
     violationView.appendChild(@constructVisualPreview(@violation.line2, @parseStacktrace(@violation.stacktrace), false))
@@ -42,7 +44,7 @@ class DetailCodeView
     violationView = document.createElement('div')
     violationView.classList.add('violation-div')
     $(violationView).click((e) =>
-      @onViolationClickCallback(violationView)
+      @onViolationClickCallback(@index)
     )
 
     summaryDiv = document.createElement('div')
@@ -185,9 +187,9 @@ class DetailCodeView
       divToAdd.classList.add('bottom')
 
     # First we check if there is a source annotation to use.
-    console.log("LineInfoText: ")
-    console.log(lineInfo.text)
-    console.log(lineInfo.text is undefined)
+    # console.log("LineInfoText: ")
+    # console.log(lineInfo.text)
+    # console.log(lineInfo.text is undefined)
     if lineInfo.text is undefined
       emptyDiv = document.createElement('div')
       emptyDiv.classList.add('empty')

@@ -222,14 +222,14 @@ class Project
         if line.indexOf("access at") isnt -1
           splitLine = line.trim().split(' ')
           accessType = splitLine[0]
-          console.log(splitLine)
+          # console.log(splitLine)
           sourceCodeLine = splitLine[4].slice(1, -1)
-          console.log(sourceCodeLine)
+          # console.log(sourceCodeLine)
           splitSC = sourceCodeLine.split(',')
           # There will be 6 elements if the line has a source code annotation.
           if splitLine.length is 6
             sourceCodeLine = splitSC[0]
-            console.log(sourceCodeLine)
+            # console.log(sourceCodeLine)
             splitIndex = sourceCodeLine.lastIndexOf(':')
             sourceCodeFile = sourceCodeLine.substr(0, splitIndex)
             sourceCodeLine = +sourceCodeLine.substr(splitIndex + 1)
@@ -245,14 +245,14 @@ class Project
             rawText: line
           }
 
-          console.log(lineData)
+          # console.log(lineData)
 
           if currentViolation.line1
             currentViolation.line2 = lineData
           else
             currentViolation.line1 = lineData
         else if line.indexOf("called by") isnt -1
-          console.log(currentViolation)
+          # console.log(currentViolation)
           currentViolation.stacktrace.push(line)
         else
           violations.push(currentViolation)
@@ -308,7 +308,8 @@ class Project
         @statusBar.displayNoErrors()
 
   highlightViolationInDetailPanel: (index) ->
-    @projectView.highlightViolation(index)
+    console.log("highlightViolationInDetailPanel called: #{index}")
+    @projectView.highlightViolation(index, true)
 
   scrollToViolation: () ->
     @projectView.scrollToViolation()

@@ -15,6 +15,7 @@ module.exports = CilkscreenPlugin =
 
   # Singleton UI elements
   detailPanel: null
+  panelPath: null
   statusBarElement: null
   statusBarTile: null
 
@@ -24,7 +25,6 @@ module.exports = CilkscreenPlugin =
     @statusBarElement = new StatusBarView({
       onErrorClickCallback: () => @onStatusTileClick()
     })
-    @statusBarElement.updatePath(@getActivePanePath())
 
     # Register command that toggles this view
     @subscriptions.add(atom.commands.add('atom-workspace', 'cilkscreen-plugin:toggle': () => @toggle()))
@@ -55,6 +55,7 @@ module.exports = CilkscreenPlugin =
 
   consumeStatusBar: (statusBar) ->
     @statusBarTile = statusBar.addLeftTile(item: @statusBarElement.getElement(), priority: -1)
+    @statusBarElement.updatePath(@getActivePanePath())
 
   deactivate: ->
     @subscriptions.dispose()
@@ -63,6 +64,7 @@ module.exports = CilkscreenPlugin =
     @statusBarTile = null
     @statusBarElement = null
     @detailPanel = null
+    @panelPath = null
 
   serialize: ->
     cilkscreenPluginViewState: null
@@ -73,23 +75,27 @@ module.exports = CilkscreenPlugin =
   onMarkerClick: (path, violationIndex) ->
     console.log("Marker clicked")
     console.log(violationIndex)
-    console.log(this)
     console.log(@detailPanel)
 
     project = @projects[path]
-    project.highlightViolationInDetailPanel(violationIndex)
     # TODO: possibly further investigate flow issue here
-    if @detailPanel
-      @detailPanel.destroy()
-    @detailPanel = atom.workspace.addBottomPanel(item: project.getDetailPanel(), visible: true)
-    project.scrollToViolation()
+    @changeDetailPanel(path)
+    project.highlightViolationInDetailPanel(violationIndex)
 
   onStatusTileClick: () ->
     path = @getActivePanePath()
+    @changeDetailPanel(path)
 
-    if @detailPanel
-      @detailPanel.destroy()
-    @detailPanel = atom.workspace.addBottomPanel(item: @projects[path].getDetailPanel(), visible: true)
+  changeDetailPanel: (path) ->
+    project = @projects[path]
+    if path isnt @panelPath or not @detailPanel
+      if @detailPanel
+        @detailPanel.destroy()
+        console.log("Destroyed detail panel.")
+      @detailPanel = atom.workspace.addBottomPanel(item: project.getDetailPanel(), visible: true)
+      @panelPath = path
+    else
+      @detailPanel.show()
 
   onPanelCloseCallback: () ->
     @detailPanel.hide()
@@ -114,8 +120,9 @@ module.exports = CilkscreenPlugin =
         newPath = editor.getPath?()
         if newPath
           newProjectPath = @findConfFile(newPath)
-          @editorToPath[editor.id] = newProjectPath
-          @registerEditorWithProject(newProjectPath, editor)
+          if newProjectPath
+            @editorToPath[editor.id] = newProjectPath
+            @registerEditorWithProject(newProjectPath, editor)
         else
           delete @editorToPath[editor.id]
     ))
@@ -158,7 +165,8 @@ module.exports = CilkscreenPlugin =
 
   registerEditorWithProject: (projectPath, editor) ->
     console.log("Trying to register editor id #{editor.id} with #{projectPath} from cilkscreen-plugin.")
-    if projectPath not in @projects
+    if projectPath not in Object.getOwnPropertyNames(@projects)
+      console.log("Path doesn't currently exist, so making a new one...")
       @projects[projectPath] = new Project({
         onMarkerClickCallback: ((index) => @onMarkerClick(projectPath, index))
         onPanelCloseCallback: (() => @onPanelCloseCallback())

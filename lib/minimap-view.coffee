@@ -106,4 +106,4 @@ class MinimapView
     return @filename
 
   getHeight: () ->
-    return @minimap.getScreenHeight()
+    return @minimap.getHeight()
