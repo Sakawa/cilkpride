@@ -1,5 +1,7 @@
 fs = require('fs')
 
+CustomSet = require('./set')
+
 module.exports =
 class FileLineReader
 
@@ -39,21 +41,12 @@ class FileLineReader
     return fs.readFileSync(filename, { encoding: 'utf-8' })
 
   @readLineNumBatch: (readRequestArray, callback) ->
-    index = 0
-    index2 = 1
-    curViolation = readRequestArray[0]
-    while index < readRequestArray.length
-      if index2 >= readRequestArray.length
-        index += 1
-        curViolation = readRequestArray[index]
-        index2 = index + 1
-        continue
+    isEqual = (obj1, obj2) ->
+      return obj1[0] is obj2[0] and obj1[1][0] is obj2[1][0] and obj1[1][1] is obj2[1][1]
 
-      violation = readRequestArray[index2]
-      if FileLineReader.isEqual(violation, curViolation)
-        readRequestArray.splice(index2, 1)
-      else
-        index2 += 1
+    fileSet = new CustomSet(isEqual)
+    fileSet.add(readRequestArray)
+    readRequestArray = fileSet.getContents()
 
     requests = readRequestArray.map((item) =>
       return new Promise((resolve) =>
@@ -64,6 +57,3 @@ class FileLineReader
     Promise.all(requests).then((data) =>
       callback(data)
     )
-
-  @isEqual: (v1, v2) ->
-    return v1[0] is v2[0] and v1[1][0] is v2[1][0] and v1[1][1] is v2[1][1]

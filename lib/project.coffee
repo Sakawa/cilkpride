@@ -6,6 +6,7 @@ path = require('path');
 process = require('process')
 spawn = require('child_process').spawn
 
+FileLineReader = require('./file-read-lines')
 MarkerView = require('./cilkscreen-marker-view')
 ProjectView = require('./cilkscreen-plugin-view')
 
@@ -57,6 +58,7 @@ class Project
   # Timer functions
 
   initializeCilkscreenTimer: () ->
+    clearInterval(@idleTimeout) if @idleTimeout
     @idleTimeout = setTimeout(
       () =>
         console.log("Idle timeout start! #{new Date()}")
@@ -71,6 +73,9 @@ class Project
     @killCilkscreen()
 
   startCilkscreen: () ->
+    # Ensure only one cilkscreen thread per project is active.
+    @killCilkscreen()
+
     cilkLibPath = atom.config.get('cilkscreen-plugin.cilkLibPath')
     cilktoolsPath = atom.config.get('cilkscreen-plugin.cilktoolsPath')
 
@@ -97,15 +102,11 @@ class Project
         console.log("Killing old markers, if any...")
         @destroyOldMarkers()
         console.log("Parsing data...")
-        parsedResults = @parseCilkscreenOutput(cilkscreenOutput)
-        @currentState.violations = parsedResults
-        @currentState.lastRuntime = Date.now() - @currentState.start
-        console.log("Just set lastRuntime #{@path} to #{@currentState.lastRuntime}")
-        @currentState.numViolations = parsedResults.length
-        console.log("The last run took #{@currentState.lastRuntime / 1000} seconds.")
-        @createMarkers(parsedResults)
-      @currentState.start = null
-      @updateStatusTile()
+        @processViolations(cilkscreenOutput)
+      else
+        console.log("Code not 0...")
+        @currentState.start = null
+        @updateStatusTile()
     )
 
     # Debug event handlers
@@ -208,6 +209,24 @@ class Project
       for marker in markers
         marker.destroy()
 
+  ###
+    Violation processing code
+  ###
+
+  processViolations: (text) ->
+    violations = @parseCilkscreenOutput(text)
+    @getViolationLineCode(violations,
+      (violations) =>
+        @currentState.violations = violations
+        @currentState.lastRuntime = Date.now() - @currentState.start
+        console.log("Just set lastRuntime #{@path} to #{@currentState.lastRuntime}")
+        @currentState.numViolations = violations.length
+        console.log("The last run took #{@currentState.lastRuntime / 1000} seconds.")
+        @createMarkers(violations)
+        @currentState.start = null
+        @updateStatusTile()
+    )
+
   # Cilkscreen-related functions
   parseCilkscreenOutput: (text) ->
     text = text.split('\n')
@@ -261,8 +280,64 @@ class Project
           violations.push(currentViolation)
           currentViolation = null
 
+    mergeStacktraces = (item, entry) ->
+      entry.stacktrace.push(item.stacktrace)
+
+    # TODO: yes, fill this out
+    isEqual = (obj1, obj2) ->
+      return false
+
     console.log(violations)
     return violations
+
+  getViolationLineCode: (violations, next) ->
+    HALF_CONTEXT = 2
+
+    readRequestArray = []
+    violations.forEach((item) =>
+      if item.line1.filename
+        readRequestArray.push([
+          item.line1.filename,
+          [item.line1.line - HALF_CONTEXT, item.line1.line + HALF_CONTEXT]
+        ])
+      if item.line2.filename
+        readRequestArray.push([
+          item.line2.filename,
+          [item.line2.line - HALF_CONTEXT, item.line2.line + HALF_CONTEXT]
+        ])
+    )
+
+    console.log("Sending violations off to read: ")
+    console.log(readRequestArray)
+    FileLineReader.readLineNumBatch(readRequestArray, (texts) =>
+      @groupCodeWithViolations(violations, texts)
+      next(violations)
+    )
+
+  groupCodeWithViolations: (violations, texts) ->
+    for violation in violations
+      codeSnippetsFound = 0
+      # console.log(violation)
+      for text in texts
+        # console.log(text)
+        if codeSnippetsFound is 2
+          break
+        if violation.line1.filename is text.filename and violation.line1.line - 2 is text.lineRange[0]
+          violation.line1.text = text.text
+          violation.line1.lineRange = text.lineRange
+          codeSnippetsFound++
+        if violation.line2.filename is text.filename and violation.line2.line - 2 is text.lineRange[0]
+          violation.line2.text = text.text
+          violation.line2.lineRange = text.lineRange
+          codeSnippetsFound++
+      if codeSnippetsFound < 2
+        console.log("groupCodeWithViolations: too few texts found for a violation")
+    console.log("Finished groupCodeWithViolations")
+    console.log(violations)
+
+  ###
+    Hooks
+  ###
 
   registerEditor: (editor) ->
     console.log("Trying to register an editor with project path #{@path}.")

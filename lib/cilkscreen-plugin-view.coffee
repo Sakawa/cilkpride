@@ -91,26 +91,7 @@ class CilkscreenPluginView
     console.log("updating plugin view: start")
     console.log(violations)
 
-    readRequestArray = []
-    violations.forEach((item) =>
-      if item.line1.filename
-        readRequestArray.push([
-          item.line1.filename,
-          [item.line1.line - @HALF_CONTEXT, item.line1.line + @HALF_CONTEXT]
-        ])
-      if item.line2.filename
-        readRequestArray.push([
-          item.line2.filename,
-          [item.line2.line - @HALF_CONTEXT, item.line2.line + @HALF_CONTEXT]
-        ])
-    )
-
-    console.log("Sending violations off to read: ")
-    console.log(readRequestArray)
-    FileLineReader.readLineNumBatch(readRequestArray, (texts) =>
-      augmentedViolations = @groupCodeWithViolations(violations, texts)
-      @createViolationDivs(augmentedViolations)
-    )
+    @createViolationDivs(violations)
 
   createViolationDivs: (augmentedViolations) ->
     console.log("createViolationDivs: called with ")
@@ -140,8 +121,6 @@ class CilkscreenPluginView
       })
       @violationContainer.appendChild(violationView.getElement())
       @violationMarkers.push(violation.markers)
-      console.log("vDec: ")
-      console.log(@violationMarkers)
 
       if violation.line1.filename
         if not @minimaps[violation.line1.filename]
@@ -222,31 +201,6 @@ class CilkscreenPluginView
       line2Y = MinimapUtil.getLineTop(violation.line2.line)
       console.log("Drawing a curve from #{startX},#{line1Y} to #{endX}, #{line2Y}") if DEBUG
       SVG.addSVGLine(@minimapOverlay, "#{index}", startX, line1Y, endX, line2Y)
-
-  groupCodeWithViolations: (violations, texts) ->
-    augmentedViolationList = []
-    for violation in violations
-      augmentedViolation = violation
-      codeSnippetsFound = 0
-      # console.log(violation)
-      for text in texts
-        # console.log(text)
-        if codeSnippetsFound is 2
-          break
-        if violation.line1.filename is text.filename and violation.line1.line - @HALF_CONTEXT is text.lineRange[0]
-          augmentedViolation.line1.text = text.text
-          augmentedViolation.line1.lineRange = text.lineRange
-          codeSnippetsFound++
-        if violation.line2.filename is text.filename and violation.line2.line - @HALF_CONTEXT is text.lineRange[0]
-          augmentedViolation.line2.text = text.text
-          augmentedViolation.line2.lineRange = text.lineRange
-          codeSnippetsFound++
-      augmentedViolationList.push(augmentedViolation)
-      if codeSnippetsFound < 2
-        console.log("groupCodeWithViolations: too few texts found for a violation")
-    console.log("Finished groupCodeWithViolations")
-    console.log(augmentedViolationList)
-    return augmentedViolationList
 
   highlightViolation: (index, shouldScroll) ->
     if @currentHighlightedIndex is index
