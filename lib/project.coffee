@@ -9,6 +9,7 @@ spawn = require('child_process').spawn
 FileLineReader = require('./file-read-lines')
 MarkerView = require('./cilkscreen-marker-view')
 ProjectView = require('./cilkscreen-plugin-view')
+CustomSet = require('./set')
 
 module.exports =
 class Project
@@ -237,7 +238,8 @@ class Project
     for line in text
       if line.indexOf("Race condition on location ") isnt -1
         # We have found the first line in a violation
-        currentViolation = {stacktrace: [], memoryLocation: line}
+        currentViolation = {stacktrace: {}, memoryLocation: line}
+        currentStacktrace = []
         continue
 
       if currentViolation isnt null
@@ -271,22 +273,38 @@ class Project
 
           if currentViolation.line1
             currentViolation.line2 = lineData
+            lineId = lineData.filename + ":" + lineData.line
+            currentViolation.stacktrace[lineId] = []
           else
             currentViolation.line1 = lineData
+            lineId = lineData.filename + ":" + lineData.line
+            currentViolation.stacktrace[lineId] = []
         else if line.indexOf("called by") isnt -1
           # console.log(currentViolation)
-          currentViolation.stacktrace.push(line)
+          currentStacktrace.push(line)
         else
+          lineId = currentViolation.line2.filename + ":" + currentViolation.line2.line
+          currentViolation.stacktrace[lineId].push(currentStacktrace)
           violations.push(currentViolation)
           currentViolation = null
 
-    mergeStacktraces = (item, entry) ->
-      entry.stacktrace.push(item.stacktrace)
+    mergeStacktraces = (entry, item) ->
+      lineId = item.line2.filename + ":" + item.line2.line
+      entry.stacktrace[lineId].push(item.stacktrace[lineId][0])
 
     # TODO: yes, fill this out
     isEqual = (obj1, obj2) ->
-      return false
+      isFileEqual = (file1, file2) ->
+        return file1.filename is file2.filename and file1.line is file2.line
 
+      return (isFileEqual(obj1.line1, obj2.line1) and isFileEqual(obj1.line2, obj2.line2)) or
+        (isFileEqual(obj1.line2, obj2.line1) and isFileEqual(obj1.line1, obj2.line2))
+
+    violationSet = new CustomSet(isEqual)
+    violationSet.add(violations, mergeStacktraces)
+    violations = violationSet.getContents()
+
+    console.log("Pruned violations...")
     console.log(violations)
     return violations
 
@@ -307,8 +325,6 @@ class Project
         ])
     )
 
-    console.log("Sending violations off to read: ")
-    console.log(readRequestArray)
     FileLineReader.readLineNumBatch(readRequestArray, (texts) =>
       @groupCodeWithViolations(violations, texts)
       next(violations)
@@ -330,7 +346,7 @@ class Project
           violation.line2.text = text.text
           violation.line2.lineRange = text.lineRange
           codeSnippetsFound++
-      if codeSnippetsFound < 2
+      if codeSnippetsFound < 2 and violation.line1.filename isnt null and violation.line2.filename isnt null
         console.log("groupCodeWithViolations: too few texts found for a violation")
     console.log("Finished groupCodeWithViolations")
     console.log(violations)

@@ -48,6 +48,9 @@ class FileLineReader
     fileSet.add(readRequestArray)
     readRequestArray = fileSet.getContents()
 
+    console.log("Sending violations off to read: ")
+    console.log(readRequestArray)
+
     requests = readRequestArray.map((item) =>
       return new Promise((resolve) =>
         FileLineReader.readLineNum(item[0], item[1], resolve)
