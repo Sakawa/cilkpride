@@ -139,7 +139,7 @@ class CilkscreenPluginView
           @minimaps[violation.line1.filename].addDecoration(violation.line1.line)
           lineOverlay = document.createElement('div')
           lineOverlay.classList.add('minimap-line-overlay')
-          lineOverlay.style.top = MinimapUtil.getLineTop(violation.line1.line) + "px"
+          lineOverlay.style.top = (MinimapUtil.getLineTop(violation.line1.line)) + "px"
           lineOverlay.style.left = (MinimapUtil.getLeftSide(@minimapIndex[violation.line1.filename])) + "px"
           minimapLineContainer.appendChild(lineOverlay)
           DetailCodeView.attachFileOpenListener(lineOverlay, violation.line1.filename, violation.line1.line)
@@ -152,7 +152,7 @@ class CilkscreenPluginView
           @minimaps[violation.line2.filename].addDecoration(violation.line2.line)
           lineOverlay = document.createElement('div')
           lineOverlay.classList.add('minimap-line-overlay')
-          lineOverlay.style.top = MinimapUtil.getLineTop(violation.line2.line) + "px"
+          lineOverlay.style.top = (MinimapUtil.getLineTop(violation.line2.line)) + "px"
           lineOverlay.style.left = (MinimapUtil.getLeftSide(@minimapIndex[violation.line2.filename])) + "px"
           minimapLineContainer.appendChild(lineOverlay)
           DetailCodeView.attachFileOpenListener(lineOverlay, violation.line2.filename, violation.line2.line)
