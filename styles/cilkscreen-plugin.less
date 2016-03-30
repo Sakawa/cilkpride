@@ -102,6 +102,21 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
         }
       }
 
+      .minimap-canvas-line-container {
+        position: absolute;
+        top: 32px;
+
+        z-index: 11;
+
+        .minimap-line-overlay {
+          position: absolute;
+          width: 200px;
+          height: 4px;
+
+          cursor: pointer;
+        }
+      }
+
       .cs-minimap-element {
         height: 100%;
         display: inline-block;
@@ -133,6 +148,8 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
         right: 0;
         overflow: scroll;
         font-size: 9pt;
+
+        border-left: 1px solid gray;
       }
     }
   }
@@ -147,7 +164,6 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
 
     .violation-div {
       border-bottom: 1px solid gray;
-      border-left: 1px solid gray;
     }
 
     .code-container-table {

@@ -204,11 +204,11 @@ class Project
       for tEditor in atom.workspace.getTextEditors()
         if tEditor.id is editorId
           editor = tEditor
-      markers = editor?.findMarkers({id: 'cilkscreen'})
-      console.log("Removing markers...")
-      console.log(markers)
-      for marker in markers
-        marker.destroy()
+          markers = editor?.findMarkers({id: 'cilkscreen'})
+          console.log("Removing markers...")
+          console.log(markers)
+          for marker in markers
+            marker.destroy()
 
   ###
     Violation processing code

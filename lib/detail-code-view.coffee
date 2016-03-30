@@ -62,6 +62,7 @@ class DetailCodeView
     if stacktrace?
       console.log("Called constructCodePreview with stack trace: ")
       console.log(stacktrace)
+    console.log(lineInfo)
 
     divToAdd = document.createElement('div')
     divToAdd.classList.add('code-container-table')
@@ -111,7 +112,8 @@ class DetailCodeView
 
     #### Text Editor
 
-    @createMiniEditorWithCode(lineCode)
+    lineEditor = @createMiniEditorWithCode(lineCode)
+    lineEditorView = atom.views.getView(lineEditor)
 
     editorCell = document.createElement('td')
     editorContainer = document.createElement('div')
@@ -132,41 +134,47 @@ class DetailCodeView
     stacktraceDiv = document.createElement('div')
     stacktraceDiv.classList.add('stacktrace-container')
     if stacktrace?
-      firstLineDiv = document.createElement('div')
-      firstLineDiv.classList.add('stacktrace-line', 'first')
-      stacktraceDiv.appendChild(firstLineDiv)
-      firstLineDiv.innerHTML = "called by: <span class='entity name function c'>#{stacktrace[0].functionName}</span> (<span class='stacktrace-line-ref'>#{stacktrace[0].filename}:#{stacktrace[0].lineNum}</span>)"
-      stacktraceLocationSpan = firstLineDiv.children[1]
-      DetailCodeView.attachFileOpenListener(stacktraceLocationSpan, stacktrace[0].rawFilename, stacktrace[0].lineNum)
+      for file in Object.getOwnPropertyNames(stacktrace)
+        console.log(stacktrace[file])
+        console.log(stacktrace[file].length)
+        if stacktrace[file].length > 0
+          for i in [0 .. stacktrace[file].length-1]
+            st = stacktrace[file][i]
+            firstLineDiv = document.createElement('div')
+            firstLineDiv.classList.add('stacktrace-line', 'first')
+            stacktraceDiv.appendChild(firstLineDiv)
+            firstLineDiv.innerHTML = "called by: <span class='entity name function c'>#{st[0].functionName}</span> (<span class='stacktrace-line-ref'>#{st[0].filename}:#{st[0].lineNum}</span>)"
+            stacktraceLocationSpan = firstLineDiv.children[1]
+            DetailCodeView.attachFileOpenListener(stacktraceLocationSpan, st[0].rawFilename, st[0].lineNum)
 
-      additionalInfoContainer = document.createElement('div')
-      additionalInfoContainer.classList.add('additional-stacktrace')
-      html = ""
-      stacktrace.slice(1).forEach((item) ->
-        html += "\t<span class='entity name function c'>#{item.functionName}</span> (<span class='stacktrace-line-ref'>#{item.filename}:#{item.lineNum}</span>)\n"
-      )
-      # Go through the extra stacktrace lines to attach our file-opening listener.
-      additionalInfoContainer.innerHTML = html.slice(0, -1)
-      for i in [1 .. additionalInfoContainer.children.length - 1] by 2
-        stacktraceIndex = Math.ceil(i / 2)
-        DetailCodeView.attachFileOpenListener(additionalInfoContainer.children[i], stacktrace[stacktraceIndex].rawFilename, stacktrace[stacktraceIndex].lineNum)
+            additionalInfoContainer = document.createElement('div')
+            additionalInfoContainer.classList.add('additional-stacktrace')
+            html = ""
+            st.slice(1).forEach((item) ->
+              html += "\t<span class='entity name function c'>#{item.functionName}</span> (<span class='stacktrace-line-ref'>#{item.filename}:#{item.lineNum}</span>)\n"
+            )
+            # Go through the extra stacktrace lines to attach our file-opening listener.
+            additionalInfoContainer.innerHTML = html.slice(0, -1)
+            for i in [1 .. additionalInfoContainer.children.length - 1] by 2
+              stacktraceIndex = Math.ceil(i / 2)
+              DetailCodeView.attachFileOpenListener(additionalInfoContainer.children[i], st[stacktraceIndex].rawFilename, st[stacktraceIndex].lineNum)
 
-      if stacktrace.length > 1
-        additionalInfoButton = document.createElement('div')
-        stacktraceDiv.appendChild(additionalInfoButton)
-        additionalInfoButton.classList.add('full-stacktrace-button')
-        additionalInfoButton.textContent = "(see full stack trace)"
+            if st.length > 1
+              additionalInfoButton = document.createElement('div')
+              stacktraceDiv.appendChild(additionalInfoButton)
+              additionalInfoButton.classList.add('full-stacktrace-button')
+              additionalInfoButton.textContent = "(see full stack trace)"
 
-        $(additionalInfoButton).click((e) =>
-          console.log("Toggling the stacktrace.")
-          $(additionalInfoContainer).toggleClass('clicked')
-          if $(additionalInfoContainer).hasClass('clicked')
-            additionalInfoButton.textContent = "(hide full stack trace)"
-          else
-            additionalInfoButton.textContent = "(see full stack trace)"
-        )
+              $(additionalInfoButton).click((e) =>
+                console.log("Toggling the stacktrace.")
+                $(additionalInfoContainer).toggleClass('clicked')
+                if $(additionalInfoContainer).hasClass('clicked')
+                  additionalInfoButton.textContent = "(hide full stack trace)"
+                else
+                  additionalInfoButton.textContent = "(see full stack trace)"
+              )
 
-        stacktraceDiv.appendChild(additionalInfoContainer)
+              stacktraceDiv.appendChild(additionalInfoContainer)
     else
       stacktraceDiv.classList.add('empty')
       stacktraceDiv.textContent = "(no stack trace available for this access)"
@@ -194,7 +202,7 @@ class DetailCodeView
     if lineInfo.text is undefined
       emptyDiv = document.createElement('div')
       emptyDiv.classList.add('empty')
-      emptyDiv.textContent = "No information on this access."
+      emptyDiv.textContent = "No information was provided for this access."
       divToAdd.appendChild(emptyDiv)
       return divToAdd
 

@@ -14,6 +14,7 @@ class CilkscreenPluginView
   minimapContainer: null
   minimaps: null
   minimapIndex: null
+  toggleVisual: true
 
   violationMarkers: null
 
@@ -41,7 +42,7 @@ class CilkscreenPluginView
     header.classList.add('header', 'table-row')
     title = document.createElement('div')
     title.classList.add('header-title')
-    title.textContent = "Cilkscreen Detected Race Conditions"
+    title.textContent = "Detected Race Conditions"
     close = document.createElement('div')
     close.classList.add('header-close', 'icon', 'icon-x')
     $(close).on('click', (() => @onClosePanel()))
@@ -55,13 +56,14 @@ class CilkscreenPluginView
 
     violationContentWrapper = document.createElement('div')
     violationContentWrapper.classList.add('violation-content-wrapper')
-    # TODO: need a better way to switch visual/non-visual
-    violationContentWrapper.classList.add('visual')
+    if @toggleVisual
+      violationContentWrapper.classList.add('visual')
     violationWrapper.appendChild(violationContentWrapper)
 
-    @minimapContainer = document.createElement('div')
-    @minimapContainer.classList.add('minimap-container')
-    violationWrapper.appendChild(@minimapContainer)
+    if @toggleVisual
+      @minimapContainer = document.createElement('div')
+      @minimapContainer.classList.add('minimap-container')
+      violationWrapper.appendChild(@minimapContainer)
 
     @violationContainer = document.createElement('div')
     @violationContainer.classList.add('violation-container')
@@ -99,22 +101,27 @@ class CilkscreenPluginView
 
     @clearChildren()
 
-    @minimapOverlay = SVG.createSVGObject(0, 32)
-    @minimapOverlay.classList.add('minimap-canvas-overlay')
-    @minimapContainer.appendChild(@minimapOverlay)
-    $(@minimapOverlay).click((e) =>
-      @minimapOnClick(e)
-    )
+    if @toggleVisual
+      @minimapOverlay = SVG.createSVGObject(0, 32)
+      @minimapOverlay.classList.add('minimap-canvas-overlay')
+      @minimapContainer.appendChild(@minimapOverlay)
+      $(@minimapOverlay).click((e) =>
+        @minimapOnClick(e)
+      )
 
     # TODO: figure out a better way to store the visual stuff here
-    @minimaps = {}
-    @minimapIndex = {}
-    minimapPromises = []
+    if @toggleVisual
+      @minimaps = {}
+      @minimapIndex = {}
+      minimapPromises = []
+      minimapLineContainer = document.createElement('div')
+      minimapLineContainer.classList.add('minimap-canvas-line-container')
+      @minimapContainer.appendChild(minimapLineContainer)
     @violationMarkers = []
     for index in [0 .. augmentedViolations.length - 1]
       violation = augmentedViolations[index]
       violationView = new DetailCodeView({
-        isVisual: true,
+        isVisual: @toggleVisual,
         index: index,
         violation: violation,
         onViolationClickCallback: ((index) => @highlightViolation(index, false))
@@ -122,40 +129,54 @@ class CilkscreenPluginView
       @violationContainer.appendChild(violationView.getElement())
       @violationMarkers.push(violation.markers)
 
-      if violation.line1.filename
-        if not @minimaps[violation.line1.filename]
-          @minimaps[violation.line1.filename] = new MinimapView({filename: violation.line1.filename})
-          minimapPromises.push(@minimaps[violation.line1.filename].init())
-          @minimapIndex[violation.line1.filename] = minimapPromises.length - 1
-          @minimapContainer.appendChild(@minimaps[violation.line1.filename].getElement())
-        @minimaps[violation.line1.filename].addDecoration(violation.line1.line)
-      if violation.line2.filename
-        if not @minimaps[violation.line2.filename]
-          @minimaps[violation.line2.filename] = new MinimapView({filename: violation.line2.filename})
-          minimapPromises.push(@minimaps[violation.line2.filename].init())
-          @minimapIndex[violation.line2.filename] = minimapPromises.length - 1
-          @minimapContainer.appendChild(@minimaps[violation.line2.filename].getElement())
-        @minimaps[violation.line2.filename].addDecoration(violation.line2.line)
+      if @toggleVisual
+        if violation.line1.filename
+          if not @minimaps[violation.line1.filename]
+            @minimaps[violation.line1.filename] = new MinimapView({filename: violation.line1.filename})
+            minimapPromises.push(@minimaps[violation.line1.filename].init())
+            @minimapIndex[violation.line1.filename] = minimapPromises.length - 1
+            @minimapContainer.appendChild(@minimaps[violation.line1.filename].getElement())
+          @minimaps[violation.line1.filename].addDecoration(violation.line1.line)
+          lineOverlay = document.createElement('div')
+          lineOverlay.classList.add('minimap-line-overlay')
+          lineOverlay.style.top = MinimapUtil.getLineTop(violation.line1.line) + "px"
+          lineOverlay.style.left = (MinimapUtil.getLeftSide(@minimapIndex[violation.line1.filename])) + "px"
+          minimapLineContainer.appendChild(lineOverlay)
+          DetailCodeView.attachFileOpenListener(lineOverlay, violation.line1.filename, violation.line1.line)
+        if violation.line2.filename
+          if not @minimaps[violation.line2.filename]
+            @minimaps[violation.line2.filename] = new MinimapView({filename: violation.line2.filename})
+            minimapPromises.push(@minimaps[violation.line2.filename].init())
+            @minimapIndex[violation.line2.filename] = minimapPromises.length - 1
+            @minimapContainer.appendChild(@minimaps[violation.line2.filename].getElement())
+          @minimaps[violation.line2.filename].addDecoration(violation.line2.line)
+          lineOverlay = document.createElement('div')
+          lineOverlay.classList.add('minimap-line-overlay')
+          lineOverlay.style.top = MinimapUtil.getLineTop(violation.line2.line) + "px"
+          lineOverlay.style.left = (MinimapUtil.getLeftSide(@minimapIndex[violation.line2.filename])) + "px"
+          minimapLineContainer.appendChild(lineOverlay)
+          DetailCodeView.attachFileOpenListener(lineOverlay, violation.line2.filename, violation.line2.line)
 
-    Promise.all(minimapPromises).then(() =>
-      console.log("All promises done!")
-      console.log(@minimaps)
-      console.log(Object.getOwnPropertyNames(@minimaps))
-      maxHeight = -1
-      minimaps = Object.getOwnPropertyNames(@minimaps)
-      for minimap in minimaps
-        height = @minimaps[minimap].getHeight()
-        console.log("looking at: #{height} height")
-        if maxHeight < height
-          maxHeight = height
-      @minimapOverlay.style.height = maxHeight + "px"
-      @minimapOverlay.style.width = (minimaps.length * 240) + "px"
-      @minimapOverlay.height = maxHeight
-      @minimapOverlay.width = (minimaps.length * 240)
+    if @toggleVisual
+      Promise.all(minimapPromises).then(() =>
+        console.log("All promises done!")
+        console.log(@minimaps)
+        console.log(Object.getOwnPropertyNames(@minimaps))
+        maxHeight = -1
+        minimaps = Object.getOwnPropertyNames(@minimaps)
+        for minimap in minimaps
+          height = @minimaps[minimap].getHeight()
+          console.log("looking at: #{height} height")
+          if maxHeight < height
+            maxHeight = height
+        @minimapOverlay.style.height = maxHeight + "px"
+        @minimapOverlay.style.width = (minimaps.length * 240) + "px"
+        @minimapOverlay.height = maxHeight
+        @minimapOverlay.width = (minimaps.length * 240)
 
-      for index in [0 .. augmentedViolations.length - 1]
-        @drawViolationConnector(augmentedViolations[index], index)
-    )
+        for index in [0 .. augmentedViolations.length - 1]
+          @drawViolationConnector(augmentedViolations[index], index)
+      )
 
   minimapOnClick: (e) ->
     rect = @minimapOverlay.getBoundingClientRect();
@@ -267,7 +288,8 @@ class CilkscreenPluginView
     console.log("Clearing children...")
 
     $(@violationContainer).empty()
-    $(@minimapContainer).empty()
+    if @toggleVisual
+      $(@minimapContainer).empty()
 
   # Tear down any state and detach
   destroy: ->
