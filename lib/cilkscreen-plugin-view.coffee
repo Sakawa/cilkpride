@@ -11,6 +11,7 @@ class CilkscreenPluginView
   element: null
   currentHighlightedIndex: null
   violationContainer: null
+  violationContentWrapper: null
   minimapContainer: null
   minimaps: null
   minimapIndex: null
@@ -55,9 +56,14 @@ class CilkscreenPluginView
     violationWrapper.classList.add('violation-wrapper', 'table-row')
 
     violationContentWrapper = document.createElement('div')
+    @violationContentWrapper = violationContentWrapper
     violationContentWrapper.classList.add('violation-content-wrapper')
     if @toggleVisual
       violationContentWrapper.classList.add('visual')
+      minimapResizeDiv = document.createElement('div')
+      minimapResizeDiv.classList.add('minimap-resize-div')
+      violationContentWrapper.appendChild(minimapResizeDiv)
+      $(minimapResizeDiv).on('mousedown', @horizontalResizeStart)
     violationWrapper.appendChild(violationContentWrapper)
 
     if @toggleVisual
@@ -72,12 +78,12 @@ class CilkscreenPluginView
     @element.appendChild(violationWrapper)
 
   resizeStart: () =>
-    console.log("Resize start")
+    # console.log("Resize start")
     $(document).on('mousemove', @resizeMove)
     $(document).on('mouseup', @resizeStop)
 
   resizeStop: () =>
-    console.log("Resize stop")
+    # console.log("Resize stop")
     $(document).off('mousemove', @resizeMove)
     $(document).off('mouseup', @resizeStop)
 
@@ -85,9 +91,27 @@ class CilkscreenPluginView
     return @resizeStop() unless event.which is 1
 
     element = $(@element)
-    console.log("Resize move")
+    # console.log("Horizontal resize move")
     height = element.offset().top + element.outerHeight() - event.pageY
     element.height(height)
+
+  horizontalResizeStart: () =>
+    # console.log("Horizontal resize start")
+    $(document).on('mousemove', @horizontalResizeMove)
+    $(document).on('mouseup', @horizontalResizeStop)
+
+  horizontalResizeStop: () =>
+    # console.log("Horizontal resize stop")
+    $(document).off('mousemove', @horizontalResizeMove)
+    $(document).off('mouseup', @horizontalResizeStop)
+
+  horizontalResizeMove: (event) =>
+    return @horizontalResizeStop() unless event.which is 1
+
+    element = $(@violationContentWrapper)
+    # console.log("Horizontal resize move")
+    width = element.offset().left + element.outerWidth() - event.pageX
+    element.width(width)
 
   update: (violations) ->
     console.log("updating plugin view: start")

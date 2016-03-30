@@ -84,10 +84,9 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
 
     .minimap-container {
       position: relative;
-      display: inline-block;
-      float: left;
+      display: block;
       height: 100%;
-      width: 40%;
+      width: auto;
       overflow: auto;
       border-bottom: 1px solid #3C3C3C;
       white-space: nowrap;
@@ -158,10 +157,20 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
   // Violation div
 
   .violation-content-wrapper.visual {
-    width: 60%;
+    width: 700px;
     float: right;
     position: relative;
     display: inline-block;
+
+    .minimap-resize-div {
+      position: absolute;
+      width: 8px;
+      height: 100%;
+
+      left: -4px;
+      z-index: 12; // it should be on top of the minimap overlays
+      cursor: ew-resize;
+    }
 
     .violation-div {
       border-bottom: 1px solid gray;
