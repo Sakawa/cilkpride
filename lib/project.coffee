@@ -157,6 +157,9 @@ class Project
         else
           editorCache[editorPath] = [textEditor]
 
+    # woraround to removing dupe markers
+    markerCache = {}
+
     # Go through each of the cilkscreen violations and make markers accordingly.
     for i in [0 .. results.length - 1]
       violation = results[i]
@@ -167,10 +170,20 @@ class Project
       violation.markers = []
 
       editorCache[path1]?.forEach((textEditor) =>
-        violation.markers.push(@createCilkscreenMarker(textEditor, line1, i))
+        id = textEditor.id + ":" + path1 + ":" + line1
+        if markerCache[id]
+          violation.markers.push(markerCache[id])
+        else
+          markerCache[id] = @createCilkscreenMarker(textEditor, line1, i)
+          violation.markers.push(markerCache[id])
       )
       editorCache[path2]?.forEach((textEditor) =>
-        violation.markers.push(@createCilkscreenMarker(textEditor, line2, i))
+        id = textEditor.id + ":" + path2 + ":" + line2
+        if markerCache[id]
+          violation.markers.push(markerCache[id])
+        else
+          markerCache[id] = @createCilkscreenMarker(textEditor, line2, i)
+          violation.markers.push(markerCache[id])
       )
 
     @projectView.setViolations(results)
