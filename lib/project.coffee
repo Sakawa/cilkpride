@@ -40,24 +40,16 @@ class Project
 
     @editorSubscriptions = {}
     @editorIds = []
-    @currentState = {}
+    @currentState = {state: "start"}
     @subscriptions = new CompositeDisposable()
     @markers = {}
-    @settings = JSON.parse(fs.readFileSync(
-      path.resolve(@path, 'cilkscreen-conf.json'),
-      {
-        flags: 'r',
-        encoding: 'utf-8',
-      }
-    ))
-    console.log(@settings)
+    @refreshConfFile()
 
     @projectView = new ProjectView({
       onCloseCallback: (() => @onPanelCloseCallback())
     })
 
   # Timer functions
-
   initializeCilkscreenTimer: () ->
     clearInterval(@idleTimeout) if @idleTimeout
     @idleTimeout = setTimeout(
@@ -66,6 +58,24 @@ class Project
         @makeExecutable()
       , atom.config.get('cilkscreen-plugin.idleSeconds') * 1000
     )
+
+  # need error handling
+  refreshConfFile: () ->
+    try
+      @settings = JSON.parse(fs.readFileSync(
+        path.resolve(@path, 'cilkscreen-conf.json'),
+        {
+          flags: 'r',
+          encoding: 'utf-8',
+        }
+      ))
+      console.log(@settings)
+      return true
+    catch error
+      @currentState.state = "conf_error"
+      @currentState.lastUpdated = Date.now()
+      @updateStatusTile()
+      return false
 
   clearCilkscreenTimer: () ->
     clearInterval(@idleTimeout)
@@ -79,6 +89,7 @@ class Project
 
     cilkLibPath = atom.config.get('cilkscreen-plugin.cilkLibPath')
     cilktoolsPath = atom.config.get('cilkscreen-plugin.cilktoolsPath')
+    @currentState.state = "ok"
 
     console.log(process.env)
     envCopy = extend({'LD_LIBRARY_PATH': cilkLibPath, 'LIBRARY_PATH': cilkLibPath}, process.env)
@@ -101,12 +112,15 @@ class Project
       console.log("cilkscreen process exited with code #{code}")
       if code is 0
         console.log("Killing old markers, if any...")
+        @currentState.lastUpdated = Date.now()
         @destroyOldMarkers()
         console.log("Parsing data...")
         @processViolations(cilkscreenOutput)
       else
         console.log("Code not 0...")
         @currentState.start = null
+        @currentState.state = "execution_error"
+        @currentState.lastUpdated = Date.now()
         @updateStatusTile()
     )
 
@@ -114,6 +128,9 @@ class Project
     thread.on('error', (err) =>
       console.log("cilkscreen thread error: #{err}")
       @currentState.start = null
+      @currentState.lastUpdated = Date.now()
+      @currentState.state = "execution_error"
+      @updateStatusTile()
     )
 
     thread.on('exit', (code, signal) ->
@@ -126,6 +143,10 @@ class Project
   # Uses the cilkscreen target in the Makefile to make the executable so that
   # we can use cilkscreen on the executable.
   makeExecutable: () ->
+    # Refresh the configuration to make sure it's up to date.
+    if not @refreshConfFile()
+      return
+      
     # First change the directory to the folder where the Makefile is.
     try
       process.chdir(@path)
@@ -141,6 +162,9 @@ class Project
         console.log("stderr: #{stderr}")
         if error isnt null
           console.log('child process exited with code ' + error)
+          @currentState.state = "make_error"
+          @currentState.lastUpdated = Date.now()
+          @updateStatusTile()
         else if not stdout.includes("Nothing to be done")
           @startCilkscreen()
     )
@@ -402,17 +426,27 @@ class Project
 
   updateStatusTile: () ->
     console.log("Updating status bar for #{@path}, current path being #{@statusBar.getCurrentPath()}")
+    console.log("Current state is #{@currentState.state}")
     console.log(@statusBar)
     if @path is @statusBar.getCurrentPath()
-      if @currentState.start
-        if @currentState.lastRuntime
-          @statusBar.displayCountdown(@currentState.start + @currentState.lastRuntime)
+      if @currentState.state is "ok"
+        if @currentState.start
+          if @currentState.lastRuntime
+            @statusBar.displayCountdown(@currentState.start + @currentState.lastRuntime)
+          else
+            @statusBar.displayUnknownCountdown()
+        else if @currentState.numViolations
+          @statusBar.displayErrors(@currentState.numViolations, @currentState.lastUpdated)
         else
-          @statusBar.displayUnknownCountdown()
-      else if @currentState.numViolations
-        @statusBar.displayErrors(@currentState.numViolations)
-      else
-        @statusBar.displayNoErrors()
+          @statusBar.displayNoErrors(@currentState.lastUpdated)
+      else if @currentState.state is "make_error"
+        @statusBar.displayMakeError(@currentState.lastUpdated)
+      else if @currentState.state is "execution_error"
+        @statusBar.displayExecError(@currentState.lastUpdated)
+      else if @currentState.state is "conf_error"
+        @statusBar.displayConfError(@currentState.lastUpdated)
+      else if @currentState.state is "start"
+        @statusBar.displayStart()
 
   highlightViolationInDetailPanel: (index) ->
     console.log("highlightViolationInDetailPanel called: #{index}")

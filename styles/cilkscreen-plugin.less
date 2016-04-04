@@ -412,4 +412,32 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
       text-decoration: underline;
     }
   }
+
+  span.icon-x {
+    color: @text-color-error;
+
+    &.clickable {
+      &:hover {
+        cursor: pointer;
+        text-decoration: underline;
+      }
+    }
+  }
+
+  span.icon-question {
+    color: @text-color-warning;
+
+    &:before {
+      margin-right: 5px;
+    }
+  }
+
+  span.icon-repo-create {
+    color: @text-color;
+
+    &:hover {
+      cursor: pointer;
+      text-decoration: underline;
+    }
+  }
 }

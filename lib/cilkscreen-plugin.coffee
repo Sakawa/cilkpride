@@ -1,6 +1,7 @@
 {CompositeDisposable} = require('atom')
 fs = require('fs')
 path = require('path')
+$ = require('jquery')
 
 Project = require('./project')
 StatusBarView = require('./status-bar-view')
@@ -24,6 +25,7 @@ module.exports = CilkscreenPlugin =
 
     @statusBarElement = new StatusBarView({
       onErrorClickCallback: () => @onStatusTileClick()
+      onRegisterProjectCallback: (directories) => @onRegisterProject(directories)
     })
 
     # Register command that toggles this view
@@ -36,17 +38,8 @@ module.exports = CilkscreenPlugin =
     # race condition status for the current project.
     @subscriptions.add(atom.workspace.onDidChangeActivePaneItem((item) =>
       if atom.workspace.getActiveTextEditor()
-        editor = atom.workspace.getActiveTextEditor()
         @statusBarElement.show()
-        console.log("Switched active panes. Editor id is #{editor.id}.")
-        console.log(@editorToPath)
-        projectPath = @editorToPath[editor.id]
-        if projectPath
-          @statusBarElement.updatePath(projectPath)
-          @projects[projectPath].updateStatusTile()
-        else
-          @statusBarElement.updatePath(null)
-          @statusBarElement.displayNoErrors()
+        @updateStatusBar()
       else
         @statusBarElement.hide()
     ))
@@ -56,6 +49,19 @@ module.exports = CilkscreenPlugin =
   consumeStatusBar: (statusBar) ->
     @statusBarTile = statusBar.addLeftTile(item: @statusBarElement.getElement(), priority: -1)
     @statusBarElement.updatePath(@getActivePanePath())
+    @updateStatusBar()
+
+  updateStatusBar: () ->
+    editor = atom.workspace.getActiveTextEditor()
+    console.log("Switched active panes. Editor id is #{editor.id}.")
+    console.log(@editorToPath)
+    projectPath = @editorToPath[editor.id]
+    if projectPath
+      @statusBarElement.updatePath(projectPath)
+      @projects[projectPath].updateStatusTile()
+    else
+      @statusBarElement.updatePath(null)
+      @statusBarElement.displayPluginDisabled()
 
   deactivate: ->
     @subscriptions.dispose()
@@ -72,28 +78,28 @@ module.exports = CilkscreenPlugin =
   toggle: ->
     console.log('CilkscreenPlugin was toggled!')
 
-  onMarkerClick: (path, violationIndex) ->
+  onMarkerClick: (cpath, violationIndex) ->
     console.log("Marker clicked")
     console.log(violationIndex)
     console.log(@detailPanel)
 
-    project = @projects[path]
+    project = @projects[cpath]
     # TODO: possibly further investigate flow issue here
-    @changeDetailPanel(path)
+    @changeDetailPanel(cpath)
     project.highlightViolationInDetailPanel(violationIndex)
 
   onStatusTileClick: () ->
-    path = @getActivePanePath()
-    @changeDetailPanel(path)
+    panePath = @getActivePanePath()
+    @changeDetailPanel(panePath)
 
-  changeDetailPanel: (path) ->
-    project = @projects[path]
-    if path isnt @panelPath or not @detailPanel
+  changeDetailPanel: (tpath) ->
+    project = @projects[tpath]
+    if tpath isnt @panelPath or not @detailPanel
       if @detailPanel
         @detailPanel.destroy()
         console.log("Destroyed detail panel.")
       @detailPanel = atom.workspace.addBottomPanel(item: project.getDetailPanel(), visible: true)
-      @panelPath = path
+      @panelPath = tpath
     else
       @detailPanel.show()
 
@@ -162,6 +168,34 @@ module.exports = CilkscreenPlugin =
           for tpath in traversedPaths
             @pathToPath[tpath] = null
           return null
+
+  onRegisterProject: (directories) ->
+    if directories
+      for directory in directories
+        @createConfFile(directory)
+
+  createConfFile: (directory) ->
+    console.log("Generating a configuration file in #{directory}...")
+    confPath = path.join(directory, 'cilkscreen-conf.json')
+    fs.open(confPath, 'wx', (err, fd) ->
+      if err
+        # do some error handling here
+        atom.notifications.addError("Cilktools configuration file already exists in #{directory}.", {
+          title: "Edit the existing configuration file, or delete it and re-register the directory."
+        })
+      else
+        fs.write(fd, """
+{
+  "makeCommand": ["make target-name"],
+  "commandArgs": ["./executable", "arg1", "arg2", "..."]
+}
+        """, {encoding: "utf8"}, (err, written, buffer) ->
+          atom.workspace.open(confPath)
+          atom.notifications.addSuccess("Cilktools configuration file created for #{directory}.", {
+            title: "Customize the configuration for your particular project to start using the plugin!"
+          })
+        )
+    )
 
   registerEditorWithProject: (projectPath, editor) ->
     console.log("Trying to register editor id #{editor.id} with #{projectPath} from cilkscreen-plugin.")
