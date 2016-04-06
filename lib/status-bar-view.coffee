@@ -76,7 +76,7 @@ class StatusBarView
   displayUnknownCountdown: () ->
     @resetState()
     @icon.classList.add('icon', 'icon-clock')
-    @icon.textContent = "ETA Unknown"
+    @icon.textContent = "Time Left Unknown"
 
   displayExecError: (lastUpdated) ->
     @resetState()
@@ -109,6 +109,9 @@ class StatusBarView
 
   constructTimerText: (time) ->
     msToFinish = time - Date.now()
+
+    if msToFinish < 0
+      return "Time Left Unknown"
 
     timerText = ''
     h = Math.floor(msToFinish / MILLI_IN_HOUR)

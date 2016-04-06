@@ -9,3 +9,5 @@
 # https://atom.io/docs/latest/behind-atom-keymaps-in-depth
 'atom-workspace':
   'ctrl-alt-p': 'cilkscreen-plugin:toggle'
+  'ctrl-alt-c': 'cilkscreen-plugin:manual-run'
+  'ctrl-alt-f': 'cilkscreen-plugin:manual-cancel'

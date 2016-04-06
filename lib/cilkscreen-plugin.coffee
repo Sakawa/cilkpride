@@ -28,8 +28,9 @@ module.exports = CilkscreenPlugin =
       onRegisterProjectCallback: (directories) => @onRegisterProject(directories)
     })
 
-    # Register command that toggles this view
-    @subscriptions.add(atom.commands.add('atom-workspace', 'cilkscreen-plugin:toggle': () => @toggle()))
+    # Register commands
+    @subscriptions.add(atom.commands.add('atom-workspace', 'cilkscreen-plugin:manual-run': () => @manuallyRun()))
+    @subscriptions.add(atom.commands.add('atom-workspace', 'cilkscreen-plugin:manual-cancel': () => @manuallyCancel()))
 
     # Add a hook on every single text editor that is open (and will be opened in the future)
     @subscriptions.add(atom.workspace.observeTextEditors((editor) => @registerEditor(editor)))
@@ -74,9 +75,6 @@ module.exports = CilkscreenPlugin =
 
   serialize: ->
     cilkscreenPluginViewState: null
-
-  toggle: ->
-    console.log('CilkscreenPlugin was toggled!')
 
   onMarkerClick: (cpath, violationIndex) ->
     console.log("Marker clicked")
@@ -208,3 +206,13 @@ module.exports = CilkscreenPlugin =
         statusBar: @statusBarElement
       })
     @projects[projectPath].registerEditor(editor)
+
+  manuallyRun: () ->
+    currentProject = @getActivePanePath()
+    if currentProject and @projects[currentProject]
+      @projects[currentProject].manuallyRun()
+
+  manuallyCancel: () ->
+    currentProject = @getActivePanePath()
+    if currentProject and @projects[currentProject]
+      @projects[currentProject].manuallyCancel()

@@ -56,6 +56,7 @@ class Project
       () =>
         console.log("Idle timeout start! #{new Date()}")
         @makeExecutable()
+        @idleTimeout = null
       , atom.config.get('cilkscreen-plugin.idleSeconds') * 1000
     )
 
@@ -78,18 +79,15 @@ class Project
       return false
 
   clearCilkscreenTimer: () ->
-    clearInterval(@idleTimeout)
-    if @currentState.start?
-      @currentState.start = null;
-    @killCilkscreen()
+    @killCilkscreen(false)
 
   startCilkscreen: () ->
     # Ensure only one cilkscreen thread per project is active.
-    @killCilkscreen()
+    @killCilkscreen(false)
 
     cilkLibPath = atom.config.get('cilkscreen-plugin.cilkLibPath')
     cilktoolsPath = atom.config.get('cilkscreen-plugin.cilktoolsPath')
-    @currentState.state = "ok"
+    @currentState.state = "running"
 
     console.log(process.env)
     envCopy = extend({'LD_LIBRARY_PATH': cilkLibPath, 'LIBRARY_PATH': cilkLibPath}, process.env)
@@ -133,11 +131,12 @@ class Project
       @updateStatusTile()
     )
 
-    thread.on('exit', (code, signal) ->
+    thread.on('exit', (code, signal) =>
       if code?
         console.log("cilkscreen exit: code #{code}")
       if signal?
         console.log("cilkscreen exit: signal #{signal}")
+      @currentState.manual = false
     )
 
   # Uses the cilkscreen target in the Makefile to make the executable so that
@@ -146,7 +145,7 @@ class Project
     # Refresh the configuration to make sure it's up to date.
     if not @refreshConfFile()
       return
-      
+
     # First change the directory to the folder where the Makefile is.
     try
       process.chdir(@path)
@@ -155,7 +154,6 @@ class Project
       console.err("Could not change pwd to #{@path} with error #{error}")
 
     # Invoke the cilkscreen target to run cilkscreen on.
-    # TODO: potentially allow the user to specify a make target
     makeThread = exec(@settings.makeCommand,
       (error, stdout, stderr) =>
         console.log("stdout: #{stdout}")
@@ -224,8 +222,15 @@ class Project
     cilkscreenGutter.decorateMarker(marker, {type: 'gutter', item: markerView})
     return markerView
 
-  killCilkscreen: () ->
+  killCilkscreen: (force) ->
     console.log("Attempting to kill cilkscreen for path #{@path}...")
+    if @currentState.manual and not force
+      return
+
+    clearInterval(@idleTimeout)
+    if @currentState.start?
+      @currentState.start = null;
+
     thread = @currentState.thread
     if thread
       console.log(thread)
@@ -233,6 +238,8 @@ class Project
       console.log("Killed thread...?")
       console.log(thread)
       delete @currentState.thread
+      @currentState.state = "ok"
+      @currentState.manual = false
 
   destroyOldMarkers: () ->
     for editorId in @editorIds
@@ -257,6 +264,7 @@ class Project
       (violations) =>
         @currentState.violations = violations
         @currentState.lastRuntime = Date.now() - @currentState.start
+        @currentState.state = "complete"
         console.log("Just set lastRuntime #{@path} to #{@currentState.lastRuntime}")
         @currentState.numViolations = violations.length
         console.log("The last run took #{@currentState.lastRuntime / 1000} seconds.")
@@ -402,14 +410,17 @@ class Project
     # initiate cilkscreen.
     stopChangeDisposable = editor.onDidStopChanging(()=>
       console.log("Editor stopped changing: " + editor.id)
-      console.log(new Date())
-      @initializeCilkscreenTimer()
+      console.log("Current state: #{@currentState.state}")
+      if @currentState.state isnt "complete"
+        console.log("Initializing timer with state as #{@currentState.state}")
+        @initializeCilkscreenTimer()
     )
     changeDisposable = editor.onDidChange(()=>
-      @clearCilkscreenTimer()
+      @clearCilkscreenTimer() if @idleTimeout
     )
     saveDisposable = editor.onDidSave(()=>
       console.log("Saved!")
+      @currentState.state = "ok"
     )
 
     @editorSubscriptions[editor.id] = [stopChangeDisposable, changeDisposable, saveDisposable]
@@ -429,7 +440,7 @@ class Project
     console.log("Current state is #{@currentState.state}")
     console.log(@statusBar)
     if @path is @statusBar.getCurrentPath()
-      if @currentState.state is "ok"
+      if @currentState.state is "complete" or @currentState.state is "running"
         if @currentState.start
           if @currentState.lastRuntime
             @statusBar.displayCountdown(@currentState.start + @currentState.lastRuntime)
@@ -447,6 +458,15 @@ class Project
         @statusBar.displayConfError(@currentState.lastUpdated)
       else if @currentState.state is "start"
         @statusBar.displayStart()
+
+  manuallyRun: () ->
+    @currentState.manual = true
+    @killCilkscreen(true)
+    @makeExecutable()
+
+  manuallyCancel: () ->
+    @killCilkscreen(true) if @currentState.thread
+    @updateStatusTile()
 
   highlightViolationInDetailPanel: (index) ->
     console.log("highlightViolationInDetailPanel called: #{index}")
