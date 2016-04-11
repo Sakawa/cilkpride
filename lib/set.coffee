@@ -32,7 +32,7 @@ class CustomSet
 
   remove: (item) ->
     index = -1
-    for i in [0 .. @contents.length - 1]
+    for i in [0 ... @contents.length]
       if @isEquals(item, @contents[i])
         index = i
         break

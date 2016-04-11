@@ -142,7 +142,7 @@ class CilkscreenPluginView
       minimapLineContainer.classList.add('minimap-canvas-line-container')
       @minimapContainer.appendChild(minimapLineContainer)
     @violationMarkers = []
-    for index in [0 .. augmentedViolations.length - 1]
+    for index in [0 ... augmentedViolations.length]
       violation = augmentedViolations[index]
       violationView = new DetailCodeView({
         isVisual: @toggleVisual,
@@ -198,7 +198,7 @@ class CilkscreenPluginView
         @minimapOverlay.height = maxHeight
         @minimapOverlay.width = (minimaps.length * 240)
 
-        for index in [0 .. augmentedViolations.length - 1]
+        for index in [0 ... augmentedViolations.length]
           @drawViolationConnector(augmentedViolations[index], index)
       )
 

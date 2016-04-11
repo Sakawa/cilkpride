@@ -179,11 +179,10 @@ class Project
         else
           editorCache[editorPath] = [textEditor]
 
-    # woraround to removing dupe markers
+    # workaround to removing dupe markers
     markerCache = {}
 
-    # Go through each of the cilkscreen violations and make markers accordingly.
-    for i in [0 .. results.length - 1]
+    for i in [0 ... results.length]
       violation = results[i]
       path1 = violation.line1.filename
       path2 = violation.line2.filename
@@ -421,6 +420,8 @@ class Project
     saveDisposable = editor.onDidSave(()=>
       console.log("Saved!")
       @currentState.state = "ok"
+      console.log("Initializing timer with state as #{@currentState.state}")
+      @initializeCilkscreenTimer()
     )
 
     @editorSubscriptions[editor.id] = [stopChangeDisposable, changeDisposable, saveDisposable]

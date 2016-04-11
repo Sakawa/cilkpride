@@ -16,8 +16,8 @@
   "configSchema": {
     "idleSeconds": {
         "type": "integer",
-        "default": 300,
-        "minimum": 1,
+        "default": 0,
+        "minimum": 0,
         "title": "Idle Length",
         "description": "Changes the number of seconds the text editor must be idle before running cilkscreen."
     },
