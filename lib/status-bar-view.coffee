@@ -14,6 +14,10 @@ class StatusBarView
   currentPath: null
   tooltip: null
 
+  currentText: null
+  lastUpdatedTimer: null
+  lastUpdated: null
+
   # Properties from parents
   props: null
   onErrorClickCallback: null
@@ -32,9 +36,10 @@ class StatusBarView
   displayNoErrors: (lastUpdated) ->
     @resetState()
     @icon.classList.add('icon', 'icon-check')
-    @icon.textContent = "No races found"
+    @currentText = "No races found"
     if lastUpdated
-      @addTooltip(lastUpdated)
+      @lastUpdated = lastUpdated
+      @setTimer(lastUpdated)
 
   displayPluginDisabled: () ->
     @resetState()
@@ -53,11 +58,12 @@ class StatusBarView
   displayErrors: (numErrors, lastUpdated) ->
     @resetState()
     @icon.classList.add('icon', 'icon-issue-opened')
-    @icon.textContent = "#{numErrors} errors found"
+    @currentText = "#{numErrors} errors found"
     $(@icon).on('click', (e) =>
       @onErrorClickCallback()
     )
-    @addTooltip(lastUpdated)
+    @lastUpdated = lastUpdated
+    @setTimer(lastUpdated)
 
   displayCountdown: (estFinished) ->
     @resetState()
@@ -81,26 +87,29 @@ class StatusBarView
   displayExecError: (lastUpdated) ->
     @resetState()
     @icon.classList.add('icon', 'icon-x')
-    @icon.textContent = "Unable to run cilkscreen"
-    @addTooltip(lastUpdated)
+    @currentText = "Unable to run cilkscreen"
+    @lastUpdated = lastUpdated
+    @setTimer(lastUpdated)
 
   displayMakeError: (lastUpdated) ->
     @resetState()
     @icon.classList.add('icon', 'icon-x', 'clickable')
-    @icon.textContent = "Unable to make"
-    @addTooltip(lastUpdated)
-    $(@icon).on('click', (e) =>
-      atom.workspace.open(path.join(@currentPath, "Makefile"))
-    )
+    @currentText = "Unable to make"
+    @lastUpdated = lastUpdated
+    @setTimer(lastUpdated)
+    # $(@icon).on('click', (e) =>
+    #   atom.workspace.open(path.join(@currentPath, "Makefile"))
+    # )
 
   displayConfError: (lastUpdated) ->
     @resetState()
     @icon.classList.add('icon', 'icon-x', 'clickable')
-    @icon.textContent = "Configuration error"
-    @addTooltip(lastUpdated)
-    $(@icon).on('click', (e) =>
-      atom.workspace.open(path.join(@currentPath, "cilkscreen-conf.json"))
-    )
+    @currentText = "Configuration error"
+    @lastUpdated = lastUpdated
+    @setTimer(lastUpdated)
+    # $(@icon).on('click', (e) =>
+    #   atom.workspace.open(path.join(@currentPath, "cilkscreen-conf.json"))
+    # )
 
   displayStart: () ->
     @resetState()
@@ -128,10 +137,26 @@ class StatusBarView
     console.log("Updating status bar tile path to #{path}.")
     @currentPath = path
 
-  addTooltip: (lastUpdated) ->
-    @tooltip = atom.tooltips.add(@element, {
-      title: "Last updated: #{TimeUtil.getTimeSince(lastUpdated)}"
-    })
+  setTimer: (lastUpdated) ->
+    @updateLastUpdated()
+
+  updateLastUpdated: () ->
+    currentTime = Date.now()
+    secAgo = Math.floor((currentTime - @lastUpdated) / 1000)
+    if secAgo < 60
+      @icon.textContent = "#{@currentText} (<1 min ago)"
+      @lastUpdatedTimer = setTimeout((=>@updateLastUpdated()), 1000 * 60)
+      return
+    if secAgo < 3600
+      minAgo = Math.floor(secAgo / 60)
+      @icon.textContent = "#{@currentText} (#{minAgo} min ago)"
+      @lastUpdatedTimer = setTimeout((=>@updateLastUpdated()), 1000 * 60)
+      return
+
+    hrAgo = Math.floor(secAgo / 60 / 60)
+    @icon.textContent = "#{@currentText} (#{hrAgo} hrs ago)"
+    @lastUpdatedTimer = setTimeout((=>@updateLastUpdated()), 1000 * 60 * 60)
+    return
 
   getCurrentPath: () ->
     return @currentPath
@@ -147,6 +172,9 @@ class StatusBarView
       clearInterval(@interval)
     if @tooltip
       @tooltip.dispose()
+    if @lastUpdatedTimer?
+      clearInterval(@lastUpdatedTimer)
+    @currentText = null
 
     @icon.className = ""
     @icon.textContent = ""

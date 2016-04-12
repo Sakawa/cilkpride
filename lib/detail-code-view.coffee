@@ -235,7 +235,7 @@ class DetailCodeView
 
     #### Text Editor
 
-    lineEditor = @createMiniEditorWithCode(lineCode)
+    lineEditor = @createMiniEditorWithCode(lineCode.trim())
     lineEditorView = atom.views.getView(lineEditor)
 
     editorContainer = document.createElement('div')

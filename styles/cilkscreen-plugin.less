@@ -210,6 +210,8 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
           order: -1;
           flex-basis: auto;
           cursor: pointer;
+          min-width: 30px;
+          text-align: right;
 
           > code {
             font-family: Menlo, Consolas, 'DejaVu Sans Mono', monospace;
@@ -220,7 +222,7 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
             display: block;
 
             &.highlighted {
-              color: @text-color-highlight;
+              color: #FFFFFF;
             }
           }
         }
@@ -246,12 +248,12 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
     cursor: pointer;
 
     &.highlighted {
-      background-color: @background-color-highlight;
-      color: @text-color-highlight;
+      background-color: #5C5E61;
+      color: #FFFFFF;
       cursor: auto;
 
       code, atom-text-editor.mini {
-        background-color: @background-color-highlight !important;
+        background-color: #5C5E61 !important;
       }
     }
 
@@ -338,7 +340,7 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
               transform: translateY(-50%);
 
               &.highlighted {
-                color: @text-color-highlight;
+                color: #FFFFFF;
               }
             }
           }
