@@ -54,6 +54,10 @@ module.exports = CilkscreenPlugin =
 
   updateStatusBar: () ->
     editor = atom.workspace.getActiveTextEditor()
+    if not editor
+      @statusBarElement.updatePath(null)
+      @statusBarElement.displayPluginDisabled()
+      return
     console.log("Switched active panes. Editor id is #{editor.id}.")
     console.log(@editorToPath)
     projectPath = @editorToPath[editor.id]

@@ -234,10 +234,14 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
         }
 
         .editor-container {
+          position: relative;
+
           order: 0;
           flex-grow: 1;
           flex-basis: auto;
           overflow: hidden;
+
+          cursor: pointer;
         }
       }
     }
@@ -307,16 +311,6 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
             border: 1px solid gray;
             top: 40%;
             left: 1%;
-          }
-
-          .editor-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            height: 100%;
-            width: 100%;
-            z-index: 1;
-            cursor: pointer;
           }
         }
 
@@ -389,6 +383,16 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
       }
     }
   }
+}
+
+.editor-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  z-index: 1;
+  cursor: pointer;
 }
 
 .cilkscreen-status-view {

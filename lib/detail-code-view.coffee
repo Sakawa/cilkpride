@@ -32,9 +32,10 @@ class DetailCodeView
   createVisualViolationView: () ->
     violationView = document.createElement('div')
     violationView.classList.add('violation-div', 'visual')
-    $(violationView).click((e) =>
-      @onViolationClickCallback(@index)
-    )
+    # $(violationView).click((e) =>
+    #   @onViolationClickCallback(e, @index)
+    # )
+    violationView.addEventListener("click", ((e) => @onViolationClickCallback(e, @index)), true)
     violationView.appendChild(@constructVisualPreview(@violation.line1, null, true))
     violationView.appendChild(@constructVisualPreview(@violation.line2, @parseStacktrace(@violation.stacktrace), false))
 
@@ -45,12 +46,15 @@ class DetailCodeView
     violationView = document.createElement('div')
     violationView.classList.add('violation-div')
     $(violationView).click((e) =>
-      @onViolationClickCallback(@index)
+      @onViolationClickCallback(e, @index)
     )
 
     summaryDiv = document.createElement('div')
     summaryDiv.classList.add('summary-div')
-    summaryDiv.textContent = "A variable was concurrently #{VERBS_PT[@violation.line1.accessType]} at #{@parseAbsolutePathname(@violation.line1.filename)}:#{@violation.line1.line}, and #{VERBS_PT[@violation.line2.accessType]} at #{@parseAbsolutePathname(@violation.line2.filename)}:#{@violation.line2.line}."
+    if @violation.line1.accessType is @violation.line2.accessType
+      summaryDiv.textContent = "A variable was concurrently #{VERBS_PT[@violation.line1.accessType]} at #{@parseAbsolutePathname(@violation.line1.filename)}:#{@violation.line1.line} and #{@parseAbsolutePathname(@violation.line2.filename)}:#{@violation.line2.line}."
+    else
+      summaryDiv.textContent = "A variable was concurrently #{VERBS_PT[@violation.line1.accessType]} at #{@parseAbsolutePathname(@violation.line1.filename)}:#{@violation.line1.line} and #{VERBS_PT[@violation.line2.accessType]} at #{@parseAbsolutePathname(@violation.line2.filename)}:#{@violation.line2.line}."
     violationView.appendChild(summaryDiv)
 
     violationView.appendChild(@constructCodePreview(@violation.line1, null, true))
@@ -240,7 +244,14 @@ class DetailCodeView
 
     editorContainer = document.createElement('div')
     editorContainer.classList.add('editor-container')
-    DetailCodeView.attachFileOpenListener(editorContainer, lineInfo.filename, originalLineNum)
+    editorOverlay = document.createElement('div')
+    editorOverlay.classList.add('editor-overlay')
+    editorContainer.appendChild(editorOverlay)
+    editorOverlay.title = "Click to go to line."
+    DetailCodeView.attachFileOpenListener(editorOverlay, lineInfo.filename, originalLineNum)
+    $(editorOverlay).mousemove((e) ->
+      e.stopPropagation()
+    )
     editorContainer.appendChild(lineEditorView)
 
     codeLineDiv.appendChild(filenameDiv)

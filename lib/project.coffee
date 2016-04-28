@@ -471,7 +471,7 @@ class Project
 
   highlightViolationInDetailPanel: (index) ->
     console.log("highlightViolationInDetailPanel called: #{index}")
-    @projectView.highlightViolation(index, true)
+    @projectView.highlightViolation(null, index, true)
 
   scrollToViolation: () ->
     @projectView.scrollToViolation()

@@ -148,7 +148,7 @@ class CilkscreenPluginView
         isVisual: @toggleVisual,
         index: index,
         violation: violation,
-        onViolationClickCallback: ((index) => @highlightViolation(index, false))
+        onViolationClickCallback: ((e, index) => @highlightViolation(e, index, false))
       })
       @violationContainer.appendChild(violationView.getElement())
       @violationMarkers.push(violation.markers)
@@ -212,7 +212,7 @@ class CilkscreenPluginView
     violationId = e.target.getAttribute('violation-id')
     console.log("clicked on id: #{violationId}")
     if violationId
-      @highlightViolation(+violationId, true)
+      @highlightViolation(e, +violationId, true)
     else
       e.stopPropagation()
 
@@ -247,12 +247,14 @@ class CilkscreenPluginView
       console.log("Drawing a curve from #{startX},#{line1Y} to #{endX}, #{line2Y}") if DEBUG
       SVG.addSVGLine(@minimapOverlay, "#{index}", startX, line1Y, endX, line2Y)
 
-  highlightViolation: (index, shouldScroll) ->
+  highlightViolation: (e, index, shouldScroll) ->
+    console.log("Clicked on a highlight violation for index #{index}")
     if @currentHighlightedIndex is index
       @scrollToViolation()
       return
 
     @resetHighlight()
+    e.stopPropagation() if e
 
     console.log("Highlighting violation: #{index}")
     if not @violationContainer.children[index]
