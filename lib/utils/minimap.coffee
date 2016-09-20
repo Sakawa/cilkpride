@@ -149,8 +149,8 @@ class Minimap
     #   e.stopPropagation()
 
   updateScrollOverlay: () ->
-    console.log(@minimap.getTextEditorScaledHeight())
-    console.log(@minimap.getTextEditorScaledScrollTop())
+    # console.log(@minimap.getTextEditorScaledHeight())
+    # console.log(@minimap.getTextEditorScaledScrollTop())
     @minimapOverlay.style.height = "#{@minimap.getTextEditorScaledHeight()}px"
     @minimapOverlay.style.top = "#{@minimap.getTextEditorScaledScrollTop()}px"
 

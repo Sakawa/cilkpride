@@ -32,10 +32,10 @@ class DetailCodeView
   createVisualViolationView: () ->
     violationView = document.createElement('div')
     violationView.classList.add('violation-div', 'visual')
-    # $(violationView).click((e) =>
-    #   @onViolationClickCallback(e, @index)
-    # )
-    violationView.addEventListener("click", ((e) => @onViolationClickCallback(e, @index)), true)
+    $(violationView).click((e) =>
+      @onViolationClickCallback(e, @index)
+    )
+    # violationView.addEventListener("click", ((e) => @onViolationClickCallback(e, @index)), true)
     violationView.appendChild(@constructVisualPreview(@violation.line1, null, true))
     violationView.appendChild(@constructVisualPreview(@violation.line2, @parseStacktrace(@violation.stacktrace), false))
 

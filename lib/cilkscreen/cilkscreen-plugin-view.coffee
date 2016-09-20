@@ -277,6 +277,7 @@ class CilkscreenPluginView
     @update(violations)
 
   scrollToViolation: (index) ->
+    console.log("Trying to scroll to index #{index}")
     violationTop = @violationContainer.children[index].offsetTop
     @violationContainer.scrollTop = violationTop - 10
 

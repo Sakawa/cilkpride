@@ -94,7 +94,7 @@ class CilkscreenUI
     if @currentViolations
       for violation in @currentViolations
         console.log("Removing markers...")
-        console.log(markers)
+        console.log(violation.markers)
         for marker in violation.markers
           marker.destroy()
 
@@ -120,7 +120,7 @@ class CilkscreenUI
 
     # If we're already highlighting the correct violation, just scroll.
     if @currentHighlightedIndex is index
-      @scrollToViolation()
+      @scrollToViolation(index)
       return
 
     # Otherwise, reset the other highlight and markers.
@@ -136,8 +136,8 @@ class CilkscreenUI
     @resetMarkers()
     @currentHighlightedIndex = null
 
-  scrollToViolation: () ->
-    @pluginView.scrollToViolation()
+  scrollToViolation: (index) ->
+    @pluginView.scrollToViolation(index)
 
   getElement: () ->
     return @pluginView.getElement()
