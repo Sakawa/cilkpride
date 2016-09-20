@@ -1,15 +1,15 @@
 $ = require('jquery')
-FileLineReader = require('./file-read-lines')
 {CompositeDisposable} = require('atom')
+
+FileLineReader = require('../utils/file-reader')
 DetailCodeView = require('./detail-code-view')
-MinimapView = require('./minimap-view')
-{MinimapUtil} = require('./utils')
-SVG = require('./svg')
+MinimapView = require('../utils/minimap')
+{MinimapUtil} = require('../utils/utils')
+SVG = require('../utils/svg')
 
 module.exports =
 class CilkscreenPluginView
   element: null
-  currentHighlightedIndex: null
   violationContainer: null
   violationContentWrapper: null
   minimapContainer: null
@@ -17,17 +17,17 @@ class CilkscreenPluginView
   minimapIndex: null
   toggleVisual: true
 
-  violationMarkers: null
-
   # Properties from parents
   props: null
   onCloseCallback: null
+  highlightCallback: null
 
   HALF_CONTEXT: 2
 
   constructor: (props) ->
     @props = props
     @onCloseCallback = props.onCloseCallback
+    @highlightCallback = props.highlightCallback
 
     # Create root element
     @element = document.createElement('div')
@@ -46,7 +46,7 @@ class CilkscreenPluginView
     title.textContent = "Detected Race Conditions"
     close = document.createElement('div')
     close.classList.add('header-close', 'icon', 'icon-x')
-    $(close).on('click', (() => @onClosePanel()))
+    $(close).on('click', (() => @onCloseCallback()))
     header.appendChild(title)
     header.appendChild(close)
 
@@ -119,6 +119,19 @@ class CilkscreenPluginView
 
     @createViolationDivs(violations)
 
+  updateMinimap: (editor) ->
+    console.log("updateMinimap called with editor: ")
+    console.log(editor)
+    if @toggleVisual
+      console.log(@minimaps)
+      if @minimaps and @minimaps[editor.getPath()]
+        @minimaps[editor.getPath()].init(editor)
+        console.log("updating minimap @ updateMinimap")
+      else
+        console.log("not updating @ updateMinimap 1")
+    else
+      console.log('not updating @ updateMinimap 2')
+
   createViolationDivs: (augmentedViolations) ->
     console.log("createViolationDivs: called with ")
     console.log(augmentedViolations)
@@ -141,78 +154,66 @@ class CilkscreenPluginView
       minimapLineContainer = document.createElement('div')
       minimapLineContainer.classList.add('minimap-canvas-line-container')
       @minimapContainer.appendChild(minimapLineContainer)
-    @violationMarkers = []
     for index in [0 ... augmentedViolations.length]
       violation = augmentedViolations[index]
       violationView = new DetailCodeView({
         isVisual: @toggleVisual,
         index: index,
         violation: violation,
-        onViolationClickCallback: ((e, index) => @highlightViolation(e, index, false))
+        onViolationClickCallback: ((e, index) => @highlightCallback(e, index, false))
       })
       @violationContainer.appendChild(violationView.getElement())
-      @violationMarkers.push(violation.markers)
 
       if @toggleVisual
-        if violation.line1.filename
-          if not @minimaps[violation.line1.filename]
-            @minimaps[violation.line1.filename] = new MinimapView({filename: violation.line1.filename})
-            minimapPromises.push(@minimaps[violation.line1.filename].init())
-            @minimapIndex[violation.line1.filename] = minimapPromises.length - 1
-            @minimapContainer.appendChild(@minimaps[violation.line1.filename].getElement())
-          @minimaps[violation.line1.filename].addDecoration(violation.line1.line)
-          lineOverlay = document.createElement('div')
-          lineOverlay.classList.add('minimap-line-overlay')
-          lineOverlay.style.top = (MinimapUtil.getLineTop(violation.line1.line)) + "px"
-          lineOverlay.style.left = (MinimapUtil.getLeftSide(@minimapIndex[violation.line1.filename])) + "px"
-          minimapLineContainer.appendChild(lineOverlay)
-          DetailCodeView.attachFileOpenListener(lineOverlay, violation.line1.filename, violation.line1.line)
-        if violation.line2.filename
-          if not @minimaps[violation.line2.filename]
-            @minimaps[violation.line2.filename] = new MinimapView({filename: violation.line2.filename})
-            minimapPromises.push(@minimaps[violation.line2.filename].init())
-            @minimapIndex[violation.line2.filename] = minimapPromises.length - 1
-            @minimapContainer.appendChild(@minimaps[violation.line2.filename].getElement())
-          @minimaps[violation.line2.filename].addDecoration(violation.line2.line)
-          lineOverlay = document.createElement('div')
-          lineOverlay.classList.add('minimap-line-overlay')
-          lineOverlay.style.top = (MinimapUtil.getLineTop(violation.line2.line)) + "px"
-          lineOverlay.style.left = (MinimapUtil.getLeftSide(@minimapIndex[violation.line2.filename])) + "px"
-          minimapLineContainer.appendChild(lineOverlay)
-          DetailCodeView.attachFileOpenListener(lineOverlay, violation.line2.filename, violation.line2.line)
+        @createMinimapForLine(violation.line1, minimapPromises, minimapLineContainer)
+        @createMinimapForLine(violation.line2, minimapPromises, minimapLineContainer)
 
-    if @toggleVisual
-      Promise.all(minimapPromises).then(() =>
-        console.log("All promises done!")
-        console.log(@minimaps)
-        console.log(Object.getOwnPropertyNames(@minimaps))
-        maxHeight = -1
-        minimaps = Object.getOwnPropertyNames(@minimaps)
-        for minimap in minimaps
-          height = @minimaps[minimap].getHeight()
-          console.log("looking at: #{height} height")
-          if maxHeight < height
-            maxHeight = height
-        @minimapOverlay.style.height = maxHeight + "px"
-        @minimapOverlay.style.width = (minimaps.length * 240) + "px"
-        @minimapOverlay.height = maxHeight
-        @minimapOverlay.width = (minimaps.length * 240)
+    # if @toggleVisual
+    #   Promise.all(minimapPromises).then(() =>
+    #     console.log("All promises done!")
+    #     console.log(@minimaps)
+    #     console.log(Object.getOwnPropertyNames(@minimaps))
+    #     maxHeight = -1
+    #     minimaps = Object.getOwnPropertyNames(@minimaps)
+    #     for minimap in minimaps
+    #       height = @minimaps[minimap].getHeight()
+    #       console.log("looking at: #{height} height")
+    #       if maxHeight < height
+    #         maxHeight = height
+    #     @minimapOverlay.style.height = maxHeight + "px"
+    #     @minimapOverlay.style.width = (minimaps.length * 240) + "px"
+    #     @minimapOverlay.height = maxHeight
+    #     @minimapOverlay.width = (minimaps.length * 240)
+    #
+    #     for index in [0 ... augmentedViolations.length]
+    #       @drawViolationConnector(augmentedViolations[index], index)
+    #   )
 
-        for index in [0 ... augmentedViolations.length]
-          @drawViolationConnector(augmentedViolations[index], index)
-      )
+  createMinimapForLine: (violationLine, minimapPromises, minimapLineContainer) ->
+    if violationLine.filename
+      if not @minimaps[violationLine.filename]
+        @minimaps[violationLine.filename] = new MinimapView({filename: violationLine.filename})
+        # minimapPromises.push(@minimaps[violation.line1.filename].init())
+        @minimaps[violationLine.filename].init()
+        @minimapIndex[violationLine.filename] = minimapPromises.length - 1
+        @minimapContainer.appendChild(@minimaps[violationLine.filename].getElement())
+      @minimaps[violationLine.filename].addDecoration(violationLine.line)
+      lineOverlay = document.createElement('div')
+      lineOverlay.classList.add('minimap-line-overlay')
+      lineOverlay.style.top = (MinimapUtil.getLineTop(violationLine.line)) + "px"
+      lineOverlay.style.left = (MinimapUtil.getLeftSide(@minimapIndex[violationLine.filename])) + "px"
+      minimapLineContainer.appendChild(lineOverlay)
+      DetailCodeView.attachFileOpenListener(lineOverlay, violationLine.filename, violationLine.line)
 
   minimapOnClick: (e) ->
     rect = @minimapOverlay.getBoundingClientRect();
-    parentTop = @minimapOverlay.offsetTop
-    parentLeft = @minimapOverlay.offsetLeft
     left = Math.round(e.pageX - rect.left)
     top = Math.round(e.pageY - rect.top)
     console.log("clicked: left: #{e.pageX - rect.left}, top: #{e.pageY - rect.top}")
     violationId = e.target.getAttribute('violation-id')
     console.log("clicked on id: #{violationId}")
     if violationId
-      @highlightViolation(e, +violationId, true)
+      @highlightCallback(e, +violationId, true)
     else
       e.stopPropagation()
 
@@ -247,14 +248,8 @@ class CilkscreenPluginView
       console.log("Drawing a curve from #{startX},#{line1Y} to #{endX}, #{line2Y}") if DEBUG
       SVG.addSVGLine(@minimapOverlay, "#{index}", startX, line1Y, endX, line2Y)
 
-  highlightViolation: (e, index, shouldScroll) ->
+  highlightViolation: (index, shouldScroll) ->
     console.log("Clicked on a highlight violation for index #{index}")
-    if @currentHighlightedIndex is index
-      @scrollToViolation()
-      return
-
-    @resetHighlight()
-    e.stopPropagation() if e
 
     console.log("Highlighting violation: #{index}")
     if not @violationContainer.children[index]
@@ -263,52 +258,30 @@ class CilkscreenPluginView
       console.log($("[violation-id=#{index}]"))
       @setHighlight(index)
       if shouldScroll
-        @scrollToViolation()
+        @scrollToViolation(index)
 
-  resetHighlight: () ->
-    console.log("resetHighlight: #{@currentHighlightedIndex}")
-    if @currentHighlightedIndex isnt null
-      violationDiv = @violationContainer.children[@currentHighlightedIndex]
-      violationDiv.classList.remove('highlighted')
-      $("[violation-id=#{@currentHighlightedIndex}-visible]").css("stroke", "#ff0000")
-      @resetMarkers()
-      @currentHighlightedIndex = null
+  resetHighlight: (index) ->
+    console.log("resetHighlight: #{index}")
+    console.log(@violationContainer.children)
+
+    violationDiv = @violationContainer.children[index]
+    violationDiv.classList.remove('highlighted')
+    $("[violation-id=#{index}-visible]").css("stroke", "#ff0000")
 
   setHighlight: (index) ->
-    @currentHighlightedIndex = index
     violationDiv = @violationContainer.children[index]
     violationDiv.classList.add('highlighted')
     $("[violation-id=#{index}-visible]").css("stroke", "#ffff00")
-    @highlightMarkers(index)
-
-  highlightMarkers: (index) ->
-    if @violationMarkers isnt null
-      for marker in @violationMarkers[index]
-        console.log("Highlighting marker...")
-        marker.highlightMarker()
-
-  resetMarkers: () ->
-    console.log("in reset markers")
-    console.log(@currentHighlightedIndex)
-    if @currentHighlightedIndex isnt null and @violationMarkers isnt null
-      console.log(@violationMarkers)
-      for marker in @violationMarkers[@currentHighlightedIndex]
-        console.log("Resetting marker...")
-        marker.resetMarker()
 
   setViolations: (violations) ->
     @update(violations)
 
-  scrollToViolation: () ->
-    violationTop = @violationContainer.children[@currentHighlightedIndex].offsetTop
+  scrollToViolation: (index) ->
+    violationTop = @violationContainer.children[index].offsetTop
     @violationContainer.scrollTop = violationTop - 10
 
   # Returns an object that can be retrieved when package is activated
   serialize: ->
-
-  onClosePanel: (e) ->
-    @resetHighlight()
-    @onCloseCallback()
 
   clearChildren: () ->
     console.log("Clearing children...")

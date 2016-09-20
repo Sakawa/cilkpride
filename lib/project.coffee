@@ -1,15 +1,15 @@
 {CompositeDisposable} = require('atom')
-fs = require('fs')
 exec = require('child_process').exec
 extend = require('util')._extend;
+fs = require('fs')
 path = require('path');
 process = require('process')
 spawn = require('child_process').spawn
 
-FileLineReader = require('./file-read-lines')
-MarkerView = require('./cilkscreen-marker-view')
-ProjectView = require('./cilkscreen-plugin-view')
-CustomSet = require('./set')
+FileLineReader = require('./utils/file-reader')
+CustomSet = require('./utils/set')
+
+CilkscreenModule = require('./cilkscreen/main')
 
 module.exports =
 class Project
@@ -19,20 +19,22 @@ class Project
   editorSubscriptions: null
   editorIds: null
   projectView: null
-  markers: null
   settings: null
 
   # Properties from parent
   props: null
-  onMarkerClickCallback: null
+  changeDetailPanel: null
   onPanelCloseCallback: null
   path: null
   statusBar: null
 
+  # Module imports
+  cilkscreenMod: null
+
   constructor: (props) ->
     @props = props
     @path = props.path
-    @onMarkerClickCallback = @props.onMarkerClickCallback
+    @changeDetailPanel = @props.changeDetailPanel
     @onPanelCloseCallback = @props.onPanelCloseCallback
     @statusBar = @props.statusBar
     console.log("Status bar for #{@path}")
@@ -40,27 +42,40 @@ class Project
 
     @editorSubscriptions = {}
     @editorIds = []
-    @currentState = {state: "start"}
+    @currentState = {
+      state: "start"
+      start: null
+      lastRuntime: null
+      lastUpdated: null
+      manual: false
+    }
     @subscriptions = new CompositeDisposable()
-    @markers = {}
     @refreshConfFile()
 
-    @projectView = new ProjectView({
+    #Initialize modules
+    # TODO: fix this constructor call
+    @cilkscreenMod = new CilkscreenModule({
+      changePanel: (() => @changeDetailPanel(@path))
       onCloseCallback: (() => @onPanelCloseCallback())
+      getConfSettings: ((refresh) => @getConfSettings(refresh))
+      changeState: ((code) => @changeState("cilkscreen", code))
     })
 
   # Timer functions
-  initializeCilkscreenTimer: () ->
+  initializeTimer: () ->
     clearInterval(@idleTimeout) if @idleTimeout
     @idleTimeout = setTimeout(
       () =>
         console.log("Idle timeout start! #{new Date()}")
         @makeExecutable()
         @idleTimeout = null
-      , atom.config.get('cilkscreen-plugin.idleSeconds') * 1000
+      , atom.config.get('cilkide.idleSeconds') * 1000
     )
 
-  # need error handling
+  clearTimer: () ->
+    @killModules(false)
+
+  # TODO: need error handling
   refreshConfFile: () ->
     try
       @settings = JSON.parse(fs.readFileSync(
@@ -77,67 +92,6 @@ class Project
       @currentState.lastUpdated = Date.now()
       @updateStatusTile()
       return false
-
-  clearCilkscreenTimer: () ->
-    @killCilkscreen(false)
-
-  startCilkscreen: () ->
-    # Ensure only one cilkscreen thread per project is active.
-    @killCilkscreen(false)
-
-    cilkLibPath = atom.config.get('cilkscreen-plugin.cilkLibPath')
-    cilktoolsPath = atom.config.get('cilkscreen-plugin.cilktoolsPath')
-    @currentState.state = "running"
-
-    console.log(process.env)
-    envCopy = extend({'LD_LIBRARY_PATH': cilkLibPath, 'LIBRARY_PATH': cilkLibPath}, process.env)
-    envCopy.PATH = envCopy.PATH + ":" + cilktoolsPath
-
-    @currentState.start = Date.now()
-    console.log("Just set cilkscreenTime #{@path} to #{@currentState.start}")
-    console.log("Last runtime: #{@currentState.lastRuntime}")
-    @updateStatusTile()
-    @currentState.thread = spawn('cilkscreen', @settings.commandArgs, {env: envCopy})
-    thread = @currentState.thread
-    cilkscreenOutput = ""
-
-    thread.stderr.on('data', (data) ->
-      cilkscreenOutput += data
-    )
-
-    thread.on('close', (code) =>
-      console.log("stderr: #{cilkscreenOutput}")
-      console.log("cilkscreen process exited with code #{code}")
-      if code is 0
-        console.log("Killing old markers, if any...")
-        @currentState.lastUpdated = Date.now()
-        @destroyOldMarkers()
-        console.log("Parsing data...")
-        @processViolations(cilkscreenOutput)
-      else
-        console.log("Code not 0...")
-        @currentState.start = null
-        @currentState.state = "execution_error"
-        @currentState.lastUpdated = Date.now()
-        @updateStatusTile()
-    )
-
-    # Debug event handlers
-    thread.on('error', (err) =>
-      console.log("cilkscreen thread error: #{err}")
-      @currentState.start = null
-      @currentState.lastUpdated = Date.now()
-      @currentState.state = "execution_error"
-      @updateStatusTile()
-    )
-
-    thread.on('exit', (code, signal) =>
-      if code?
-        console.log("cilkscreen exit: code #{code}")
-      if signal?
-        console.log("cilkscreen exit: signal #{signal}")
-      @currentState.manual = false
-    )
 
   # Uses the cilkscreen target in the Makefile to make the executable so that
   # we can use cilkscreen on the executable.
@@ -164,236 +118,38 @@ class Project
           @currentState.lastUpdated = Date.now()
           @updateStatusTile()
         else if not stdout.includes("Nothing to be done")
-          @startCilkscreen()
+          @startModules()
     )
 
-  createMarkers: (results) ->
-    # Build a small cache of file path -> editor
-    editorCache = {}
-    editors = atom.workspace.getTextEditors()
-    for textEditor in editors
-      editorPath = textEditor.getPath?()
-      if editorPath
-        if editorPath in editorCache
-          editorCache[editorPath].push(textEditor)
-        else
-          editorCache[editorPath] = [textEditor]
-
-    # workaround to removing dupe markers
-    markerCache = {}
-
-    for i in [0 ... results.length]
-      violation = results[i]
-      path1 = violation.line1.filename
-      path2 = violation.line2.filename
-      line1 = +violation.line1.line
-      line2 = +violation.line2.line
-      violation.markers = []
-
-      editorCache[path1]?.forEach((textEditor) =>
-        id = textEditor.id + ":" + path1 + ":" + line1
-        if markerCache[id]
-          violation.markers.push(markerCache[id])
-        else
-          markerCache[id] = @createCilkscreenMarker(textEditor, line1, i)
-          violation.markers.push(markerCache[id])
-      )
-      editorCache[path2]?.forEach((textEditor) =>
-        id = textEditor.id + ":" + path2 + ":" + line2
-        if markerCache[id]
-          violation.markers.push(markerCache[id])
-        else
-          markerCache[id] = @createCilkscreenMarker(textEditor, line2, i)
-          violation.markers.push(markerCache[id])
-      )
-
-    @projectView.setViolations(results)
-
-  createCilkscreenMarker: (editor, line, i) ->
-    cilkscreenGutter = editor.gutterWithName('cilkscreen-lint')
-    range = [[line - 1, 0], [line - 1, Infinity]]
-    marker = editor.markBufferRange(range, {id: 'cilkscreen'})
-    markerView = new MarkerView(
-      {index: i},
-      (index) =>
-        @onMarkerClickCallback(index)
-    )
-    cilkscreenGutter.decorateMarker(marker, {type: 'gutter', item: markerView})
-    return markerView
-
-  killCilkscreen: (force) ->
-    console.log("Attempting to kill cilkscreen for path #{@path}...")
-    if @currentState.manual and not force
+  startModules: () ->
+    if not @killModules(false)
       return
+
+    # TODO: This should be turned into a cancellable promise, so that
+    # we know when to modify the status bar to mark everything complete.
+    # All the modules should be run in parallel (at least, up to the UI changes)
+    @currentState.start = Date.now()
+    @changeState("cilkscreen", "running")
+    console.log("Just set cilkscreenTime #{@path} to #{@currentState.start}")
+    console.log("Last runtime: #{@currentState.lastRuntime}")
+    @cilkscreenMod.startThread()
+
+  killModules: (force) ->
+    console.log("Attempting to kill modules for path #{@path}...")
+    if @currentState.manual and not force
+      return false
+
+    if @currentState.start?
+      @currentState.start = null;
 
     clearInterval(@idleTimeout)
     if @currentState.start?
       @currentState.start = null;
 
-    thread = @currentState.thread
-    if thread
-      console.log(thread)
-      thread.kill('SIGKILL')
-      console.log("Killed thread...?")
-      console.log(thread)
-      delete @currentState.thread
-      @currentState.state = "ok"
-      @currentState.manual = false
-
-  destroyOldMarkers: () ->
-    for editorId in @editorIds
-      console.log("Trying to find editor id #{editorId}")
-      editor = null
-      for tEditor in atom.workspace.getTextEditors()
-        if tEditor.id is editorId
-          editor = tEditor
-          markers = editor?.findMarkers({id: 'cilkscreen'})
-          console.log("Removing markers...")
-          console.log(markers)
-          for marker in markers
-            marker.destroy()
-
-  ###
-    Violation processing code
-  ###
-
-  processViolations: (text) ->
-    violations = @parseCilkscreenOutput(text)
-    @getViolationLineCode(violations,
-      (violations) =>
-        @currentState.violations = violations
-        @currentState.lastRuntime = Date.now() - @currentState.start
-        @currentState.state = "complete"
-        console.log("Just set lastRuntime #{@path} to #{@currentState.lastRuntime}")
-        @currentState.numViolations = violations.length
-        console.log("The last run took #{@currentState.lastRuntime / 1000} seconds.")
-        @createMarkers(violations)
-        @currentState.start = null
-        @updateStatusTile()
-    )
-
-  # Cilkscreen-related functions
-  parseCilkscreenOutput: (text) ->
-    text = text.split('\n')
-    violations = []
-    currentViolation = null
-
-    # Run through it line by line to figure out what the race conditions are
-    for line in text
-      if line.indexOf("Race condition on location ") isnt -1
-        # We have found the first line in a violation
-        currentViolation = {stacktrace: {}, memoryLocation: line}
-        currentStacktrace = []
-        continue
-
-      if currentViolation isnt null
-        if line.indexOf("access at") isnt -1
-          splitLine = line.trim().split(' ')
-          accessType = splitLine[0]
-          # console.log(splitLine)
-          sourceCodeLine = splitLine[4].slice(1, -1)
-          # console.log(sourceCodeLine)
-          splitSC = sourceCodeLine.split(',')
-          # There will be 6 elements if the line has a source code annotation.
-          if splitLine.length is 6
-            sourceCodeLine = splitSC[0]
-            # console.log(sourceCodeLine)
-            splitIndex = sourceCodeLine.lastIndexOf(':')
-            sourceCodeFile = sourceCodeLine.substr(0, splitIndex)
-            sourceCodeLine = +sourceCodeLine.substr(splitIndex + 1)
-          # Otherwise, for some cilk_for calls, there is no extra information.
-          else
-            sourceCodeFile = null
-            sourceCodeLine = null;
-
-          lineData = {
-            accessType: accessType,
-            filename: sourceCodeFile,
-            line: sourceCodeLine,
-            rawText: line
-          }
-
-          # console.log(lineData)
-
-          if currentViolation.line1
-            currentViolation.line2 = lineData
-            lineId = lineData.filename + ":" + lineData.line
-            currentViolation.stacktrace[lineId] = []
-          else
-            currentViolation.line1 = lineData
-            lineId = lineData.filename + ":" + lineData.line
-            currentViolation.stacktrace[lineId] = []
-        else if line.indexOf("called by") isnt -1
-          # console.log(currentViolation)
-          currentStacktrace.push(line)
-        else
-          lineId = currentViolation.line2.filename + ":" + currentViolation.line2.line
-          currentViolation.stacktrace[lineId].push(currentStacktrace)
-          violations.push(currentViolation)
-          currentViolation = null
-
-    mergeStacktraces = (entry, item) ->
-      lineId = item.line2.filename + ":" + item.line2.line
-      entry.stacktrace[lineId].push(item.stacktrace[lineId][0])
-
-    # TODO: yes, fill this out
-    isEqual = (obj1, obj2) ->
-      isFileEqual = (file1, file2) ->
-        return file1.filename is file2.filename and file1.line is file2.line
-
-      return (isFileEqual(obj1.line1, obj2.line1) and isFileEqual(obj1.line2, obj2.line2)) or
-        (isFileEqual(obj1.line2, obj2.line1) and isFileEqual(obj1.line1, obj2.line2))
-
-    violationSet = new CustomSet(isEqual)
-    violationSet.add(violations, mergeStacktraces)
-    violations = violationSet.getContents()
-
-    console.log("Pruned violations...")
-    console.log(violations)
-    return violations
-
-  getViolationLineCode: (violations, next) ->
-    HALF_CONTEXT = 2
-
-    readRequestArray = []
-    violations.forEach((item) =>
-      if item.line1.filename
-        readRequestArray.push([
-          item.line1.filename,
-          [item.line1.line - HALF_CONTEXT, item.line1.line + HALF_CONTEXT]
-        ])
-      if item.line2.filename
-        readRequestArray.push([
-          item.line2.filename,
-          [item.line2.line - HALF_CONTEXT, item.line2.line + HALF_CONTEXT]
-        ])
-    )
-
-    FileLineReader.readLineNumBatch(readRequestArray, (texts) =>
-      @groupCodeWithViolations(violations, texts)
-      next(violations)
-    )
-
-  groupCodeWithViolations: (violations, texts) ->
-    for violation in violations
-      codeSnippetsFound = 0
-      # console.log(violation)
-      for text in texts
-        # console.log(text)
-        if codeSnippetsFound is 2
-          break
-        if violation.line1.filename is text.filename and violation.line1.line - 2 is text.lineRange[0]
-          violation.line1.text = text.text
-          violation.line1.lineRange = text.lineRange
-          codeSnippetsFound++
-        if violation.line2.filename is text.filename and violation.line2.line - 2 is text.lineRange[0]
-          violation.line2.text = text.text
-          violation.line2.lineRange = text.lineRange
-          codeSnippetsFound++
-      if codeSnippetsFound < 2 and violation.line1.filename isnt null and violation.line2.filename isnt null
-        console.log("groupCodeWithViolations: too few texts found for a violation")
-    console.log("Finished groupCodeWithViolations")
-    console.log(violations)
+    @cilkscreenMod.killThread()
+    @currentState.state = "ok"
+    @currentState.manual = false
+    return true
 
   ###
     Hooks
@@ -406,28 +162,33 @@ class Project
       @editorIds.push(editor.id)
 
     # After the user stops changing the text, we start the timer to when we
-    # initiate cilkscreen.
+    # initiate running cilktools.
     stopChangeDisposable = editor.onDidStopChanging(()=>
       console.log("Editor stopped changing: " + editor.id)
       console.log("Current state: #{@currentState.state}")
       if @currentState.state isnt "complete"
         console.log("Initializing timer with state as #{@currentState.state}")
-        @initializeCilkscreenTimer()
+        @initializeTimer()
     )
     changeDisposable = editor.onDidChange(()=>
-      @clearCilkscreenTimer() if @idleTimeout
+      @clearTimer() if @idleTimeout
     )
     saveDisposable = editor.onDidSave(()=>
       console.log("Saved!")
       @currentState.state = "ok"
       console.log("Initializing timer with state as #{@currentState.state}")
-      @initializeCilkscreenTimer()
+      @initializeTimer()
     )
 
     @editorSubscriptions[editor.id] = [stopChangeDisposable, changeDisposable, saveDisposable]
     @subscriptions.add(changeDisposable)
     @subscriptions.add(stopChangeDisposable)
     @subscriptions.add(saveDisposable)
+
+  # Uh, why do we need this? probably for minimap maintenance
+  updateActiveEditor: () ->
+    console.log("Called active editor in project")
+    @cilkscreenMod.updateActiveEditor()
 
   unregisterEditor: (editorId) ->
     for disposable in @editorSubscriptions[editorId]
@@ -436,10 +197,22 @@ class Project
     index = @editorIds.indexOf(editorId)
     @editorIds.splice(index, 1)
 
+  changeState: (moduleName, status) ->
+    if status is "complete"
+      @currentState.lastRuntime = Date.now() - @currentState.start
+      console.log("Just set lastRuntime #{@path} to #{@currentState.lastRuntime}")
+      console.log("The last run took #{@currentState.lastRuntime / 1000} seconds.")
+    if status isnt "running"
+      @currentState.manual = false
+      @currentState.start = null
+    @currentState.state = status
+    @currentState.lastUpdated = Date.now()
+    @updateStatusTile()
+
+  # TODO: this needs to be generalized
   updateStatusTile: () ->
     console.log("Updating status bar for #{@path}, current path being #{@statusBar.getCurrentPath()}")
     console.log("Current state is #{@currentState.state}")
-    console.log(@statusBar)
     if @path is @statusBar.getCurrentPath()
       if @currentState.state is "complete" or @currentState.state is "running"
         if @currentState.start
@@ -462,19 +235,18 @@ class Project
 
   manuallyRun: () ->
     @currentState.manual = true
-    @killCilkscreen(true)
+    @killModules(true)
     @makeExecutable()
 
   manuallyCancel: () ->
-    @killCilkscreen(true) if @currentState.thread
+    @killModules(true)
     @updateStatusTile()
 
-  highlightViolationInDetailPanel: (index) ->
-    console.log("highlightViolationInDetailPanel called: #{index}")
-    @projectView.highlightViolation(null, index, true)
+  getConfSettings: (refresh) ->
+    if refresh
+      @refreshConfFile()
+    return @settings
 
-  scrollToViolation: () ->
-    @projectView.scrollToViolation()
-
+  # Core UI functions
   getDetailPanel: () ->
-    return @projectView.getElement()
+    return @cilkscreenMod.getDetailPanel()

@@ -1,11 +1,11 @@
 {
-  "name": "cilkscreen-plugin",
-  "main": "./lib/cilkscreen-plugin",
-  "version": "0.0.0",
+  "name": "cilkide",
+  "main": "./lib/main",
+  "version": "0.0.1",
   "description": "A short description of your package",
   "keywords": [
   ],
-  "repository": "https://github.com/Sakawa/cilkscreen-plugin",
+  "repository": "https://github.com/Sakawa/cilkide",
   "license": "MIT",
   "engines": {
     "atom": ">=1.0.0 <2.0.0"

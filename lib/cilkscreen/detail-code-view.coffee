@@ -1,5 +1,5 @@
 TextEditor = null
-CustomSet = require('./set')
+CustomSet = require('../utils/set')
 $ = require('jquery')
 
 VERBS_PT = {

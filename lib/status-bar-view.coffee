@@ -1,22 +1,22 @@
 $ = require('jquery')
-{TimeUtil} = require('./utils')
 path = require('path')
 
-MILLI_IN_HOUR = 1000 * 60 * 60
-MILLI_IN_MIN = 1000 * 60
 MILLI_IN_SEC = 1000
+MILLI_IN_MIN = MILLI_IN_SEC * 60
+MILLI_IN_HOUR = MILLI_IN_MIN * 60
 
 module.exports =
 class StatusBarView
-  element: null
-  icon: null
-  interval: null
   currentPath: null
-  tooltip: null
-
   currentText: null
+  interval: null
   lastUpdatedTimer: null
   lastUpdated: null
+
+  # UI elements
+  element: null
+  icon: null
+  tooltip: null
 
   # Properties from parents
   props: null
@@ -137,25 +137,25 @@ class StatusBarView
     console.log("Updating status bar tile path to #{path}.")
     @currentPath = path
 
-  setTimer: (lastUpdated) ->
+  setTimer: () ->
     @updateLastUpdated()
 
   updateLastUpdated: () ->
     currentTime = Date.now()
-    secAgo = Math.floor((currentTime - @lastUpdated) / 1000)
+    secAgo = Math.floor((currentTime - @lastUpdated) / MILLI_IN_SEC)
     if secAgo < 60
       @icon.textContent = "#{@currentText} (<1 min ago)"
-      @lastUpdatedTimer = setTimeout((=>@updateLastUpdated()), 1000 * 60)
+      @lastUpdatedTimer = setTimeout((=>@updateLastUpdated()), MILLI_IN_MIN)
       return
     if secAgo < 3600
       minAgo = Math.floor(secAgo / 60)
       @icon.textContent = "#{@currentText} (#{minAgo} min ago)"
-      @lastUpdatedTimer = setTimeout((=>@updateLastUpdated()), 1000 * 60)
+      @lastUpdatedTimer = setTimeout((=>@updateLastUpdated()), MILLI_IN_MIN)
       return
 
     hrAgo = Math.floor(secAgo / 60 / 60)
     @icon.textContent = "#{@currentText} (#{hrAgo} hrs ago)"
-    @lastUpdatedTimer = setTimeout((=>@updateLastUpdated()), 1000 * 60 * 60)
+    @lastUpdatedTimer = setTimeout((=>@updateLastUpdated()), MILLI_IN_HOUR)
     return
 
   getCurrentPath: () ->

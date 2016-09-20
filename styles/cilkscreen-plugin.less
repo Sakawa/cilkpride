@@ -131,6 +131,20 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
           cursor: pointer;
         }
 
+        .cs-minimap-container {
+          position: relative;
+
+          .minimap-overlay {
+            position: absolute;
+            width: 100%;
+            height: 0px;
+            z-index: 11;
+            background-color: white;
+            opacity: 0.3;
+          }
+
+        }
+
       }
     }
 

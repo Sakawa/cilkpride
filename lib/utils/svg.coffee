@@ -11,24 +11,26 @@ class SVG
 
   @addSVGLine = (svg, id, x1, y1, x2, y2) ->
     line = SVG.createSVGElement("line", {
-      "x1": x1,
-      "y1": y1,
-      "x2": x2,
-      "y2": y2,
       "stroke": "#ff0000",
       "stroke-width": "1",
       "violation-id": "#{id}-visible",
+      "x1": x1,
+      "x2": x2,
+      "y1": y1,
+      "y2": y2,
     })
 
+    # We need an invisible line that is larger than the visible line,
+    # to serve as the clickable part.
     hiddenLine = SVG.createSVGElement("line", {
-      "x1": x1,
-      "y1": y1,
-      "x2": x2,
-      "y2": y2,
       "stroke": "#ff0000",
       "stroke-width": "8",
       "stroke-opacity": "0.0",
       "violation-id": id,
+      "x1": x1,
+      "x2": x2,
+      "y1": y1,
+      "y2": y2,
     })
 
     svg.appendChild(line)
@@ -40,18 +42,20 @@ class SVG
     path = "M #{x1} #{y1} Q #{midX - 20} #{midY} #{x2} #{y2}"
     curve = SVG.createSVGElement("path", {
       "d": path,
+      "fill": "none",
       "stroke": "#ff0000",
       "stroke-width": "2",
-      "fill": "none",
       "violation-id": "#{id}-visible",
     })
 
+    # We need an invisible curve that is larger than the visible curve,
+    # to serve as the clickable part.
     hiddenCurve = SVG.createSVGElement("path", {
       "d": path,
-      "stroke": "#ff0000",
-      "stroke-width": "8",
       "fill": "none",
+      "stroke": "#ff0000",
       "stroke-opacity": "0.0",
+      "stroke-width": "8",
       "violation-id": id,
     })
 

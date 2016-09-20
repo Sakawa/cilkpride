@@ -1,5 +1,5 @@
 TextEditor = null
-FileLineReader = require('./file-read-lines')
+FileLineReader = require('../utils/file-reader')
 $ = require('jquery')
 
 NUM_PIXELS_PER_LINE = 6
@@ -11,6 +11,8 @@ class MinimapView
   editor: null
   minimap: null
   decorationQueue: null
+  promise: null
+  minimapElement: null
 
   # Properties from parent
   props: null
@@ -35,12 +37,20 @@ class MinimapView
 
     @decorationQueue = []
 
-  init: () ->
-    console.log("init started for #{@filename} minimap")
-    promise = new Promise((resolve, reject) =>
+  init: (editor) ->
+    if editor
+      console.log("init started for #{@filename} minimap for editor #{editor.id} for filename #{@filename}")
+      @editor = editor
+    else
+      console.log("init started for #{@filename} minimap for filename #{@filename}")
       data = FileLineReader.readFile(@filename)
-      @buildMinimap(resolve, data)
-    )
+      hiddenEditor = @constructTextEditor({ mini: false })
+      @editor = hiddenEditor
+      @editor.setGrammar(atom.grammars.grammarForScopeName('source.c'))
+      @editor.setText(data)
+
+    @buildMinimap()
+
     promise.then(() =>
       console.log("#{@filename} minimap init promise returned")
       console.log(@decorationQueue)
@@ -56,16 +66,24 @@ class MinimapView
       console.log(minimapView.shadowRoot)
       console.log(minimapView.shadowRoot.children[0])
     )
-    return promise
+    return @promise
 
-  buildMinimap: (resolve, data) ->
-    editor = @constructTextEditor({ mini: false })
-    @editor = editor
-    editor.setGrammar(atom.grammars.grammarForScopeName('source.c'))
-    editor.setText(data)
-    numLines = data.split('\n').length
+  registerEditor: () ->
+    return
+
+  clearEditor: () ->
+    @editor = null if @editor
+    @minimap.destroy() if @minimap
+    @minimap = null
+    @minimapElement.destroy() if @minimapElement
+    @minimapElement = null
+    @decorationQueue = []
+    @ready = false
+
+  buildMinimap: () ->
+    numLines = @editor.getLineCount()
     atom.packages.serviceHub.consume('minimap', '1.0.0', (api) =>
-      @minimap = api.standAloneMinimapForEditor(editor)
+      @minimap = api.standAloneMinimapForEditor(@editor)
       @minimap.setCharHeight(3)
       @minimap.setCharWidth(3)
       minimapElement = atom.views.getView(@minimap)
