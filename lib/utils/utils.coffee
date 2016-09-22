@@ -1,3 +1,5 @@
+TextEditor = null
+
 class MinimapUtil
   VERTICAL_PADDING = 5
   HORIZONTAL_PADDING = 20
@@ -15,4 +17,13 @@ class MinimapUtil
   @getLineTop: (line) ->
     return line * LINE_HEIGHT - 2
 
-module.exports = {MinimapUtil}
+class TextEditorUtil
+  @constructTextEditor: (params) ->
+    if atom.workspace.buildTextEditor?
+      lineEditor = atom.workspace.buildTextEditor(params)
+    else
+      TextEditor ?= require("atom").TextEditor
+      lineEditor = new TextEditor(params)
+    return lineEditor
+
+module.exports = {MinimapUtil, TextEditorUtil}
