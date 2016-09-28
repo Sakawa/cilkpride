@@ -1,15 +1,18 @@
 $ = require('jquery')
 {TextEditorUtil} = require('./utils/utils')
+{CompositeDisposable} = require('atom')
 
 module.exports =
 class PasswordView
 
-  content = null
+  content: null
   passwordEditor: null
   panel: null
+  subscriptions: null
 
   constructor: (description, onEnter, onCancel) ->
     console.log("[password-view] Password modal created")
+    @subscriptions = new CompositeDisposable()
     @content = document.createElement('div')
     if description
       descriptionDiv = document.createElement('div')
@@ -31,18 +34,17 @@ class PasswordView
       passwordElement.find('#password-style').remove()
       passwordElement.append('<style id="password-style">.password-lines .line span.text:before {content:"' + string + '";}</style>')
     )
-    atom.commands.add('atom-text-editor', 'core:confirm', () =>
+    @subscriptions.add(atom.commands.add('atom-text-editor', 'core:confirm', () =>
       console.log("[password-view] Pressed enter")
-      console.log("Your password is #{@passwordEditor.getText()}")
       password = @passwordEditor.getText()
       @detach()
       onEnter(password)
-    )
-    atom.commands.add('atom-text-editor', 'core:cancel', () =>
+    ))
+    @subscriptions.add(atom.commands.add('atom-text-editor', 'core:cancel', () =>
       console.log("[password-view] Pressed cancel")
       @detach()
       onCancel()
-    )
+    ))
 
     @attach()
 
@@ -57,6 +59,7 @@ class PasswordView
   detach: () ->
     @passwordEditor.setText('')
     $(@passwordEditor.element).off("blur")
+    @subscriptions.dispose()
     @panel.destroy()
 
   getView: () ->
