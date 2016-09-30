@@ -174,7 +174,7 @@ module.exports = Cilkide =
         console.log("Quick escape: #{@pathToPath[projectPath]}")
         return @pathToPath[projectPath]
       try
-        stats = fs.statSync(path.resolve(projectPath, 'cilkscreen-conf.json'))
+        stats = fs.statSync(path.resolve(projectPath, 'cilkide-conf.json'))
         if stats.isFile()
           for tpath in traversedPaths
             @pathToPath[tpath] = projectPath
@@ -194,7 +194,7 @@ module.exports = Cilkide =
 
   createConfFile: (directory) ->
     console.log("Generating a configuration file in #{directory}...")
-    confPath = path.join(directory, 'cilkscreen-conf.json')
+    confPath = path.join(directory, 'cilkide-conf.json')
     fs.open(confPath, 'wx', (err, fd) ->
       if err
         # do some error handling here
@@ -204,12 +204,18 @@ module.exports = Cilkide =
       else
         fs.write(fd, """
 {
-  "makeCommand": ["make target-name"],
-  "commandArgs": ["./executable", "arg1", "arg2", "..."]
+  "cilksanCommand": "this command should compile & run the cilksan-capable executable",
+
+  "hostname": "athena.dialup.mit.edu",
+  "port": 22,
+  "username": "your athena username here",
+  "launchInstance": true,
+  "localBaseDir": "full directory path of the project directory on your local computer",
+  "remoteBaseDir": "full directory path of the project directory on the remote instance"
 }
         """, {encoding: "utf8"}, (err, written, buffer) ->
           atom.workspace.open(confPath)
-          atom.notifications.addSuccess("CilkIDE configuration file created for #{directory}.", {
+          atom.notifications.addSuccess("Cilkide configuration file created for #{directory}.", {
             title: "Customize the configuration for your particular project to start using the plugin!"
           })
         )

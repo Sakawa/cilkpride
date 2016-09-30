@@ -111,7 +111,7 @@ class StatusBarView
     @lastUpdated = lastUpdated
     @setTimer(lastUpdated)
     # $(@icon).on('click', (e) =>
-    #   atom.workspace.open(path.join(@currentPath, "cilkscreen-conf.json"))
+    #   atom.workspace.open(path.join(@currentPath, "cilkide-conf.json"))
     # )
 
   displayStart: () ->

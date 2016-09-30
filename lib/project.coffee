@@ -114,7 +114,7 @@ class Project
   refreshConfFile: () ->
     try
       @settings = JSON.parse(fs.readFileSync(
-        path.resolve(@path, 'cilkscreen-conf.json'),
+        path.resolve(@path, 'cilkide-conf.json'),
         {
           flags: 'r',
           encoding: 'utf-8',
