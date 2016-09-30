@@ -1,3 +1,5 @@
+path = require('path')
+
 CustomSet = require('../utils/set')
 FileLineReader = require('../utils/file-reader')
 
@@ -6,19 +8,20 @@ class CilkscreenParser
 
   # This is the main function in the parser for cilkscreen results.
   # External classes should only call this function, and not any others.
-  @processViolations: (text, callback) ->
-    violations = CilkscreenParser.parseCilkscreenOutput(text)
+  @processViolations: (text, callback, remoteDir, localDir) ->
+    violations = CilkscreenParser.parseCilkscreenOutput(text, remoteDir, localDir)
     CilkscreenParser.getViolationLineCode(violations, callback)
 
   # Cilkscreen-related functions
-  @parseCilkscreenOutput: (text) ->
+  # TODO: could replace this with smart regex
+  @parseCilkscreenOutput: (text, remoteDir, localDir) ->
     text = text.split('\n')
     violations = []
     currentViolation = null
 
     # Run through it line by line to figure out what the race conditions are
     for line in text
-      if line.indexOf("Race condition on location ") isnt -1
+      if line.indexOf("Race detected at address ") isnt -1
         # We have found the first line in a violation
         currentViolation = {stacktrace: {}, memoryLocation: line}
         currentStacktrace = []
@@ -31,18 +34,20 @@ class CilkscreenParser
           # console.log(splitLine)
           sourceCodeLine = splitLine[4].slice(1, -1)
           # console.log(sourceCodeLine)
-          splitSC = sourceCodeLine.split(',')
-          # There will be 6 elements if the line has a source code annotation.
-          if splitLine.length is 6
-            sourceCodeLine = splitSC[0]
+          # There will be 5 elements if the line has a source code annotation.
+          if splitLine.length is 5
             # console.log(sourceCodeLine)
             splitIndex = sourceCodeLine.lastIndexOf(':')
             sourceCodeFile = sourceCodeLine.substr(0, splitIndex)
             sourceCodeLine = +sourceCodeLine.substr(splitIndex + 1)
-          # Otherwise, for some cilk_for calls, there is no extra information.
-          else
-            sourceCodeFile = null
-            sourceCodeLine = null;
+            # Sometimes there's no information given from cilksan, specified by (??:0)
+            if sourceCodeFile is '??'
+              sourceCodeFile = null
+            else if remoteDir and localDir
+              relativePath = path.relative(remoteDir, sourceCodeFile)
+              sourceCodeFile = path.join(localDir, relativePath)
+            if sourceCodeLine is 0
+              sourceCodeLine = null
 
           lineData = {
             accessType: accessType,
@@ -51,7 +56,8 @@ class CilkscreenParser
             rawText: line
           }
 
-          # console.log(lineData)
+          console.log("[cilkscreen-parser] Line data")
+          console.log(lineData)
 
           if currentViolation.line1
             currentViolation.line2 = lineData
@@ -61,9 +67,9 @@ class CilkscreenParser
             currentViolation.line1 = lineData
             lineId = lineData.filename + ":" + lineData.line
             currentViolation.stacktrace[lineId] = []
-        else if line.indexOf("called by") isnt -1
-          # console.log(currentViolation)
-          currentStacktrace.push(line)
+        # else if line.indexOf("called by") isnt -1
+        #   # console.log(currentViolation)
+        #   currentStacktrace.push(line)
         else
           lineId = currentViolation.line2.filename + ":" + currentViolation.line2.line
           currentViolation.stacktrace[lineId].push(currentStacktrace)
@@ -97,15 +103,23 @@ class CilkscreenParser
     readRequestArray = []
     violations.forEach((item) =>
       if item.line1.filename
-        readRequestArray.push([
-          item.line1.filename,
-          [item.line1.line - HALF_CONTEXT, item.line1.line + HALF_CONTEXT]
-        ])
+        if item.line1.line
+          readRequestArray.push([
+            item.line1.filename,
+            [item.line1.line - HALF_CONTEXT, item.line1.line + HALF_CONTEXT]
+          ])
+        else
+          item.line1.text = "No source code available for this access."
+          item.line1.lineRange = [0,0]
       if item.line2.filename
-        readRequestArray.push([
-          item.line2.filename,
-          [item.line2.line - HALF_CONTEXT, item.line2.line + HALF_CONTEXT]
-        ])
+        if item.line2.line
+          readRequestArray.push([
+            item.line2.filename,
+            [item.line2.line - HALF_CONTEXT, item.line2.line + HALF_CONTEXT]
+          ])
+        else
+          item.line2.text = "No source code available for this access."
+          item.line2.lineRange = [0,0]
     )
 
     FileLineReader.readLineNumBatch(readRequestArray, (texts) =>

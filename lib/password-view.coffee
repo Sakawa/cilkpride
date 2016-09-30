@@ -10,15 +10,20 @@ class PasswordView
   panel: null
   subscriptions: null
 
-  constructor: (description, onEnter, onCancel) ->
+  onEnter: null
+  onCancel: null
+
+  constructor: (props) ->
     console.log("[password-view] Password modal created")
     @subscriptions = new CompositeDisposable()
+    @onEnter = props.onEnter
+    @onCancel = props.onCancel # caution: these callbacks may be overwritten!
     @content = document.createElement('div')
-    if description
-      descriptionDiv = document.createElement('div')
-      descriptionDiv.classList.add('password-view-descriptor')
-      descriptionDiv.textContent = description
-      @content.appendChild(descriptionDiv)
+
+    descriptionDiv = document.createElement('div')
+    descriptionDiv.classList.add('password-view-descriptor')
+    descriptionDiv.textContent = props.description
+    @content.appendChild(descriptionDiv)
 
     @passwordEditor = TextEditorUtil.constructTextEditor({
       mini: true
@@ -38,12 +43,12 @@ class PasswordView
       console.log("[password-view] Pressed enter")
       password = @passwordEditor.getText()
       @detach()
-      onEnter(password)
+      @onEnter(password)
     ))
     @subscriptions.add(atom.commands.add('atom-text-editor', 'core:cancel', () =>
       console.log("[password-view] Pressed cancel")
       @detach()
-      onCancel()
+      @onCancel()
     ))
 
     @attach()

@@ -37,7 +37,8 @@ class DetailCodeView
     )
     # violationView.addEventListener("click", ((e) => @onViolationClickCallback(e, @index)), true)
     violationView.appendChild(@constructVisualPreview(@violation.line1, null, true))
-    violationView.appendChild(@constructVisualPreview(@violation.line2, @parseStacktrace(@violation.stacktrace), false))
+    # currently no stack traces
+    violationView.appendChild(@constructVisualPreview(@violation.line2, null, false))
 
     return violationView
 
@@ -58,7 +59,8 @@ class DetailCodeView
     violationView.appendChild(summaryDiv)
 
     violationView.appendChild(@constructCodePreview(@violation.line1, null, true))
-    violationView.appendChild(@constructCodePreview(@violation.line2, @parseStacktrace(@violation.stacktrace), false))
+    # currently no stack traces
+    violationView.appendChild(@constructCodePreview(@violation.line2, null, false))
 
     return violationView
 
@@ -214,7 +216,7 @@ class DetailCodeView
     filename = filenamePath[filenamePath.length - 1]
     minLineNum = lineInfo.lineRange[0]
     maxLineNum = lineInfo.lineRange[1]
-    originalLineNum = lineInfo.line
+    originalLineNum = if lineInfo.line then lineInfo.line else '??'
 
     codeLineDiv = document.createElement('div')
     codeLineDiv.classList.add('code-line-container')
@@ -228,12 +230,12 @@ class DetailCodeView
       readWriteDiv.title = "This line wrote to a shared location."
     codeLineDiv.appendChild(readWriteDiv)
     filenameDiv = document.createElement('div')
-    DetailCodeView.attachFileOpenListener(filenameDiv, lineInfo.filename, originalLineNum)
+    DetailCodeView.attachFileOpenListener(filenameDiv, lineInfo.filename, originalLineNum) if originalLineNum isnt '??'
     filenameDiv.classList.add('filename-line-number')
     filenameDiv.textContent = "#{filename}:#{originalLineNum}"
     lineNumberDiv = document.createElement('div')
     lineNumberDiv.classList.add('line-number')
-    DetailCodeView.attachFileOpenListener(lineNumberDiv, lineInfo.filename,originalLineNum)
+    DetailCodeView.attachFileOpenListener(lineNumberDiv, lineInfo.filename,originalLineNum) if originalLineNum isnt '??'
     lineNumberDiv.innerHTML = "<code class='highlighted'>#{originalLineNum}</code>"
     codeLineDiv.appendChild(lineNumberDiv)
 
@@ -244,14 +246,15 @@ class DetailCodeView
 
     editorContainer = document.createElement('div')
     editorContainer.classList.add('editor-container')
-    editorOverlay = document.createElement('div')
-    editorOverlay.classList.add('editor-overlay')
-    editorContainer.appendChild(editorOverlay)
-    editorOverlay.title = "Click to go to line."
-    DetailCodeView.attachFileOpenListener(editorOverlay, lineInfo.filename, originalLineNum)
-    $(editorOverlay).mousemove((e) ->
-      e.stopPropagation()
-    )
+    if originalLineNum isnt '??'
+      editorOverlay = document.createElement('div')
+      editorOverlay.classList.add('editor-overlay')
+      editorContainer.appendChild(editorOverlay)
+      editorOverlay.title = "Click to go to line."
+      DetailCodeView.attachFileOpenListener(editorOverlay, lineInfo.filename, originalLineNum)
+      $(editorOverlay).mousemove((e) ->
+        e.stopPropagation()
+      )
     editorContainer.appendChild(lineEditorView)
 
     codeLineDiv.appendChild(filenameDiv)

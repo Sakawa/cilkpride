@@ -36,7 +36,10 @@ class StatusBarView
   displayNoErrors: (lastUpdated) ->
     @resetState()
     @icon.classList.add('icon', 'icon-check')
-    @currentText = "No races found"
+    @currentText = "Cilktools run successfully"
+    $(@icon).on('click', (e) =>
+      @onErrorClickCallback()
+    )
     if lastUpdated
       @lastUpdated = lastUpdated
       @setTimer(lastUpdated)

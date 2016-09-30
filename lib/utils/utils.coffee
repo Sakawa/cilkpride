@@ -26,4 +26,7 @@ class TextEditorUtil
       lineEditor = new TextEditor(params)
     return lineEditor
 
-module.exports = {MinimapUtil, TextEditorUtil}
+extractLast = (str, numChar) ->
+  return str.substring(str.length - numChar, str.length)
+
+module.exports = {MinimapUtil, TextEditorUtil, extractLast}

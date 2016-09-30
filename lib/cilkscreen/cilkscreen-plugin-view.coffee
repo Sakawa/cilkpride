@@ -190,7 +190,7 @@ class CilkscreenPluginView
     #   )
 
   createMinimapForLine: (violationLine, minimapPromises, minimapLineContainer) ->
-    if violationLine.filename
+    if violationLine.filename and violationLine.line
       if not @minimaps[violationLine.filename]
         @minimaps[violationLine.filename] = new MinimapView({filename: violationLine.filename})
         # minimapPromises.push(@minimaps[violation.line1.filename].init())

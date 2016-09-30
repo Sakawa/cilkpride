@@ -29,8 +29,15 @@ module.exports = Cilkide =
     })
 
     # Register commands
-    @subscriptions.add(atom.commands.add('atom-workspace', 'cilkide:manual-run': () => @manuallyRun()))
-    @subscriptions.add(atom.commands.add('atom-workspace', 'cilkide:manual-cancel': () => @manuallyCancel()))
+    # @subscriptions.add(atom.commands.add('atom-workspace', 'cilkide:manual-run': () => @manuallyRun()))
+    # @subscriptions.add(atom.commands.add('atom-workspace', 'cilkide:manual-cancel': () => @manuallyCancel()))
+    # FileSync = require('./file-sync')
+    # SSHRunner = require('./sshrunner')
+    # PasswordView = require('./password-view')
+    # @subscriptions.add(atom.commands.add('atom-workspace', 'cilkide:test-ftp': () =>
+    #   (new SSHRunner()).createConnection()
+    # ))
+    # @subscriptions.add(atom.commands.add('atom-workspace', 'cilkide:test-ftp-2': () => (new FileSync({}).remoteToLocal())))
 
     # Add a hook on every single text editor that is open (and will be opened in the future)
     @subscriptions.add(atom.workspace.observeTextEditors((editor) => @registerEditor(editor)))
@@ -48,12 +55,26 @@ module.exports = Cilkide =
         @statusBarElement.hide()
     ))
 
+    atom.commands.add('atom-workspace', 'cilkide:sync-local-remote', (event) =>
+      event.stopPropagation()
+      editorPath = @getActivePanePath()
+      if editorPath
+        @projects[editorPath].sync(true)
+    )
+
+    atom.commands.add('atom-workspace', 'cilkide:sync-remote-local', (event) =>
+      event.stopPropagation()
+      editorPath = @getActivePanePath()
+      if editorPath
+        @projects[editorPath].sync(false)
+    )
+
     console.log("Cilkscreen plugin activated!")
 
   deactivate: ->
     @subscriptions.dispose()
     @statusBarTile.destroy()
-    @detailPanel.destroy()
+    @detailPanel.destroy() if @detailPanel
     @statusBarTile = null
     @statusBarElement = null
     @detailPanel = null

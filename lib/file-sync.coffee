@@ -7,42 +7,48 @@ class FileSync
   sftp: null
   settings: null
 
-  constructor: (sftp) ->
-    @sftp = sftp.sftp
-    @settings = sftp.settings
-    @sftp.on('close', (hadError) =>
-      console.log("[file-sync] SFTP :: closed")
-      @sftp = null
-    ).on('end', () =>
-      console.log("[file-sync] SFTP :: end signal received")
-      @sftp = null
-    ).on('error', (err) =>
-      console.log(["[file-sync] SFTP :: received error"])
-      console.log(err)
-      @sftp = null
+  constructor: (props) ->
+    @getSFTP = props.getSFTP
+
+  updateSFTP: () ->
+    @getSFTP((sftp) =>
+      @sftp = sftp.sftp
+      @settings = sftp.settings
+      console.log("[file-sync] Got a new SFTP.")
     )
 
   # Folder syncing
 
   copyFolder: (folder, localToRemote) ->
+    if not @sftp
+      return false
+
     source = @sftp
     dest = fs
     sourceBaseDir = path.join(@settings.remoteBaseDir, folder)
+    messageStr = "Synced #{sourceBaseDir} to #{path.join(@settings.localBaseDir, folder)}."
 
     if localToRemote
       source = fs
       dest = @sftp
       sourceBaseDir = path.join(@settings.localBaseDir, folder)
+      messageStr = "Synced #{sourceBaseDir} to #{path.join(@settings.remoteBaseDir, folder)}."
 
     (new Promise((resolve, reject) =>
-      source.stat(sourceBaseDir, (err, stats) ->
+      source.stat(sourceBaseDir, (err, stats) =>
         unless stats?.isDirectory()
-          throw "Error: Source directory specified is not an actual directory."
+          atom.notifications.addError("Error: Source directory #{@settings.localBaseDir} doesn't exist.")
           reject()
         else
           resolve()
       )
-    )).then(new Promise((resolve, reject) =>
+    )).then(() =>
+      @copyFolderRecur(folder, localToRemote, source, dest, sourceBaseDir)
+      atom.notifications.addSuccess(messageStr)
+    )
+
+  copyFolderRecur: (folder, localToRemote, source, dest, sourceBaseDir) ->
+    (new Promise((resolve, reject) =>
       @createDestFolderIfNecessary(folder, localToRemote, resolve, reject)
     )).then(() =>
       source.readdir(sourceBaseDir, (err, files) =>
@@ -60,24 +66,28 @@ class FileSync
               if stats.isFile()
                 @copyFile(newPath, localToRemote)
               else if stats.isDirectory()
-                @copyFolder(newPath, localToRemote)
+                @copyFolderRecur(newPath, localToRemote, source, dest, sourceBaseDir)
               else
                 console.log("[file-sync] SFTP :: unknown filetype #{newPath} encountered")
             )
       )
     )
 
-  copyFile: (file, localToRemote) ->
+  copyFile: (file, localToRemote, callback) ->
+    if not @sftp
+      return false
     console.log("[file-sync STFP] :: received request for #{file} : #{localToRemote} local -> remote")
     if localToRemote
       @sftp.fastPut(path.join(@settings.localBaseDir, file), path.join(@settings.remoteBaseDir, file), (err) ->
         throw err if err
         console.log("[file-sync] SFTP :: fastPut LTR #{file} succeeded")
+        callback() if callback
       )
     else
       @sftp.fastGet(path.join(@settings.remoteBaseDir, file), path.join(@settings.localBaseDir, file), (err) ->
         throw err if err
         console.log("[file-sync] SFTP :: fastPut RTL #{file} succeeded")
+        callback() if callback
       )
 
   createDestFolderIfNecessary: (folder, localToRemote, resolve, reject) ->

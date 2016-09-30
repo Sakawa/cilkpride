@@ -2,27 +2,23 @@
 'context-menu':
   'atom-text-editor': [
     {
-      'label': 'Toggle cilkscreen-plugin'
-      'command': 'cilkscreen-plugin:toggle'
+      'label': 'Toggle cilkide'
+      'command': 'cilkide:toggle'
     }
   ]
 'menu': [
   {
     'label': 'Packages'
     'submenu': [
-      'label': 'Cilkscreen'
+      'label': 'Cilkide'
       'submenu': [
         {
-          'label': 'Toggle'
-          'command': 'cilkscreen-plugin:toggle'
+          'label': 'Sync Project (Local -> Remote)'
+          'command': 'cilkide:sync-local-remote'
         },
         {
-          'label': 'Manually Run'
-          'command': 'cilkscreen-plugin:manual-run'
-        },
-        {
-          'label': 'Cancel Manual Run'
-          'command': 'cilkscreen-plugin:manual-cancel'
+          'label': 'Sync Project (Remote -> Local)',
+          'command': 'cilkide:sync-remote-local'
         }
       ]
     ]

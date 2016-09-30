@@ -10,6 +10,9 @@ FileLineReader = require('./utils/file-reader')
 CustomSet = require('./utils/set')
 
 CilkscreenModule = require('./cilkscreen/main')
+SSHModule = require('./ssh-module')
+FileSync = require('./file-sync')
+Runner = require('./runner')
 
 module.exports =
 class Project
@@ -30,6 +33,8 @@ class Project
 
   # Module imports
   cilkscreenMod: null
+  sshMod: null
+  fileSync: null
 
   constructor: (props) ->
     @props = props
@@ -52,14 +57,44 @@ class Project
     @subscriptions = new CompositeDisposable()
     @refreshConfFile()
 
-    #Initialize modules
-    # TODO: fix this constructor call
+    @init()
+
+    if @settings.hostname
+      @sshMod = new SSHModule({settings: @settings, refreshConfFile: (() => @getUpdatedConf())})
+      @sshMod.eventEmitter.on('ready', () =>
+        console.log("[project] Received ready on SSHModule")
+        @signalModules()
+      )
+      @fileSync = new FileSync({getSFTP: ((callback) => @getSFTP(callback))})
+
+  # TODO: this is jank
+  init: () ->
+    # Initialize modules
     @cilkscreenMod = new CilkscreenModule({
       changePanel: (() => @changeDetailPanel(@path))
       onCloseCallback: (() => @onPanelCloseCallback())
       getConfSettings: ((refresh) => @getConfSettings(refresh))
       changeState: ((code) => @changeState("cilkscreen", code))
+      runner: new Runner({
+        getInstance: ((callback) => @getInstance(callback))
+        settings: @settings
+        refreshConfFile: (() => @getUpdatedConf())
+      })
+      path: @path
     })
+
+  signalModules: () ->
+    @fileSync.updateSFTP()
+    @cilkscreenMod.updateInstance()
+
+  getInstance: (callback) ->
+    @sshMod.getInstance(callback)
+
+  getSFTP: (callback) ->
+    @sshMod.getSFTP(callback)
+
+  sync: (localToRemote) ->
+    @fileSync.copyFolder('/', localToRemote)
 
   # Timer functions
   initializeTimer: () ->
@@ -93,6 +128,10 @@ class Project
       @updateStatusTile()
       return false
 
+  getUpdatedConf: () ->
+    @refreshConfFile()
+    return @settings
+
   # Uses the cilkscreen target in the Makefile to make the executable so that
   # we can use cilkscreen on the executable.
   makeExecutable: () ->
@@ -100,26 +139,26 @@ class Project
     if not @refreshConfFile()
       return
 
-    # First change the directory to the folder where the Makefile is.
-    try
-      process.chdir(@path)
-      console.log("Successfully changed pwd to: #{@path}")
-    catch error
-      console.err("Could not change pwd to #{@path} with error #{error}")
-
-    # Invoke the cilkscreen target to run cilkscreen on.
-    makeThread = exec(@settings.makeCommand,
-      (error, stdout, stderr) =>
-        console.log("stdout: #{stdout}")
-        console.log("stderr: #{stderr}")
-        if error isnt null
-          console.log('child process exited with code ' + error)
-          @currentState.state = "make_error"
-          @currentState.lastUpdated = Date.now()
-          @updateStatusTile()
-        else if not stdout.includes("Nothing to be done")
-          @startModules()
-    )
+    # # First change the directory to the folder where the Makefile is.
+    # try
+    #   process.chdir(@path)
+    #   console.log("Successfully changed pwd to: #{@path}")
+    # catch error
+    #   console.err("Could not change pwd to #{@path} with error #{error}")
+    #
+    # # Invoke the cilkscreen target to run cilkscreen on.
+    # makeThread = exec(@settings.makeCommand,
+    #   (error, stdout, stderr) =>
+    #     console.log("stdout: #{stdout}")
+    #     console.log("stderr: #{stderr}")
+    #     if error isnt null
+    #       console.log('child process exited with code ' + error)
+    #       @currentState.state = "make_error"
+    #       @currentState.lastUpdated = Date.now()
+    #       @updateStatusTile()
+    #     else if not stdout.includes("Nothing to be done")
+    @startModules()
+   #)
 
   startModules: () ->
     if not @killModules(false)
@@ -146,7 +185,7 @@ class Project
     if @currentState.start?
       @currentState.start = null;
 
-    @cilkscreenMod.killThread()
+    @cilkscreenMod.kill()
     @currentState.state = "ok"
     @currentState.manual = false
     return true
@@ -163,26 +202,31 @@ class Project
 
     # After the user stops changing the text, we start the timer to when we
     # initiate running cilktools.
-    stopChangeDisposable = editor.onDidStopChanging(()=>
-      console.log("Editor stopped changing: " + editor.id)
-      console.log("Current state: #{@currentState.state}")
-      if @currentState.state isnt "complete"
-        console.log("Initializing timer with state as #{@currentState.state}")
-        @initializeTimer()
-    )
-    changeDisposable = editor.onDidChange(()=>
-      @clearTimer() if @idleTimeout
-    )
+    # stopChangeDisposable = editor.onDidStopChanging(()=>
+    #   console.log("Editor stopped changing: " + editor.id)
+    #   console.log("Current state: #{@currentState.state}")
+    #   # if @currentState.state isnt "complete"
+    #   #   console.log("Initializing timer with state as #{@currentState.state}")
+    #   #   @initializeTimer()
+    # )
+    # changeDisposable = editor.onDidChange(()=>
+    #   @clearTimer() if @idleTimeout
+    # )
     saveDisposable = editor.onDidSave(()=>
       console.log("Saved!")
       @currentState.state = "ok"
-      console.log("Initializing timer with state as #{@currentState.state}")
-      @initializeTimer()
+      if @settings.hostname
+        @fileSync.copyFile(path.relative(@settings.localBaseDir, editor.getPath()), true, () =>
+          console.log("Initializing timer with state as #{@currentState.state}")
+          @initializeTimer()
+        )
+      else
+        @initializeTimer()
     )
 
-    @editorSubscriptions[editor.id] = [stopChangeDisposable, changeDisposable, saveDisposable]
-    @subscriptions.add(changeDisposable)
-    @subscriptions.add(stopChangeDisposable)
+    @editorSubscriptions[editor.id] = [saveDisposable]
+    # @subscriptions.add(changeDisposable)
+    # @subscriptions.add(stopChangeDisposable)
     @subscriptions.add(saveDisposable)
 
   # Uh, why do we need this? probably for minimap maintenance
