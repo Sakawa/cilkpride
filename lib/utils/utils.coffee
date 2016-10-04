@@ -1,4 +1,5 @@
 TextEditor = null
+path = require('path').posix
 
 class MinimapUtil
   VERTICAL_PADDING = 5
@@ -29,4 +30,10 @@ class TextEditorUtil
 extractLast = (str, numChar) ->
   return str.substring(str.length - numChar, str.length)
 
-module.exports = {MinimapUtil, TextEditorUtil, extractLast}
+normalizePath = (filePath) ->
+  if filePath
+    return path.normalize(filePath.replace(/\\/g, '/'))
+  else
+    return null
+
+module.exports = {MinimapUtil, TextEditorUtil, extractLast, normalizePath}

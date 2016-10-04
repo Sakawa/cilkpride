@@ -2,17 +2,20 @@
 exec = require('child_process').exec
 extend = require('util')._extend;
 fs = require('fs')
-path = require('path');
+path = require('path').posix;
 process = require('process')
 spawn = require('child_process').spawn
 
 FileLineReader = require('./utils/file-reader')
 CustomSet = require('./utils/set')
+{normalizePath} = require('./utils/utils')
 
+CilkideDetailPanel = require('./cilkide-detail-panel')
 CilkscreenModule = require('./cilkscreen/main')
 SSHModule = require('./ssh-module')
 FileSync = require('./file-sync')
 Runner = require('./runner')
+Console = require('./console/console')
 
 module.exports =
 class Project
@@ -35,6 +38,10 @@ class Project
   cilkscreenMod: null
   sshMod: null
   fileSync: null
+  consoleMod: null
+
+  # ui
+  detailPanel: null
 
   constructor: (props) ->
     @props = props
@@ -49,17 +56,42 @@ class Project
     @editorIds = []
     @currentState = {
       state: "start"
-      start: null
-      lastRuntime: null
-      lastUpdated: null
-      manual: false
     }
     @subscriptions = new CompositeDisposable()
-    @refreshConfFile()
+    @detailPanel = new CilkideDetailPanel({
+        onCloseCallback: (() => @onPanelCloseCallback())
+    })
 
     @init()
 
-    if @settings.hostname
+  # TODO: this is jank
+  init: () ->
+    # Check the configuration file for errors first.
+    if not @refreshConfFile()
+      return
+
+    # For each module, create a tab for it and initialize the module.
+    @cilkscreenMod = new CilkscreenModule({
+      changePanel: (() => @changeDetailPanel(@path))
+      onCloseCallback: (() => @onPanelCloseCallback())
+      getConfSettings: ((refresh) => @getConfSettings(refresh))
+      onStateChange: (() => @updateState(true, @cilkscreenMod))
+      runner: new Runner({
+        getInstance: ((callback) => @getInstance(callback))
+        settings: @settings
+        refreshConfFile: (() => @getUpdatedConf())
+      })
+      path: @path
+      tab: @detailPanel.registerModuleTab("Cilksan", (() => return @cilkscreenMod.getDetailPanel()))
+    })
+
+    @consoleMod = new Console({
+      tab: @detailPanel.registerModuleTab("Console", (() => return @consoleMod.getDetailPanel()))
+    })
+
+    @consoleMod.registerModule(@cilkscreenMod.name)
+
+    if @settings.sshEnabled
       @sshMod = new SSHModule({settings: @settings, refreshConfFile: (() => @getUpdatedConf())})
       @sshMod.eventEmitter.on('ready', () =>
         console.log("[project] Received ready on SSHModule")
@@ -67,21 +99,53 @@ class Project
       )
       @fileSync = new FileSync({getSFTP: ((callback) => @getSFTP(callback))})
 
-  # TODO: this is jank
-  init: () ->
-    # Initialize modules
-    @cilkscreenMod = new CilkscreenModule({
-      changePanel: (() => @changeDetailPanel(@path))
-      onCloseCallback: (() => @onPanelCloseCallback())
-      getConfSettings: ((refresh) => @getConfSettings(refresh))
-      changeState: ((code) => @changeState("cilkscreen", code))
-      runner: new Runner({
-        getInstance: ((callback) => @getInstance(callback))
-        settings: @settings
-        refreshConfFile: (() => @getUpdatedConf())
-      })
-      path: @path
-    })
+  updateState: (repressUpdate, module) ->
+    console.log("[project] Updating status bar for #{@path}, current path being #{@statusBar.getCurrentPath()}")
+    console.log("[project] Current state is #{@currentState.state}")
+
+    if module and module.currentState.output
+      @consoleMod.updateOutput(module.name, module.currentState.output)
+
+    if @path isnt @statusBar.getCurrentPath()
+      console.log("[project] status bar: path mismatch")
+      return
+
+    # Global project states take priority - config errors, etc.
+    if @currentState.state is "config_error"
+      console.log("[project] status bar: config error")
+      return @statusBar.displayConfigError(repressUpdate)
+
+    # Modules still loading...
+    if not @cilkscreenMod.currentState.initialized
+      console.log("[project] status bar: cilkscreen not init'd")
+      return @statusBar.displayLoading(repressUpdate)
+
+    # All modules loaded, display status based off if (in priority)
+    # 1. Any module is still running
+    # 2. Any module is reporting a execution error
+    # 3. Any module is reporting a error
+    # 4. All modules are reporting start.
+    # 4. All modules are reporting OK.
+    if not @cilkscreenMod.currentState.ready
+      if @cilkscreenMod.currentState.lastRuntime
+        return @statusBar.displayCountdown(@cilkscreenMod.currentState.startTime +
+          @cilkscreenMod.currentState.lastRuntime)
+      else
+        return @statusBar.displayCountdown()
+
+    if @cilkscreenMod.currentState.state is "execution_error"
+      return @statusBar.displayExecutionError(repressUpdate)
+
+    if @cilkscreenMod.currentState.state is "error"
+      return @statusBar.displayErrors(repressUpdate)
+
+    if @cilkscreenMod.currentState.state is "start"
+      return @statusBar.displayStart(repressUpdate)
+
+    console.log("[project] status bar: fallthrough")
+    @statusBar.displayNoErrors(repressUpdate)
+
+    return
 
   signalModules: () ->
     @fileSync.updateSFTP()
@@ -113,8 +177,9 @@ class Project
   # TODO: need error handling
   refreshConfFile: () ->
     try
+      console.log(path.join(@path, 'cilkide-conf.json'))
       @settings = JSON.parse(fs.readFileSync(
-        path.resolve(@path, 'cilkide-conf.json'),
+        path.join(@path, 'cilkide-conf.json'),
         {
           flags: 'r',
           encoding: 'utf-8',
@@ -123,9 +188,10 @@ class Project
       console.log(@settings)
       return true
     catch error
-      @currentState.state = "conf_error"
-      @currentState.lastUpdated = Date.now()
-      @updateStatusTile()
+      @currentState.state = "config_error"
+      @updateState()
+      atom.notifications.addError("Cilkide was unable to read #{path.join(@path, 'cilkide-conf.json')}.
+        Please make sure the configuration file is correctly formatted.")
       return false
 
   getUpdatedConf: () ->
@@ -139,38 +205,12 @@ class Project
     if not @refreshConfFile()
       return
 
-    # # First change the directory to the folder where the Makefile is.
-    # try
-    #   process.chdir(@path)
-    #   console.log("Successfully changed pwd to: #{@path}")
-    # catch error
-    #   console.err("Could not change pwd to #{@path} with error #{error}")
-    #
-    # # Invoke the cilkscreen target to run cilkscreen on.
-    # makeThread = exec(@settings.makeCommand,
-    #   (error, stdout, stderr) =>
-    #     console.log("stdout: #{stdout}")
-    #     console.log("stderr: #{stderr}")
-    #     if error isnt null
-    #       console.log('child process exited with code ' + error)
-    #       @currentState.state = "make_error"
-    #       @currentState.lastUpdated = Date.now()
-    #       @updateStatusTile()
-    #     else if not stdout.includes("Nothing to be done")
     @startModules()
-   #)
 
   startModules: () ->
     if not @killModules(false)
       return
 
-    # TODO: This should be turned into a cancellable promise, so that
-    # we know when to modify the status bar to mark everything complete.
-    # All the modules should be run in parallel (at least, up to the UI changes)
-    @currentState.start = Date.now()
-    @changeState("cilkscreen", "running")
-    console.log("Just set cilkscreenTime #{@path} to #{@currentState.start}")
-    console.log("Last runtime: #{@currentState.lastRuntime}")
     @cilkscreenMod.startThread()
 
   killModules: (force) ->
@@ -178,16 +218,9 @@ class Project
     if @currentState.manual and not force
       return false
 
-    if @currentState.start?
-      @currentState.start = null;
-
     clearInterval(@idleTimeout)
-    if @currentState.start?
-      @currentState.start = null;
 
     @cilkscreenMod.kill()
-    @currentState.state = "ok"
-    @currentState.manual = false
     return true
 
   ###
@@ -200,23 +233,18 @@ class Project
     if editor.id not in @editorIds
       @editorIds.push(editor.id)
 
-    # After the user stops changing the text, we start the timer to when we
-    # initiate running cilktools.
-    # stopChangeDisposable = editor.onDidStopChanging(()=>
-    #   console.log("Editor stopped changing: " + editor.id)
-    #   console.log("Current state: #{@currentState.state}")
-    #   # if @currentState.state isnt "complete"
-    #   #   console.log("Initializing timer with state as #{@currentState.state}")
-    #   #   @initializeTimer()
-    # )
-    # changeDisposable = editor.onDidChange(()=>
-    #   @clearTimer() if @idleTimeout
-    # )
     saveDisposable = editor.onDidSave(()=>
       console.log("Saved!")
-      @currentState.state = "ok"
-      if @settings.hostname
-        @fileSync.copyFile(path.relative(@settings.localBaseDir, editor.getPath()), true, () =>
+
+      # If the project did not create modules because of a config error,
+      # try to init when the error is fixed.
+      if @currentState.state is "config_error"
+        if @refreshConfFile()
+          @init() if not @cilkscreenMod
+        else return
+
+      if @sshMod
+        @fileSync.copyFile(path.relative(@settings.localBaseDir, normalizePath(editor.getPath())), true, () =>
           console.log("Initializing timer with state as #{@currentState.state}")
           @initializeTimer()
         )
@@ -241,51 +269,6 @@ class Project
     index = @editorIds.indexOf(editorId)
     @editorIds.splice(index, 1)
 
-  changeState: (moduleName, status) ->
-    if status is "complete"
-      @currentState.lastRuntime = Date.now() - @currentState.start
-      console.log("Just set lastRuntime #{@path} to #{@currentState.lastRuntime}")
-      console.log("The last run took #{@currentState.lastRuntime / 1000} seconds.")
-    if status isnt "running"
-      @currentState.manual = false
-      @currentState.start = null
-    @currentState.state = status
-    @currentState.lastUpdated = Date.now()
-    @updateStatusTile()
-
-  # TODO: this needs to be generalized
-  updateStatusTile: () ->
-    console.log("Updating status bar for #{@path}, current path being #{@statusBar.getCurrentPath()}")
-    console.log("Current state is #{@currentState.state}")
-    if @path is @statusBar.getCurrentPath()
-      if @currentState.state is "complete" or @currentState.state is "running"
-        if @currentState.start
-          if @currentState.lastRuntime
-            @statusBar.displayCountdown(@currentState.start + @currentState.lastRuntime)
-          else
-            @statusBar.displayUnknownCountdown()
-        else if @currentState.numViolations
-          @statusBar.displayErrors(@currentState.numViolations, @currentState.lastUpdated)
-        else
-          @statusBar.displayNoErrors(@currentState.lastUpdated)
-      else if @currentState.state is "make_error"
-        @statusBar.displayMakeError(@currentState.lastUpdated)
-      else if @currentState.state is "execution_error"
-        @statusBar.displayExecError(@currentState.lastUpdated)
-      else if @currentState.state is "conf_error"
-        @statusBar.displayConfError(@currentState.lastUpdated)
-      else if @currentState.state is "start"
-        @statusBar.displayStart()
-
-  manuallyRun: () ->
-    @currentState.manual = true
-    @killModules(true)
-    @makeExecutable()
-
-  manuallyCancel: () ->
-    @killModules(true)
-    @updateStatusTile()
-
   getConfSettings: (refresh) ->
     if refresh
       @refreshConfFile()
@@ -293,4 +276,4 @@ class Project
 
   # Core UI functions
   getDetailPanel: () ->
-    return @cilkscreenMod.getDetailPanel()
+    return @detailPanel

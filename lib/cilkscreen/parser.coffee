@@ -1,4 +1,4 @@
-path = require('path')
+path = require('path').posix
 
 CustomSet = require('../utils/set')
 FileLineReader = require('../utils/file-reader')
@@ -15,6 +15,7 @@ class CilkscreenParser
   # Cilkscreen-related functions
   # TODO: could replace this with smart regex
   @parseCilkscreenOutput: (text, remoteDir, localDir) ->
+    console.log("[parser] remote dir: #{remoteDir} | local dir: #{localDir}")
     text = text.split('\n')
     violations = []
     currentViolation = null

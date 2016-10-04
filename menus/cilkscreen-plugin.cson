@@ -19,6 +19,10 @@
         {
           'label': 'Sync Project (Remote -> Local)',
           'command': 'cilkide:sync-remote-local'
+        },
+        {
+          'label': 'Debug',
+          'command': 'cilkide:debug'
         }
       ]
     ]

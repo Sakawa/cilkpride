@@ -2,6 +2,7 @@ TextEditor = null
 FileLineReader = require('./file-reader')
 $ = require('jquery')
 {CompositeDisposable} = require('atom')
+{normalizePath} = require('../utils/utils')
 
 NUM_PIXELS_PER_LINE = 6
 
@@ -59,12 +60,16 @@ class Minimap
     @currentId += 1
     @destroy()
     @editor = editor if editor
-    @editor = atom.workspace.getActiveTextEditor() if atom.workspace.getActiveTextEditor().getPath() is @filename
+    console.log("[minimap] Current text editor path: #{atom.workspace.getActiveTextEditor().getPath()}")
+    console.log("[minimap] Normalized path: #{normalizePath(atom.workspace.getActiveTextEditor().getPath())}")
+    @editor = atom.workspace.getActiveTextEditor() if normalizePath(atom.workspace.getActiveTextEditor().getPath()) is @filename
     if @editor
       console.log("init started for #{@filename} minimap for editor #{@editor.id} for filename #{@filename}")
     else
       console.log("init started for #{@filename} minimap for filename #{@filename}")
       data = FileLineReader.readFile(@filename)
+      console.log("[minimap] reading data")
+      console.log(data)
       hiddenEditor = @constructTextEditor({ mini: false })
       @editor = hiddenEditor
       @editor.setGrammar(atom.grammars.grammarForScopeName('source.c'))
@@ -88,14 +93,14 @@ class Minimap
           console.log(obj)
         )
 
-        @subscriptions.add(atom.views.pollDocument((() => @updateScrollOverlay())))
-
         @minimapOverlay = document.createElement('div')
         @minimapOverlay.classList.add('minimap-overlay')
         @minimapContainer.appendChild(@minimapOverlay)
         $(@minimapOverlay).click((e) =>
           @minimapOnClick(e)
         )
+
+        @subscriptions.add(atom.views.pollDocument((() => @updateScrollOverlay())))
 
         minimapElement = atom.views.getView(@minimap)
         minimapElement.attach(@minimapContainer)

@@ -1,7 +1,9 @@
 $ = require('jquery')
 {CompositeDisposable} = require('atom')
 fs = require('fs')
-path = require('path')
+path = require('path').posix
+
+{normalizePath} = require('./utils/utils')
 
 Project = require('./project')
 StatusBarView = require('./status-bar-view')
@@ -21,26 +23,17 @@ module.exports = Cilkide =
   statusBarTile: null
 
   activate: (state) ->
+    require('atom-package-deps').install('cilkide').then(() =>
+      # Add a hook on every single text editor that is open (and will be opened in the future)
+      @subscriptions.add(atom.workspace.observeTextEditors((editor) => @registerEditor(editor)))
+    )
+
     @subscriptions = new CompositeDisposable()
 
     @statusBarElement = new StatusBarView({
       onErrorClickCallback: () => @onStatusTileClick()
       onRegisterProjectCallback: (directories) => @onRegisterProject(directories)
     })
-
-    # Register commands
-    # @subscriptions.add(atom.commands.add('atom-workspace', 'cilkide:manual-run': () => @manuallyRun()))
-    # @subscriptions.add(atom.commands.add('atom-workspace', 'cilkide:manual-cancel': () => @manuallyCancel()))
-    # FileSync = require('./file-sync')
-    # SSHRunner = require('./sshrunner')
-    # PasswordView = require('./password-view')
-    # @subscriptions.add(atom.commands.add('atom-workspace', 'cilkide:test-ftp': () =>
-    #   (new SSHRunner()).createConnection()
-    # ))
-    # @subscriptions.add(atom.commands.add('atom-workspace', 'cilkide:test-ftp-2': () => (new FileSync({}).remoteToLocal())))
-
-    # Add a hook on every single text editor that is open (and will be opened in the future)
-    @subscriptions.add(atom.workspace.observeTextEditors((editor) => @registerEditor(editor)))
 
     # Add a hook when we're changing active panes so that the status tile can show the correct
     # status for the current project.
@@ -99,7 +92,7 @@ module.exports = Cilkide =
     console.log("Project path is #{projectPath}")
     if projectPath
       @statusBarElement.updatePath(projectPath)
-      @projects[projectPath].updateStatusTile()
+      @projects[projectPath].updateState(true)
     else
       @statusBarElement.updatePath(null)
       @statusBarElement.displayPluginDisabled()
@@ -137,11 +130,11 @@ module.exports = Cilkide =
       () =>
         # TODO: finish this
         console.log("Editor changed path: " + editor.id)
-        console.log("The new path is now: #{editor.getPath?()}")
+        console.log("The new path is now: #{normalizePath(editor.getPath?())}")
         oldPath = @editorToPath[editor.id]
         if oldPath
           @projects[oldPath].unregisterEditor(editor.id)
-        newPath = editor.getPath?()
+        newPath = normalizePath(editor.getPath?())
         if newPath
           newProjectPath = @findConfFile(newPath)
           if newProjectPath
@@ -151,7 +144,7 @@ module.exports = Cilkide =
           delete @editorToPath[editor.id]
     ))
 
-    filePath = editor.getPath?()
+    filePath = normalizePath(editor.getPath?())
     if not filePath
       return
 
@@ -164,25 +157,28 @@ module.exports = Cilkide =
 
   findConfFile: (filePath) ->
     traversedPaths = []
-    projectPath = path.resolve(filePath, '..')
+    console.log("File path: #{filePath}")
+    projectPath = path.join(filePath, '..')
+    console.log("Project path: #{projectPath}")
     rootDir = path.parse(projectPath).root
     console.log("Root dir: #{rootDir}")
     loop
       console.log("Testing for Makefile: #{projectPath}")
+      # on Windows machines, due to path normalization we must break on '.'
       traversedPaths.push(projectPath)
       if @pathToPath[projectPath] isnt undefined
         console.log("Quick escape: #{@pathToPath[projectPath]}")
         return @pathToPath[projectPath]
       try
-        stats = fs.statSync(path.resolve(projectPath, 'cilkide-conf.json'))
+        stats = fs.statSync(path.join(projectPath, 'cilkide-conf.json'))
         if stats.isFile()
           for tpath in traversedPaths
             @pathToPath[tpath] = projectPath
           return projectPath
       catch error
-        projectPath = path.resolve(projectPath, '..')
+        projectPath = path.join(projectPath, '..')
       finally
-        if projectPath is rootDir
+        if projectPath is rootDir or projectPath is '.'
           for tpath in traversedPaths
             @pathToPath[tpath] = null
           return null

@@ -144,7 +144,7 @@ class SSHModule
   onCancelPassword: () ->
     @passwordView = null
     console.log("Cancel initiated.")
-    conn.end()
+    @connection.end() if @connection
 
   destroy: () ->
     clearTimeout(@connectionTimeout) if @connectionTimeout
@@ -222,6 +222,7 @@ class Instance extends EventEmitter
       if not @initialized and extractLast(@output, 14) is "@localhost:~$ "
         @initialized = true
         @ready = true
+        @emit('initialized')
         @resetOutput()
         return
 
@@ -260,6 +261,8 @@ class Instance extends EventEmitter
   kill: () ->
     if @instance and @initialized and not @ready
       @instance.write('\u0003')
+      return true
+    return false
 
   resetOutput: () ->
     @output = ''

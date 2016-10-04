@@ -1,5 +1,5 @@
 $ = require('jquery')
-path = require('path')
+path = require('path').posix
 
 MILLI_IN_SEC = 1000
 MILLI_IN_MIN = MILLI_IN_SEC * 60
@@ -29,20 +29,20 @@ class StatusBarView
     @onRegisterProjectCallback = props.onRegisterProjectCallback
 
     @element = document.createElement('div')
-    @element.classList.add('cilkscreen-status-view', 'inline-block')
+    @element.classList.add('cilkide-status-view', 'inline-block')
     @icon = document.createElement('span')
     @element.appendChild(@icon)
+    @lastUpdated = Date.now()
 
-  displayNoErrors: (lastUpdated) ->
+  displayNoErrors: (update) ->
     @resetState()
     @icon.classList.add('icon', 'icon-check')
-    @currentText = "Cilktools run successfully"
+    @currentText = "No issues!"
     $(@icon).on('click', (e) =>
       @onErrorClickCallback()
     )
-    if lastUpdated
-      @lastUpdated = lastUpdated
-      @setTimer(lastUpdated)
+    @lastUpdated = Date.now() unless update
+    @setTimer(@lastUpdated)
 
   displayPluginDisabled: () ->
     @resetState()
@@ -58,66 +58,74 @@ class StatusBarView
       title: "Click to enable the Cilktool plugin for a project."
     })
 
-  displayErrors: (numErrors, lastUpdated) ->
+  displayErrors: (update) ->
     @resetState()
     @icon.classList.add('icon', 'icon-issue-opened')
-    @currentText = "#{numErrors} errors found"
+    @currentText = "Errors reported"
     $(@icon).on('click', (e) =>
       @onErrorClickCallback()
     )
-    @lastUpdated = lastUpdated
-    @setTimer(lastUpdated)
+    @lastUpdated = Date.now() unless update
+    @setTimer(@lastUpdated)
 
   displayCountdown: (estFinished) ->
     @resetState()
     @icon.classList.add('icon', 'icon-clock')
-    @icon.textContent = @constructTimerText(estFinished)
-    @interval = setInterval(
-      () =>
-        msToFinish = estFinished - Date.now()
-        if msToFinish < 0
-          clearInterval(@interval)
-        else
-          @icon.textContent = @constructTimerText(estFinished)
-      , 1000
+    $(@icon).on('click', (e) =>
+      @onErrorClickCallback()
     )
 
-  displayUnknownCountdown: () ->
-    @resetState()
-    @icon.classList.add('icon', 'icon-clock')
-    @icon.textContent = "Time Left Unknown"
+    if estFinished
+      @icon.textContent = @constructTimerText(estFinished)
+      @interval = setInterval(
+        () =>
+          msToFinish = estFinished - Date.now()
+          if msToFinish < 0
+            clearInterval(@interval)
+          else
+            @icon.textContent = @constructTimerText(estFinished)
+        , 1000
+      )
+    else
+      @icon.textContent = "Time Left Unknown"
 
-  displayExecError: (lastUpdated) ->
+  displayExecutionError: (update) ->
     @resetState()
     @icon.classList.add('icon', 'icon-x')
-    @currentText = "Unable to run cilkscreen"
-    @lastUpdated = lastUpdated
-    @setTimer(lastUpdated)
+    @currentText = "Execution error"
+    @lastUpdated = Date.now() unless update
+    @setTimer(@lastUpdated)
+    $(@icon).on('click', (e) =>
+      @onErrorClickCallback()
+    )
 
-  displayMakeError: (lastUpdated) ->
+  displayConfigError: (update) ->
     @resetState()
-    @icon.classList.add('icon', 'icon-x', 'clickable')
-    @currentText = "Unable to make"
-    @lastUpdated = lastUpdated
-    @setTimer(lastUpdated)
-    # $(@icon).on('click', (e) =>
-    #   atom.workspace.open(path.join(@currentPath, "Makefile"))
-    # )
-
-  displayConfError: (lastUpdated) ->
-    @resetState()
-    @icon.classList.add('icon', 'icon-x', 'clickable')
+    @icon.classList.add('icon', 'icon-issue-opened', 'clickable')
     @currentText = "Configuration error"
-    @lastUpdated = lastUpdated
-    @setTimer(lastUpdated)
-    # $(@icon).on('click', (e) =>
-    #   atom.workspace.open(path.join(@currentPath, "cilkide-conf.json"))
-    # )
+    @lastUpdated = Date.now() unless update
+    @setTimer(@lastUpdated)
+    $(@icon).on('click', (e) =>
+      atom.workspace.open(path.join(@currentPath, "cilkide-conf.json"))
+    )
+
+  displayLoading: (update) ->
+    @resetState()
+    @icon.classList.add('icon', 'icon-sync')
+    @currentText = "SSHing..."
+    @lastUpdated = Date.now() unless update
+    @setTimer(@lastUpdated)
+    $(@icon).on('click', (e) =>
+      @onErrorClickCallback()
+    )
 
   displayStart: () ->
     @resetState()
     @icon.classList.add('icon', 'icon-question')
     @icon.textContent = "Cilktools not yet run"
+    $(@icon).on('click', (e) =>
+      @onErrorClickCallback()
+    )
 
   constructTimerText: (time) ->
     msToFinish = time - Date.now()

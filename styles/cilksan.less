@@ -17,7 +17,8 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
 
   .alert {
     display: inline-block;
-    padding-left: .5em;    // aligns with the padding for line-number
+    font-size: 12px;
+    padding: 0px 7px;    // aligns with the padding for line-number
     cursor: pointer;
 
     &:after {
@@ -34,53 +35,15 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
 
 // Detail View CSS
 
-.cilkscreen-detail-resize {
-  width: @view-width;
-  position: absolute;
-  height: 8px;
-  cursor: ns-resize;
-}
-
-.table {
-  display: table;
-}
-
-.table-row {
-  display: table-row;
-}
-
 .cilkscreen-detail-view {
   width: @view-width;
-  height: 400px;
   margin-bottom: 0px;
   border-collapse: collapse;
-
-  .header {
-    width: @view-width;
-    overflow: hidden;
-    font-size: 12pt;
-    height: 24px;
-    border-bottom: 1px solid gray;
-  }
-
-  .header-title {
-    color: #ffffff;
-    float: left;
-    overflow: hidden;
-    padding: 5px 15px;
-  }
-
-  .header-close {
-    width: 20px;
-    float: right;
-    overflow:hidden;
-    cursor: pointer;
-    padding: 5px 25px;
-  }
+  height: 100%;
 
   .violation-wrapper {
     height: 100%;
-    overflow: hidden;
+    overflow: auto;
 
     .minimap-container {
       position: relative;
@@ -152,18 +115,11 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
       width: 100%;
       height: 100%;
       position: relative;
-      border-bottom: 1px solid #3C3C3C;
+      border-left: 1px solid gray;
 
       .violation-container {
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        overflow: scroll;
+        overflow: auto;
         font-size: 9pt;
-
-        border-left: 1px solid gray;
       }
     }
   }
@@ -407,75 +363,4 @@ atom-text-editor::shadow .gutter[gutter-name=cilkscreen-lint] .decoration {
   width: 100%;
   z-index: 1;
   cursor: pointer;
-}
-
-.cilkscreen-status-view {
-  vertical-align: top;
-  overflow: hidden;
-  white-space: nowrap;
-  max-width: 20vw;
-  text-overflow: ellipsis;
-
-  span.icon-check {
-    color: @background-color-success;
-  }
-
-  span.icon-clock {
-    color: @background-color-warning;
-  }
-
-  span.icon-issue-opened {
-    color: @background-color-error;
-
-    &:hover {
-      cursor: pointer;
-      text-decoration: underline;
-    }
-  }
-
-  span.icon-x {
-    color: @text-color-error;
-
-    &.clickable {
-      &:hover {
-        cursor: pointer;
-        text-decoration: underline;
-      }
-    }
-  }
-
-  span.icon-question {
-    color: @text-color-warning;
-
-    &:before {
-      margin-right: 5px;
-    }
-  }
-
-  span.icon-repo-create {
-    color: @text-color;
-
-    &:hover {
-      cursor: pointer;
-      text-decoration: underline;
-    }
-  }
-}
-
-
-// Password CSS
-atom-text-editor::shadow .password-lines .line {
-  span.text:before {
-    position: absolute;
-    left: 0px;
-    top: 0px;
-    color: @text-color !important;
-  }
-  span.text {
-    color:rgba(0, 0, 0, 0);
-  }
-}
-
-.password-view-descriptor {
-  margin-bottom: 7px;
 }

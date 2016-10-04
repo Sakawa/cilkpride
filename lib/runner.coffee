@@ -19,11 +19,14 @@ class Runner
     @settings = props.settings
     @refreshConfFile = props.refreshConfFile
 
-  getNewInstance: () ->
+  getNewInstance: (readyCallback) ->
     @getInstance((instance) =>
       @instance = instance
       console.log("[runner] Got a new instance.")
       instance.once('destroyed', (() => @getNewInstance()))
+      instance.once('initialized', () ->
+        readyCallback()
+      )
       instance.on('data', (errCode, output) =>
         @callback(errCode, output)
       )
@@ -77,9 +80,11 @@ class Runner
   kill: () ->
     if @instance
       console.log("[runner] Killed instance...?")
-      @instance.kill()
+      return @instance.kill()
     if @thread
       @thread.kill('SIGINT')
       console.log("[runner] Killed thread...?")
       console.log(@thread)
       @thread = null
+      return true
+    return false

@@ -1,0 +1,11 @@
+{
+  "cilksanCommand": "make cilksan",
+
+  "sshEnabled": true,
+  "hostname": "athena.dialup.mit.edu",
+  "port": 22,
+  "username": "gchau",
+  "launchInstance": true,
+  "localBaseDir": "C:/Users/Taiga/Documents/cilkide/examples/simple-race",
+  "remoteBaseDir": "/afs/athena.mit.edu/user/g/c/gchau/simple-race"
+}

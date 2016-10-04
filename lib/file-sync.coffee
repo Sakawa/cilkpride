@@ -1,5 +1,5 @@
 fs = require('fs')
-path = require('path')
+path = require('path').posix
 
 module.exports =
 class FileSync
@@ -34,10 +34,12 @@ class FileSync
       sourceBaseDir = path.join(@settings.localBaseDir, folder)
       messageStr = "Synced #{sourceBaseDir} to #{path.join(@settings.remoteBaseDir, folder)}."
 
-    (new Promise((resolve, reject) =>
-      source.stat(sourceBaseDir, (err, stats) =>
+    (new Promise((resolve, reject) ->
+      source.stat(sourceBaseDir, (err, stats) ->
+        console.log(err) if err
+        console.log(stats) if stats
         unless stats?.isDirectory()
-          atom.notifications.addError("Error: Source directory #{@settings.localBaseDir} doesn't exist.")
+          atom.notifications.addError("Error: Source directory #{sourceBaseDir} doesn't exist.")
           reject()
         else
           resolve()

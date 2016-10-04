@@ -1,6 +1,8 @@
 MarkerView = require('./cilkscreen-marker-view')
 PluginView = require('./cilkscreen-plugin-view')
 
+{normalizePath} = require('../utils/utils')
+
 module.exports =
 class CilkscreenUI
 
@@ -39,7 +41,7 @@ class CilkscreenUI
     editorCache = {}
     editors = atom.workspace.getTextEditors()
     for textEditor in editors
-      editorPath = textEditor.getPath?()
+      editorPath = normalizePath(textEditor.getPath?())
       if editorPath
         if editorPath in editorCache
           editorCache[editorPath].push(textEditor)

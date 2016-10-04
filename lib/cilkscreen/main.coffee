@@ -9,63 +9,123 @@ class CilkscreenModule
 
   view: null
   currentState: null
-  settings: null
+  name: "Cilksan"
 
   props: null
   onCloseCallback: null
   changePanel: null
   getConfSettings: null
-  changeState: null
-  thread: null
+  onStateChange: null
+
   violations: null
   path: null
 
   runner: null
+  tab: null
 
   constructor: (props) ->
     @props = props
     @onCloseCallback = props.onCloseCallback
     @changePanel = props.changePanel
     @getConfSettings = props.getConfSettings
-    @changeState = props.changeState
     @runner = props.runner
     @path = props.path
+    @onStateChange = props.onStateChange
+    @tab = props.tab
+
+    @currentState = {
+      ready: false
+      state: "start"
+      lastUpdated: null
+      lastSuccessful: null
+      startTime: null
+      lastRuntime: null
+      output: null
+      initialized: not @getConfSettings().sshEnabled
+    }
 
     @view = new CilkscreenView({
       onCloseCallback: (() => @onCloseCallback())
       changePanel: (() => @changePanel())
     })
 
+    atom.commands.add('atom-workspace', 'cilkide:debug', () =>
+      console.log("[debug]")
+      console.log(@currentState)
+    )
+
   updateInstance: () ->
-    @runner.getNewInstance()
+    @currentState.initialized = false
+    @tab.setState("initializing")
+    @resetState()
+    @runner.getNewInstance(() =>
+      @currentState.initialized = true
+      @tab.setState("ok")
+      @resetState()
+    )
 
   kill: () ->
-    @runner.kill()
+    if @runner.kill()
+      @resetState()
 
-  # TODO: where do I put the state and status bar updates for multiple modules?
   # TODO: the modules should push updates to the project class, which will manage everything
   startThread: () ->
     @runner.spawn(@getConfSettings(true).cilksanCommand, [], {}, (err, output) =>
       @runnerCallback(err, output)
     )
+    @startState()
 
   runnerCallback: (err, output) ->
     settings = @getConfSettings(true)
     console.log("[cilkscreen] Received code #{err}")
     console.log("[cilkscreen] Received output #{output}")
+    @currentState.output = output
     if err is 0
       console.log("[cilkscreen] Killing old markers, if any...")
       @view.destroyOldMarkers()
       console.log("[cilkscreen] Parsing data...")
-      Parser.processViolations(output, ((results) => @generateUI(results)), settings.remoteBaseDir, settings.localBaseDir)
+      Parser.processViolations(output, (results) =>
+        @updateState(err, results)
+        @generateUI(results)
+      , settings.remoteBaseDir, settings.localBaseDir)
+    else
+      @updateState(err, null)
 
   generateUI: (parserResults) ->
     @violations = parserResults
-    @changeState("complete")
     @view.createUI(parserResults)
 
-  updateActiveEditor: () ->
-    return
+  # State-based functions
+
+  resetState: () ->
+    console.log("[cilksan] Resetting state.")
+    @currentState.ready = true
+    @currentState.startTime = null
+    @onStateChange()
+
+  # TODO: figure this out
+  updateState: (err, results) ->
+    console.log("[cilksan] Update state.")
+    @currentState.lastUpdated = Date.now()
+    if err
+      @currentState.state = "execution_error"
+    else
+      @currentState.lastSuccessful = Date.now()
+      @currentState.lastRuntime = Date.now() - @currentState.startTime
+      if results.length > 0
+        @currentState.state = "error"
+      else
+        @currentState.state = "ok"
+    @tab.setState(@currentState.state)
+    @resetState()
+    @onStateChange()
+
+  startState: () ->
+    console.log("[cilksan] Start state.")
+    @currentState.ready = false
+    @currentState.startTime = Date.now()
+    @tab.setState("busy")
+    @onStateChange()
 
   getDetailPanel: () ->
     return @view.getElement()

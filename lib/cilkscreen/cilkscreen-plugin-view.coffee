@@ -4,7 +4,7 @@ $ = require('jquery')
 FileLineReader = require('../utils/file-reader')
 DetailCodeView = require('./detail-code-view')
 MinimapView = require('../utils/minimap')
-{MinimapUtil} = require('../utils/utils')
+{MinimapUtil, normalizePath} = require('../utils/utils')
 SVG = require('../utils/svg')
 
 module.exports =
@@ -33,27 +33,8 @@ class CilkscreenPluginView
     @element = document.createElement('div')
     @element.classList.add('cilkscreen-detail-view', 'table')
 
-    resizeDiv = document.createElement('div')
-    resizeDiv.classList.add('cilkscreen-detail-resize')
-
-    @element.appendChild(resizeDiv)
-    $(resizeDiv).on('mousedown', @resizeStart)
-
-    header = document.createElement('div')
-    header.classList.add('header', 'table-row')
-    title = document.createElement('div')
-    title.classList.add('header-title')
-    title.textContent = "Detected Race Conditions"
-    close = document.createElement('div')
-    close.classList.add('header-close', 'icon', 'icon-x')
-    $(close).on('click', (() => @onCloseCallback()))
-    header.appendChild(title)
-    header.appendChild(close)
-
-    @element.appendChild(header)
-
     violationWrapper = document.createElement('div')
-    violationWrapper.classList.add('violation-wrapper', 'table-row')
+    violationWrapper.classList.add('violation-wrapper')
 
     violationContentWrapper = document.createElement('div')
     @violationContentWrapper = violationContentWrapper
@@ -76,24 +57,6 @@ class CilkscreenPluginView
     violationContentWrapper.appendChild(@violationContainer)
 
     @element.appendChild(violationWrapper)
-
-  resizeStart: () =>
-    # console.log("Resize start")
-    $(document).on('mousemove', @resizeMove)
-    $(document).on('mouseup', @resizeStop)
-
-  resizeStop: () =>
-    # console.log("Resize stop")
-    $(document).off('mousemove', @resizeMove)
-    $(document).off('mouseup', @resizeStop)
-
-  resizeMove: (event) =>
-    return @resizeStop() unless event.which is 1
-
-    element = $(@element)
-    # console.log("Horizontal resize move")
-    height = element.offset().top + element.outerHeight() - event.pageY
-    element.height(height)
 
   horizontalResizeStart: () =>
     # console.log("Horizontal resize start")
@@ -124,8 +87,8 @@ class CilkscreenPluginView
     console.log(editor)
     if @toggleVisual
       console.log(@minimaps)
-      if @minimaps and @minimaps[editor.getPath()]
-        @minimaps[editor.getPath()].init(editor)
+      if @minimaps and @minimaps[normalizePath(editor.getPath())]
+        @minimaps[normalizePath(editor.getPath())].init(editor)
         console.log("updating minimap @ updateMinimap")
       else
         console.log("not updating @ updateMinimap 1")
@@ -264,6 +227,7 @@ class CilkscreenPluginView
     console.log("resetHighlight: #{index}")
     console.log(@violationContainer.children)
 
+    return if index is null
     violationDiv = @violationContainer.children[index]
     violationDiv.classList.remove('highlighted')
     $("[violation-id=#{index}-visible]").css("stroke", "#ff0000")
