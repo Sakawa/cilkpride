@@ -1,10 +1,9 @@
 {
   "name": "cilkpride",
   "main": "./lib/main",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Experimental package that passively runs cilksan in the background for Cilk projects.",
-  "keywords": [
-  ],
+  "keywords": [],
   "repository": "https://github.com/Sakawa/cilkpride",
   "license": "MIT",
   "engines": {
@@ -15,26 +14,28 @@
     "ssh2": "0.5.2",
     "atom-package-deps": "4.3.1"
   },
-  "package-deps": ["minimap"],
+  "package-deps": [
+    "minimap"
+  ],
   "configSchema": {
     "idleSeconds": {
-        "type": "integer",
-        "default": 0,
-        "minimum": 0,
-        "title": "Idle Length",
-        "description": "Changes the number of seconds the text editor must be idle before running cilkscreen."
+      "type": "integer",
+      "default": 0,
+      "minimum": 0,
+      "title": "Idle Length",
+      "description": "Changes the number of seconds the text editor must be idle before running cilkscreen."
     },
     "cilktoolsPath": {
-        "type": "string",
-        "default": "",
-        "title": "Cilktools Executable Path",
-        "description": "The location of the Cilktools executables, to run cilkscreen."
+      "type": "string",
+      "default": "",
+      "title": "Cilktools Executable Path",
+      "description": "The location of the Cilktools executables, to run cilkscreen."
     },
     "cilkLibPath": {
-        "type": "string",
-        "default": "",
-        "title": "Cilk Library Path",
-        "description": "The location of the Cilk lib files, so that the plugin can appropriately build executables."
+      "type": "string",
+      "default": "",
+      "title": "Cilk Library Path",
+      "description": "The location of the Cilk lib files, so that the plugin can appropriately build executables."
     }
   },
   "consumedServices": {
