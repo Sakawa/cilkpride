@@ -10,7 +10,6 @@ class CilkideDetailPanel
   header: null
   moduleContainer: null
 
-  clickTriggers: null
   currentTab: null
 
   constructor: (props) ->
@@ -32,7 +31,10 @@ class CilkideDetailPanel
     header.classList.add('header', 'table-row')
     close = document.createElement('div')
     close.classList.add('header-close', 'icon', 'icon-x')
-    $(close).on('click', (() => @onCloseCallback()))
+    $(close).on('click', () =>
+      @onCloseCallback()
+      @currentTab.view.resetUI() if @currentTab
+    )
     header.appendChild(close)
 
     @element.appendChild(header)
@@ -64,28 +66,34 @@ class CilkideDetailPanel
     height = element.offset().top + element.outerHeight() - event.pageY
     element.height(height)
 
-  clickTab: (newTab, name) ->
+  clickTab: (newTab) ->
+    if @currentTab is newTab
+      return
+
     if @currentTab
       @currentTab.getElement().classList.remove('selected')
+      @currentTab.view.resetUI()
     @currentTab = newTab
     newTab.getElement().classList.add('selected')
-    getViewFunc = @clickTriggers[name]
-    if getViewFunc
-      $(@moduleContainer).empty()
-      @moduleContainer.appendChild(getViewFunc())
+    $(@moduleContainer.firstChild).detach()
+    @moduleContainer.appendChild(@currentTab.view.getElement())
 
-  registerModuleTab: (name, getViewFunc) ->
-    @clickTriggers[name] = getViewFunc
-    tab = new Tab({name: name, onClickCallback: ((tab) => @clickTab(tab, name))})
+  registerModuleTab: (name, view) ->
+    tab = new Tab({name: name, onClickCallback: ((tab) => @clickTab(tab, name)), view: view})
     @header.appendChild(tab.getElement())
+    if not @currentTab
+      @clickTab(tab)
     return tab
 
 class Tab
   element: null
   onClickCallback: null
+  view: null
 
   constructor: (props) ->
     @onClickCallback = props.onClickCallback
+    @view = props.view
+
     @element = document.createElement('div')
     @element.classList.add('cilkide-tab', 'inline-block')
     @icon = document.createElement('span')
@@ -111,6 +119,10 @@ class Tab
 
   resetState: () ->
     @icon.className = ""
+
+  # Programatically force a click (for module use)
+  click: () ->
+    @onClickCallback(this)
 
   getElement: () ->
     return @element

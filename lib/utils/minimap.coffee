@@ -156,8 +156,12 @@ class Minimap
   updateScrollOverlay: () ->
     # console.log(@minimap.getTextEditorScaledHeight())
     # console.log(@minimap.getTextEditorScaledScrollTop())
-    @minimapOverlay.style.height = "#{@minimap.getTextEditorScaledHeight()}px"
-    @minimapOverlay.style.top = "#{@minimap.getTextEditorScaledScrollTop()}px"
+    # TODO: this is bad performance
+    try
+      @minimapOverlay.style.height = "#{@minimap.getTextEditorScaledHeight()}px"
+      @minimapOverlay.style.top = "#{@minimap.getTextEditorScaledScrollTop()}px"
+    catch
+      @subscriptions.dispose()
 
   constructTextEditor: (params) ->
     if atom.workspace.buildTextEditor?

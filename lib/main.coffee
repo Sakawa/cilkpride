@@ -170,7 +170,7 @@ module.exports = Cilkide =
         console.log("Quick escape: #{@pathToPath[projectPath]}")
         return @pathToPath[projectPath]
       try
-        stats = fs.statSync(path.join(projectPath, 'cilkide-conf.json'))
+        stats = fs.statSync(path.join(projectPath, 'cilkpride-conf.json'))
         if stats.isFile()
           for tpath in traversedPaths
             @pathToPath[tpath] = projectPath
@@ -190,35 +190,36 @@ module.exports = Cilkide =
 
   createConfFile: (directory) ->
     console.log("Generating a configuration file in #{directory}...")
-    confPath = path.join(directory, 'cilkide-conf.json')
+    confPath = path.join(directory, 'cilkpride-conf.json')
     fs.open(confPath, 'wx', (err, fd) ->
       if err
         # do some error handling here
-        atom.notifications.addError("CilkIDE configuration file already exists in #{directory}.", {
+        atom.notifications.addError("Cilkpride configuration file already exists in #{directory}.", {
           title: "Edit the existing configuration file, or delete it and re-register the directory."
         })
       else
         fs.write(fd, """
 {
-  "cilksanCommand": "this command should compile & run the cilksan-capable executable",
+  "cilksanCommand": "make cilksan",
 
+  "sshEnabled": true,
   "hostname": "athena.dialup.mit.edu",
   "port": 22,
   "username": "your athena username here",
-  "launchInstance": true,
+  "launchInstance": false,
   "localBaseDir": "full directory path of the project directory on your local computer",
   "remoteBaseDir": "full directory path of the project directory on the remote instance"
 }
         """, {encoding: "utf8"}, (err, written, buffer) ->
           atom.workspace.open(confPath)
-          atom.notifications.addSuccess("Cilkide configuration file created for #{directory}.", {
+          atom.notifications.addSuccess("Cilkpride configuration file created for #{directory}.", {
             title: "Customize the configuration for your particular project to start using the plugin!"
           })
         )
     )
 
   registerEditorWithProject: (projectPath, editor) ->
-    console.log("Trying to register editor id #{editor.id} with #{projectPath} from cilkide.")
+    console.log("Trying to register editor id #{editor.id} with #{projectPath} from cilkpride.")
     if projectPath not in Object.getOwnPropertyNames(@projects)
       console.log("Path doesn't currently exist, so making a new one...")
       @projects[projectPath] = new Project({

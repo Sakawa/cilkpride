@@ -7,7 +7,6 @@
 
 # For more detailed documentation see
 # https://atom.io/docs/latest/behind-atom-keymaps-in-depth
-'atom-workspace':
-  'ctrl-alt-p': 'cilkscreen-plugin:toggle'
-  'ctrl-alt-c': 'cilkscreen-plugin:manual-run'
-  'ctrl-alt-f': 'cilkscreen-plugin:manual-cancel'
+'atom-text-editor':
+  'ctrl-alt-g': 'cilkide:sync-local-remote'
+  'ctrl-alt-j': 'cilkide:sync-remote-local'

@@ -106,7 +106,7 @@ class StatusBarView
     @lastUpdated = Date.now() unless update
     @setTimer(@lastUpdated)
     $(@icon).on('click', (e) =>
-      atom.workspace.open(path.join(@currentPath, "cilkide-conf.json"))
+      atom.workspace.open(path.join(@currentPath, "cilkpride-conf.json"))
     )
 
   displayLoading: (update) ->

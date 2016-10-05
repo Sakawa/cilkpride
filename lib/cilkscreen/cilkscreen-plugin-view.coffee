@@ -19,14 +19,12 @@ class CilkscreenPluginView
 
   # Properties from parents
   props: null
-  onCloseCallback: null
   highlightCallback: null
 
   HALF_CONTEXT: 2
 
   constructor: (props) ->
     @props = props
-    @onCloseCallback = props.onCloseCallback
     @highlightCallback = props.highlightCallback
 
     # Create root element

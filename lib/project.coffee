@@ -30,7 +30,6 @@ class Project
   # Properties from parent
   props: null
   changeDetailPanel: null
-  onPanelCloseCallback: null
   path: null
   statusBar: null
 
@@ -73,21 +72,22 @@ class Project
     # For each module, create a tab for it and initialize the module.
     @cilkscreenMod = new CilkscreenModule({
       changePanel: (() => @changeDetailPanel(@path))
-      onCloseCallback: (() => @onPanelCloseCallback())
       getConfSettings: ((refresh) => @getConfSettings(refresh))
-      onStateChange: (() => @updateState(true, @cilkscreenMod))
+      onStateChange: (() => @updateState(false, @cilkscreenMod))
       runner: new Runner({
         getInstance: ((callback) => @getInstance(callback))
         settings: @settings
         refreshConfFile: (() => @getUpdatedConf())
       })
       path: @path
-      tab: @detailPanel.registerModuleTab("Cilksan", (() => return @cilkscreenMod.getDetailPanel()))
     })
+    # TODO: fix this
+    @cilkscreenMod.tab = @detailPanel.registerModuleTab("Cilksan", @cilkscreenMod.getView())
 
     @consoleMod = new Console({
-      tab: @detailPanel.registerModuleTab("Console", (() => return @consoleMod.getDetailPanel()))
     })
+    # TODO: also fix this
+    @consoleMod.tab = @detailPanel.registerModuleTab("Console", @consoleMod)
 
     @consoleMod.registerModule(@cilkscreenMod.name)
 
@@ -177,9 +177,9 @@ class Project
   # TODO: need error handling
   refreshConfFile: () ->
     try
-      console.log(path.join(@path, 'cilkide-conf.json'))
+      console.log(path.join(@path, 'cilkpride-conf.json'))
       @settings = JSON.parse(fs.readFileSync(
-        path.join(@path, 'cilkide-conf.json'),
+        path.join(@path, 'cilkpride-conf.json'),
         {
           flags: 'r',
           encoding: 'utf-8',
@@ -190,7 +190,7 @@ class Project
     catch error
       @currentState.state = "config_error"
       @updateState()
-      atom.notifications.addError("Cilkide was unable to read #{path.join(@path, 'cilkide-conf.json')}.
+      atom.notifications.addError("Cilkide was unable to read #{path.join(@path, 'cilkpride-conf.json')}.
         Please make sure the configuration file is correctly formatted.")
       return false
 

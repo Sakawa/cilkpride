@@ -9,6 +9,7 @@ class CilkscreenUI
   props: null
   onCloseCallback: null
   changePanel: null
+  changeTab: null
 
   pluginView: null
   currentViolationIndex: null
@@ -19,11 +20,9 @@ class CilkscreenUI
     @props = props
     @onCloseCallback = props.onCloseCallback
     @changePanel = props.changePanel
+    @changeTab = props.changeTab
 
     @pluginView = new PluginView({
-      onCloseCallback: () =>
-        @resetHighlight()
-        @onCloseCallback()
       changePanel: (() => @changePanel())
       onMarkerClick: (() => @onMarkerClickCallback())
       highlightCallback: ((e, index) => @highlightViolation(e, index, false))
@@ -140,6 +139,9 @@ class CilkscreenUI
 
   scrollToViolation: (index) ->
     @pluginView.scrollToViolation(index)
+
+  resetUI: () ->
+    @resetHighlight()
 
   getElement: () ->
     return @pluginView.getElement()

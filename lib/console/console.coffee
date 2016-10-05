@@ -40,5 +40,8 @@ class Console
     @outputs[name].children[0].textContent = "#{name} - last updated some longer time ago"
     @outputs[name].children[1].textContent = output
 
-  getDetailPanel: () ->
+  resetUI: () ->
+    return # nothing needed here
+
+  getElement: () ->
     return @element

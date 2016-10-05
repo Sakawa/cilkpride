@@ -12,7 +12,6 @@ class CilkscreenModule
   name: "Cilksan"
 
   props: null
-  onCloseCallback: null
   changePanel: null
   getConfSettings: null
   onStateChange: null
@@ -45,8 +44,10 @@ class CilkscreenModule
     }
 
     @view = new CilkscreenView({
-      onCloseCallback: (() => @onCloseCallback())
-      changePanel: (() => @changePanel())
+      changePanel: (() =>
+        @changePanel()
+        @tab.click()
+      )
     })
 
     atom.commands.add('atom-workspace', 'cilkide:debug', () =>
@@ -107,6 +108,12 @@ class CilkscreenModule
   updateState: (err, results) ->
     console.log("[cilksan] Update state.")
     @currentState.lastUpdated = Date.now()
+
+    # Shortcircuit if err is actually null
+    if err is null or err is 2
+      @onStateChange()
+      return
+
     if err
       @currentState.state = "execution_error"
     else
@@ -127,5 +134,5 @@ class CilkscreenModule
     @tab.setState("busy")
     @onStateChange()
 
-  getDetailPanel: () ->
-    return @view.getElement()
+  getView: () ->
+    return @view

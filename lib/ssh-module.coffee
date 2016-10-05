@@ -178,6 +178,7 @@ class Instance extends EventEmitter
   instance: null
   initialized: false
   passwordFlag: false
+  settings: null
   ready: false
   killFlag: false
 
@@ -188,7 +189,9 @@ class Instance extends EventEmitter
     console.log('[instance] Instance constructed')
     @instance = props.instance
     @stderr = @instance.stderr
-    @instance.write('launch-instance\n')
+    @settings = props.settings
+    if @settings.launchInstance
+      @instance.write('launch-instance\n')
     @output = ''
     # 'ready' event denotes that the instance is ready to process another command
     @on('ready', () =>
@@ -212,14 +215,14 @@ class Instance extends EventEmitter
       @output += data
       console.log('STDOUT: ' + data)
       # Deals with entering in the user's password on launch-instance
-      if not @passwordFlag and extractLast(@output, 10) is "Password: "
+      if @settings.launchInstance and not @passwordFlag and extractLast(@output, 10) is "Password: "
         @instance.write("#{password}\n")
         @passwordFlag = true
         @resetOutput()
         return
 
       # Deals with the initial command prompt
-      if not @initialized and extractLast(@output, 14) is "@localhost:~$ "
+      if not @initialized and extractLast(@output, 4) is ":~$ "
         @initialized = true
         @ready = true
         @emit('initialized')
@@ -229,13 +232,12 @@ class Instance extends EventEmitter
       # Deals with with identifying when a command is finished
       if extractLast(@output, 2) is "$ "
         exitResults = @parseExitCode(@output)
-        if exitResults
-          @ready = true
-          if exitResults.exitCode isnt 130 # 130 - CTRL-C kill
-            @emit('data', exitResults.exitCode, @output.substring(0, exitResults.index))
-          @resetOutput()
-          @emit('ready')
-          console.log("[ssh-module] Instance emitted ready!")
+        @ready = true
+        if exitResults # right now, false signifies a kill
+          @emit('data', exitResults.exitCode, @output.substring(0, exitResults.index))
+        @resetOutput()
+        @emit('ready')
+        console.log("[ssh-module] Instance emitted ready!")
     ).stderr.on('data', (data) ->
       console.log('STDERR: ' + data)
     ).on('error', (err) =>
