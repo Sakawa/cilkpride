@@ -3,7 +3,9 @@
   "main": "./lib/main",
   "version": "0.1.0",
   "description": "Experimental package that passively runs cilksan in the background for Cilk projects.",
-  "keywords": [],
+  "keywords": [
+    "cilkpride"
+  ],
   "repository": "https://github.com/Sakawa/cilkpride",
   "license": "MIT",
   "engines": {
