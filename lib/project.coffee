@@ -168,7 +168,7 @@ class Project
         console.log("Idle timeout start! #{new Date()}")
         @makeExecutable()
         @idleTimeout = null
-      , atom.config.get('cilkide.idleSeconds') * 1000
+      , atom.config.get('cilkpride.idleSeconds') * 1000
     )
 
   clearTimer: () ->
@@ -190,7 +190,7 @@ class Project
     catch error
       @currentState.state = "config_error"
       @updateState()
-      atom.notifications.addError("Cilkide was unable to read #{path.join(@path, 'cilkpride-conf.json')}.
+      atom.notifications.addError("Cilkpride was unable to read #{path.join(@path, 'cilkpride-conf.json')}.
         Please make sure the configuration file is correctly formatted.")
       return false
 

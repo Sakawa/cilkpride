@@ -51,8 +51,8 @@ class Runner
         console.log("[runner] Successfully changed pwd to: #{@settings.localBaseDir}")
       catch error
         console.err("[runner] Could not change pwd to #{@settings.localBaseDir} with error #{error}")
-      cilkLibPath = atom.config.get('cilkide.cilkLibPath')
-      cilktoolsPath = atom.config.get('cilkide.cilktoolsPath')
+      cilkLibPath = atom.config.get('cilkpride.cilkLibPath')
+      cilktoolsPath = atom.config.get('cilkpride.cilktoolsPath')
       console.log("[runner] Process environment: ")
       console.log(process.env)
       envCopy = extend({'LD_LIBRARY_PATH': cilkLibPath, 'LIBRARY_PATH': cilkLibPath}, process.env)

@@ -6,6 +6,6 @@
   "port": 22,
   "username": "gchau",
   "launchInstance": false,
-  "localBaseDir": "C:/Users/Taiga/Documents/cilkide/examples/simple-race",
+  "localBaseDir": "C:/Users/Taiga/Documents/cilkpride/examples/simple-race",
   "remoteBaseDir": "/afs/athena.mit.edu/user/g/c/gchau/simple-race"
 }

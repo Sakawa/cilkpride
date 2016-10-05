@@ -23,7 +23,7 @@ module.exports = Cilkide =
   statusBarTile: null
 
   activate: (state) ->
-    require('atom-package-deps').install('cilkide').then(() =>
+    require('atom-package-deps').install('cilkpride').then(() =>
       # Add a hook on every single text editor that is open (and will be opened in the future)
       @subscriptions.add(atom.workspace.observeTextEditors((editor) => @registerEditor(editor)))
     )
