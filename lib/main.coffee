@@ -207,7 +207,7 @@ module.exports = Cilkide =
   "port": 22,
   "username": "your athena username here",
   "launchInstance": false,
-  "localBaseDir": "full directory path of the project directory on your local computer",
+  "localBaseDir": "#{directory}",
   "remoteBaseDir": "full directory path of the project directory on the remote instance"
 }
         """, {encoding: "utf8"}, (err, written, buffer) ->
