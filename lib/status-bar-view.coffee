@@ -20,12 +20,12 @@ class StatusBarView
 
   # Properties from parents
   props: null
-  onErrorClickCallback: null
+  onClickCallback: null
   onRegisterProjectCallback: null
 
   constructor: (props) ->
     @props = props
-    @onErrorClickCallback = props.onErrorClickCallback
+    @onClickCallback = props.onClickCallback
     @onRegisterProjectCallback = props.onRegisterProjectCallback
 
     @element = document.createElement('div')
@@ -38,9 +38,7 @@ class StatusBarView
     @resetState()
     @icon.classList.add('icon', 'icon-check')
     @currentText = "No issues!"
-    $(@icon).on('click', (e) =>
-      @onErrorClickCallback()
-    )
+    $(@icon).on('click', (e) => @onClickCallback())
     @lastUpdated = Date.now() unless update
     @setTimer(@lastUpdated)
 
@@ -50,30 +48,25 @@ class StatusBarView
     @icon.textContent = "Register Cilk project"
     $(@icon).on('click', (e) =>
       atom.pickFolder((paths) =>
-        console.log(paths)
         @onRegisterProjectCallback(paths)
       )
     )
     @tooltip = atom.tooltips.add(@element, {
-      title: "Click to enable the Cilktool plugin for a project."
+      title: "Click to enable the Cilkpride plugin for a project."
     })
 
   displayErrors: (update) ->
     @resetState()
     @icon.classList.add('icon', 'icon-issue-opened')
     @currentText = "Errors reported"
-    $(@icon).on('click', (e) =>
-      @onErrorClickCallback()
-    )
+    $(@icon).on('click', (e) => @onClickCallback())
     @lastUpdated = Date.now() unless update
     @setTimer(@lastUpdated)
 
   displayCountdown: (estFinished) ->
     @resetState()
     @icon.classList.add('icon', 'icon-clock')
-    $(@icon).on('click', (e) =>
-      @onErrorClickCallback()
-    )
+    $(@icon).on('click', (e) => @onClickCallback())
 
     if estFinished
       @icon.textContent = @constructTimerText(estFinished)
@@ -87,7 +80,7 @@ class StatusBarView
         , 1000
       )
     else
-      @icon.textContent = "Time Left Unknown"
+      @icon.textContent = "Running (ETA Unknown)"
 
   displayExecutionError: (update) ->
     @resetState()
@@ -96,7 +89,7 @@ class StatusBarView
     @lastUpdated = Date.now() unless update
     @setTimer(@lastUpdated)
     $(@icon).on('click', (e) =>
-      @onErrorClickCallback()
+      @onClickCallback()
     )
 
   displayConfigError: (update) ->
@@ -115,23 +108,19 @@ class StatusBarView
     @currentText = "SSHing..."
     @lastUpdated = Date.now() unless update
     @setTimer(@lastUpdated)
-    $(@icon).on('click', (e) =>
-      @onErrorClickCallback()
-    )
+    $(@icon).on('click', (e) => @onClickCallback())
 
   displayStart: () ->
     @resetState()
     @icon.classList.add('icon', 'icon-question')
-    @icon.textContent = "Cilktools not yet run"
-    $(@icon).on('click', (e) =>
-      @onErrorClickCallback()
-    )
+    @icon.textContent = "Cilkpride not yet run (Save to start)"
+    $(@icon).on('click', (e) => @onClickCallback())
 
   constructTimerText: (time) ->
     msToFinish = time - Date.now()
 
     if msToFinish < 0
-      return "Time Left Unknown"
+      return "Running (ETA Unknown)"
 
     timerText = ''
     h = Math.floor(msToFinish / MILLI_IN_HOUR)
@@ -156,17 +145,17 @@ class StatusBarView
     secAgo = Math.floor((currentTime - @lastUpdated) / MILLI_IN_SEC)
     if secAgo < 60
       @icon.textContent = "#{@currentText} (<1 min ago)"
-      @lastUpdatedTimer = setTimeout((=>@updateLastUpdated()), MILLI_IN_MIN)
+      @lastUpdatedTimer = setTimeout((() => @updateLastUpdated()), MILLI_IN_MIN)
       return
     if secAgo < 3600
       minAgo = Math.floor(secAgo / 60)
       @icon.textContent = "#{@currentText} (#{minAgo} min ago)"
-      @lastUpdatedTimer = setTimeout((=>@updateLastUpdated()), MILLI_IN_MIN)
+      @lastUpdatedTimer = setTimeout((() => @updateLastUpdated()), MILLI_IN_MIN)
       return
 
     hrAgo = Math.floor(secAgo / 60 / 60)
     @icon.textContent = "#{@currentText} (#{hrAgo} hrs ago)"
-    @lastUpdatedTimer = setTimeout((=>@updateLastUpdated()), MILLI_IN_HOUR)
+    @lastUpdatedTimer = setTimeout((() => @updateLastUpdated()), MILLI_IN_HOUR)
     return
 
   getCurrentPath: () ->
@@ -179,12 +168,9 @@ class StatusBarView
     @element.style.display = "inline-block"
 
   resetState: () ->
-    if @interval?
-      clearInterval(@interval)
-    if @tooltip
-      @tooltip.dispose()
-    if @lastUpdatedTimer?
-      clearInterval(@lastUpdatedTimer)
+    clearInterval(@interval) if @interval
+    @tooltip.dispose() if @tooltip
+    clearInterval(@lastUpdatedTimer) if @lastUpdatedTimer
     @currentText = null
 
     @icon.className = ""

@@ -1,4 +1,3 @@
-$ = require('jquery')
 {CompositeDisposable} = require('atom')
 fs = require('fs')
 path = require('path').posix
@@ -23,42 +22,41 @@ module.exports = Cilkide =
   statusBarTile: null
 
   activate: (state) ->
+    # Install dependencies first, if the user doesn't have them.
     require('atom-package-deps').install('cilkpride').then(() =>
-      # Add a hook on every single text editor that is open (and will be opened in the future)
+      # Add a hook on all text editors open / will be opened in the future.
       @subscriptions.add(atom.workspace.observeTextEditors((editor) => @registerEditor(editor)))
     )
 
     @subscriptions = new CompositeDisposable()
 
     @statusBarElement = new StatusBarView({
-      onErrorClickCallback: () => @onStatusTileClick()
+      onClickCallback: () => @onStatusTileClick()
       onRegisterProjectCallback: (directories) => @onRegisterProject(directories)
     })
 
-    # Add a hook when we're changing active panes so that the status tile can show the correct
-    # status for the current project.
+    # Add a hook when we're changing active panes so that the status tile shows
+    # the correct status for the current project.
     @subscriptions.add(atom.workspace.onDidChangeActivePaneItem((item) =>
       console.log("Changed active pane item...")
       if atom.workspace.getActiveTextEditor()
         @statusBarElement.show()
         @updateStatusBar()
-        # Pass down the change to all projects, since we can't tell what project the file is in.
-        # @projects[projectPath].updateActiveEditor() for projectPath in Object.getOwnPropertyNames(@projects)
       else
         @statusBarElement.hide()
     ))
 
-    atom.commands.add('atom-workspace', 'cilkide:sync-local-remote', (event) =>
+    # Local -> Remote syncing.
+    atom.commands.add('atom-workspace', 'cilkpride:sync-local-remote', (event) =>
       event.stopPropagation()
-      editorPath = @getActivePanePath()
-      if editorPath
+      if editorPath = @getActivePanePath()
         @projects[editorPath].sync(true)
     )
 
-    atom.commands.add('atom-workspace', 'cilkide:sync-remote-local', (event) =>
+    # Remote -> Local syncing.
+    atom.commands.add('atom-workspace', 'cilkpride:sync-remote-local', (event) =>
       event.stopPropagation()
-      editorPath = @getActivePanePath()
-      if editorPath
+      if editorPath = @getActivePanePath()
         @projects[editorPath].sync(false)
     )
 
@@ -68,13 +66,12 @@ module.exports = Cilkide =
     @subscriptions.dispose()
     @statusBarTile.destroy()
     @detailPanel.destroy() if @detailPanel
-    @statusBarTile = null
-    @statusBarElement = null
-    @detailPanel = null
-    @panelPath = null
+    for projectPath in @projects
+      @projects[projectPath].destroy()
 
   serialize: ->
-    cilkideViewState: null
+
+  # Status bar related items
 
   consumeStatusBar: (statusBar) ->
     @statusBarTile = statusBar.addLeftTile(item: @statusBarElement.getElement(), priority: -1)
@@ -82,24 +79,26 @@ module.exports = Cilkide =
     @updateStatusBar()
 
   updateStatusBar: () ->
-    editor = atom.workspace.getActiveTextEditor()
-    if not editor
+    # The current pane is a non-text editor (settings view, etc.)
+    # The status bar should disappear and not be visible.
+    if not editor = atom.workspace.getActiveTextEditor()
       @statusBarElement.updatePath(null)
       @statusBarElement.displayPluginDisabled()
       return
+
     console.log("Switched active panes. Editor id is #{editor.id}.")
-    projectPath = @editorToPath[editor.id]
-    console.log("Project path is #{projectPath}")
-    if projectPath
+    if projectPath = @editorToPath[editor.id]
       @statusBarElement.updatePath(projectPath)
       @projects[projectPath].updateState(true)
     else
       @statusBarElement.updatePath(null)
       @statusBarElement.displayPluginDisabled()
+    console.log("Project path is #{projectPath}")
 
   onStatusTileClick: () ->
-    panePath = @getActivePanePath()
-    @changeDetailPanel(panePath)
+    @changeDetailPanel(@getActivePanePath())
+
+  # Panel-based methods
 
   changeDetailPanel: (tpath) ->
     project = @projects[tpath]
@@ -119,53 +118,52 @@ module.exports = Cilkide =
     return @editorToPath[atom.workspace.getActiveTextEditor()?.id]
 
   # Event handlers
+
   registerEditor: (editor) ->
     console.log("Received a new editor (id #{editor.id})")
 
-    # TODO: Change this so that it's in the Cilkscreen module file
-    # Add the gutter to the newly registered editor.
-    editor.addGutter({name: 'cilkscreen-lint', priority: -1, visible: true})
+    # Add the gutter to the newly registered editor. We do this to all
+    # editors for consistency - otherwise there will be flashing.
+    editor.addGutter({name: 'cilksan-lint', priority: -1, visible: true})
 
     @subscriptions.add(editor.onDidChangePath(
       () =>
-        # TODO: finish this
         console.log("Editor changed path: " + editor.id)
         console.log("The new path is now: #{normalizePath(editor.getPath?())}")
-        oldPath = @editorToPath[editor.id]
-        if oldPath
+        if oldPath = @editorToPath[editor.id]
           @projects[oldPath].unregisterEditor(editor.id)
-        newPath = normalizePath(editor.getPath?())
-        if newPath
-          newProjectPath = @findConfFile(newPath)
-          if newProjectPath
+        if newPath = normalizePath(editor.getPath?())
+          if newProjectPath = @findConfFile(newPath)
             @editorToPath[editor.id] = newProjectPath
             @registerEditorWithProject(newProjectPath, editor)
+          else
+            delete @editorToPath[editor.id]
         else
           delete @editorToPath[editor.id]
     ))
 
-    filePath = normalizePath(editor.getPath?())
-    if not filePath
-      return
-
-    projectPath = @findConfFile(filePath)
-    if not projectPath
-      return
+    # If the editor has no path or we can't find a config file, stop.
+    return if not filePath = normalizePath(editor.getPath?())
+    return if not projectPath = @findConfFile(filePath)
 
     @editorToPath[editor.id] = projectPath
     @registerEditorWithProject(projectPath, editor)
 
+  # Traverse the directories to determine if this file has a parent directory
+  # that contains a configuration file.
   findConfFile: (filePath) ->
     traversedPaths = []
     console.log("File path: #{filePath}")
     projectPath = path.join(filePath, '..')
     console.log("Project path: #{projectPath}")
-    rootDir = path.parse(projectPath).root
+    if not rootDir = path.parse(projectPath).root
+      # On Windows machines, due to path normalization we must break on '.'
+      rootDir = '.'
     console.log("Root dir: #{rootDir}")
     loop
       console.log("Testing for Makefile: #{projectPath}")
-      # on Windows machines, due to path normalization we must break on '.'
       traversedPaths.push(projectPath)
+      # If we've seen this path before, break early.
       if @pathToPath[projectPath] isnt undefined
         console.log("Quick escape: #{@pathToPath[projectPath]}")
         return @pathToPath[projectPath]
@@ -178,7 +176,7 @@ module.exports = Cilkide =
       catch error
         projectPath = path.join(projectPath, '..')
       finally
-        if projectPath is rootDir or projectPath is '.'
+        if projectPath is rootDir
           for tpath in traversedPaths
             @pathToPath[tpath] = null
           return null
@@ -200,7 +198,7 @@ module.exports = Cilkide =
       else
         fs.write(fd, """
 {
-  "cilksanCommand": "make cilksan",
+  "cilksanCommand": "make cilksan && ./queens",
 
   "sshEnabled": true,
   "hostname": "athena.dialup.mit.edu",
@@ -229,13 +227,3 @@ module.exports = Cilkide =
         statusBar: @statusBarElement
       })
     @projects[projectPath].registerEditor(editor)
-
-  manuallyRun: () ->
-    currentProject = @getActivePanePath()
-    if currentProject and @projects[currentProject]
-      @projects[currentProject].manuallyRun()
-
-  manuallyCancel: () ->
-    currentProject = @getActivePanePath()
-    if currentProject and @projects[currentProject]
-      @projects[currentProject].manuallyCancel()

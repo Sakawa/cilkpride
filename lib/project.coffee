@@ -1,13 +1,7 @@
 {CompositeDisposable} = require('atom')
-exec = require('child_process').exec
-extend = require('util')._extend;
 fs = require('fs')
 path = require('path').posix;
-process = require('process')
-spawn = require('child_process').spawn
 
-FileLineReader = require('./utils/file-reader')
-CustomSet = require('./utils/set')
 {normalizePath} = require('./utils/utils')
 
 CilkideDetailPanel = require('./cilkide-detail-panel')
@@ -24,12 +18,12 @@ class Project
   subscriptions: null
   editorSubscriptions: null
   editorIds: null
-  projectView: null
   settings: null
 
   # Properties from parent
   props: null
   changeDetailPanel: null
+  onPanelCloseCallback: null
   path: null
   statusBar: null
 
@@ -48,8 +42,6 @@ class Project
     @changeDetailPanel = @props.changeDetailPanel
     @onPanelCloseCallback = @props.onPanelCloseCallback
     @statusBar = @props.statusBar
-    console.log("Status bar for #{@path}")
-    console.log(@statusBar)
 
     @editorSubscriptions = {}
     @editorIds = []
@@ -63,11 +55,12 @@ class Project
 
     @init()
 
-  # TODO: this is jank
   init: () ->
     # Check the configuration file for errors first.
     if not @refreshConfFile()
       return
+
+    @currentState.state = "ok"
 
     # For each module, create a tab for it and initialize the module.
     @cilkscreenMod = new CilkscreenModule({
@@ -77,16 +70,14 @@ class Project
       runner: new Runner({
         getInstance: ((callback) => @getInstance(callback))
         settings: @settings
-        refreshConfFile: (() => @getUpdatedConf())
+        refreshConfFile: (() => @getConfSettings(true))
       })
       path: @path
     })
-    # TODO: fix this
-    @cilkscreenMod.tab = @detailPanel.registerModuleTab("Cilksan", @cilkscreenMod.getView())
 
-    @consoleMod = new Console({
-    })
-    # TODO: also fix this
+    @consoleMod = new Console({})
+
+    @cilkscreenMod.tab = @detailPanel.registerModuleTab("Cilksan", @cilkscreenMod.getView())
     @consoleMod.tab = @detailPanel.registerModuleTab("Console", @consoleMod)
 
     @consoleMod.registerModule(@cilkscreenMod.name)
@@ -172,10 +163,20 @@ class Project
     )
 
   clearTimer: () ->
-    @killModules(false)
+    @killModules()
 
-  # TODO: need error handling
   refreshConfFile: () ->
+    checkSettings = (settings) ->
+      console.log("[project] Checking settings...")
+      return false unless settings.cilksanCommand
+      if settings.sshEnabled
+        return false unless settings.username?.trim?().split(' ').length is 1
+        return false unless settings.hostname?.trim?().split(' ').length is 1
+        return false unless settings.localBaseDir?.trim?().split(' ').length is 1
+        return false unless settings.remoteBaseDir?.trim?().split(' ').length is 1
+        return false unless typeof settings.port is "number"
+      return true
+
     try
       console.log(path.join(@path, 'cilkpride-conf.json'))
       @settings = JSON.parse(fs.readFileSync(
@@ -185,17 +186,20 @@ class Project
           encoding: 'utf-8',
         }
       ))
+      throw new Error() if not checkSettings(@settings)
       console.log(@settings)
       return true
     catch error
       @currentState.state = "config_error"
       @updateState()
       atom.notifications.addError("Cilkpride was unable to read #{path.join(@path, 'cilkpride-conf.json')}.
-        Please make sure the configuration file is correctly formatted.")
+        Please make sure the configuration file is correctly formatted, and the appropriate fields are filled out.")
       return false
 
-  getUpdatedConf: () ->
-    @refreshConfFile()
+  # TODO: centralize settings here. Too much passing around right now.
+  getConfSettings: (refresh) ->
+    if refresh
+      @refreshConfFile()
     return @settings
 
   # Uses the cilkscreen target in the Makefile to make the executable so that
@@ -208,27 +212,19 @@ class Project
     @startModules()
 
   startModules: () ->
-    if not @killModules(false)
-      return
-
     @cilkscreenMod.startThread()
 
-  killModules: (force) ->
+  killModules: () ->
     console.log("Attempting to kill modules for path #{@path}...")
-    if @currentState.manual and not force
-      return false
-
     clearInterval(@idleTimeout)
 
     @cilkscreenMod.kill()
     return true
 
-  ###
-    Hooks
-  ###
+  # Hooks
 
   registerEditor: (editor) ->
-    console.log("Trying to register an editor with project path #{@path}.")
+    console.log("[project] Trying to register an editor with project path #{@path}.")
     console.log(editor)
     if editor.id not in @editorIds
       @editorIds.push(editor.id)
@@ -245,35 +241,30 @@ class Project
 
       if @sshMod
         @fileSync.copyFile(path.relative(@settings.localBaseDir, normalizePath(editor.getPath())), true, () =>
-          console.log("Initializing timer with state as #{@currentState.state}")
+          console.log("[project] Initializing timer with state as #{@currentState.state}")
           @initializeTimer()
         )
       else
         @initializeTimer()
     )
 
-    @editorSubscriptions[editor.id] = [saveDisposable]
-    # @subscriptions.add(changeDisposable)
-    # @subscriptions.add(stopChangeDisposable)
+    @editorSubscriptions[editor.id] = saveDisposable
     @subscriptions.add(saveDisposable)
 
-  # Uh, why do we need this? probably for minimap maintenance
-  updateActiveEditor: () ->
-    console.log("Called active editor in project")
-    @cilkscreenMod.updateActiveEditor()
-
   unregisterEditor: (editorId) ->
-    for disposable in @editorSubscriptions[editorId]
-      @subscriptions.remove(disposable)
+    @subscriptions.remove(@editorSubscriptions[editorId])
     delete @editorSubscriptions[editorId]
     index = @editorIds.indexOf(editorId)
     @editorIds.splice(index, 1)
 
-  getConfSettings: (refresh) ->
-    if refresh
-      @refreshConfFile()
-    return @settings
-
   # Core UI functions
   getDetailPanel: () ->
     return @detailPanel
+
+  destroy: () ->
+    @subscriptions.dispose()
+
+    @cilkscreenMod.destroy()
+    @sshMod.destroy()
+    @fileSync.destroy()
+    @consoleMod.destroy()

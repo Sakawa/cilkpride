@@ -115,3 +115,6 @@ class FileSync
         console.log("[file-sync] SFTP :: verified #{folder} folder exists")
         resolve()
     )
+
+  destroy: () ->
+    @sftp.close() if @sftp

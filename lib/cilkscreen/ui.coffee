@@ -76,7 +76,7 @@ class CilkscreenUI
       )
 
   createCilkscreenMarker: (editor, line, i) ->
-    cilkscreenGutter = editor.gutterWithName('cilkscreen-lint')
+    cilkscreenGutter = editor.gutterWithName('cilksan-lint')
     range = [[line - 1, 0], [line - 1, Infinity]]
     marker = editor.markBufferRange(range, {id: 'cilkscreen'})
     markerView = new MarkerView(

@@ -43,5 +43,8 @@ class Console
   resetUI: () ->
     return # nothing needed here
 
+  destroy: () ->
+    return
+
   getElement: () ->
     return @element

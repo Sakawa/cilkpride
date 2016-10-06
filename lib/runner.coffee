@@ -88,3 +88,7 @@ class Runner
       @thread = null
       return true
     return false
+
+  destroy: () ->
+    @instance.destroy() if @instance
+    @thread.kill('SIGINT') if @thread

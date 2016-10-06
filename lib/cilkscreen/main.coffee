@@ -50,7 +50,7 @@ class CilkscreenModule
       )
     })
 
-    atom.commands.add('atom-workspace', 'cilkide:debug', () =>
+    atom.commands.add('atom-workspace', 'cilkpride:debug', () =>
       console.log("[debug]")
       console.log(@currentState)
     )
@@ -136,3 +136,6 @@ class CilkscreenModule
 
   getView: () ->
     return @view
+
+  destroy: () ->
+    @runner.destroy()

@@ -36,6 +36,7 @@ class SSHModule
 
     conn.on('ready', () =>
       console.log("[ssh-module] Connection ready.")
+      atom.notifications.addSuccess("Successfully SSHed into #{@settings.username}@#{@settings.hostname}.")
       @eventEmitter.emit('ready')
       @consecFailedAttempts = 0
     ).on('close', (hadError) =>
@@ -279,6 +280,7 @@ class Instance extends EventEmitter
       return {exitCode: parseInt(results[1]), index: results.index}
 
   destroy: () ->
+    @instance.end() if @instance
     @instance = null
     @initialized = false
     @ready = false
