@@ -1,7 +1,7 @@
 {
   "name": "cilkpride",
   "main": "./lib/main",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Experimental package that passively runs cilksan in the background for Cilk projects.",
   "keywords": [
     "cilkpride"
