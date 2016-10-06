@@ -116,6 +116,8 @@ class Tab
       @icon.classList.add('icon', 'icon-clock')
     else if state is "initializing"
       @icon.classList.add('icon', 'icon-sync')
+    else if state is "start"
+      @icon.classList.add('icon', 'icon-question')
 
   resetState: () ->
     @icon.className = ""

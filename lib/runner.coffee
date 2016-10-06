@@ -23,7 +23,7 @@ class Runner
     @getInstance((instance) =>
       @instance = instance
       console.log("[runner] Got a new instance.")
-      instance.once('destroyed', (() => @getNewInstance()))
+      instance.once('destroyed', (() => @getNewInstance(readyCallback)))
       instance.once('initialized', () ->
         readyCallback()
       )

@@ -53,6 +53,10 @@ class Project
         onCloseCallback: (() => @onPanelCloseCallback())
     })
 
+    atom.commands.add('atom-workspace', 'cilkpride:debug', () =>
+      console.log("[debug] Wow! Debug!")
+    )
+
     @init()
 
   init: () ->
@@ -83,7 +87,7 @@ class Project
     @consoleMod.registerModule(@cilkscreenMod.name)
 
     if @settings.sshEnabled
-      @sshMod = new SSHModule({settings: @settings, refreshConfFile: (() => @getUpdatedConf())})
+      @sshMod = new SSHModule({settings: @settings, refreshConfFile: (() => @getConfSettings(true))})
       @sshMod.eventEmitter.on('ready', () =>
         console.log("[project] Received ready on SSHModule")
         @signalModules()

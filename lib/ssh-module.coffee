@@ -89,7 +89,8 @@ class SSHModule
     console.log("[ssh-module] Starting to connect...")
 
   clean: (conn) ->
-    if conn is @connection
+    if conn and conn is @connection
+      @connection.end()
       @connection = null
       console.log("[ssh-module] Module cleaned")
 
@@ -239,12 +240,17 @@ class Instance extends EventEmitter
         @resetOutput()
         @emit('ready')
         console.log("[ssh-module] Instance emitted ready!")
-    ).stderr.on('data', (data) ->
-      console.log('STDERR: ' + data)
     ).on('error', (err) =>
       console.log("[instance] Error received")
       console.log(err)
       @destroy()
+    ).on('finish', () =>
+      console.log('[instance] Instance finished.')
+      @destroy()
+    )
+
+    @instance.stderr.on('data', (data) ->
+      console.log('STDERR: ' + data)
     )
 
   spawn: (command, args, options) ->

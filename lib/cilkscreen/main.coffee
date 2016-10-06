@@ -61,7 +61,7 @@ class CilkscreenModule
     @resetState()
     @runner.getNewInstance(() =>
       @currentState.initialized = true
-      @tab.setState("ok")
+      @tab.setState(@currentState.state)
       @resetState()
     )
 
