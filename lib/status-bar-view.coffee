@@ -88,9 +88,7 @@ class StatusBarView
     @currentText = "Execution error"
     @lastUpdated = Date.now() unless update
     @setTimer(@lastUpdated)
-    $(@icon).on('click', (e) =>
-      @onClickCallback()
-    )
+    $(@icon).on('click', (e) => @onClickCallback())
 
   displayConfigError: (update) ->
     @resetState()

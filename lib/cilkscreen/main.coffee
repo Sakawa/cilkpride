@@ -134,6 +134,9 @@ class CilkscreenModule
     @tab.setState("busy")
     @onStateChange()
 
+  registerEditor: (editor) ->
+    @view.createMarkersForEditor(editor)
+
   getView: () ->
     return @view
 

@@ -250,6 +250,7 @@ class Project
 
     @editorSubscriptions[editor.id] = saveDisposable
     @subscriptions.add(saveDisposable)
+    @cilkscreenMod.registerEditor(editor)
 
   unregisterEditor: (editorId) ->
     @subscriptions.remove(@editorSubscriptions[editorId])

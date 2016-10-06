@@ -28,6 +28,8 @@ class CilkscreenUI
       highlightCallback: ((e, index) => @highlightViolation(e, index, false))
     })
 
+    @currentViolations = []
+
   createUI: (violations) ->
     @currentViolations = violations
     @createMarkers(violations)
@@ -74,6 +76,32 @@ class CilkscreenUI
           markerCache[id] = @createCilkscreenMarker(textEditor, line2, i)
           violation.markers.push(markerCache[id])
       )
+
+  createMarkersForEditor: (editor) ->
+    return if not editorPath = normalizePath(editor.getPath?())
+    markerCache = {}
+
+    for i in [0 ... @currentViolations.length]
+      violation = @currentViolations[i]
+      path1 = violation.line1.filename
+      path2 = violation.line2.filename
+      line1 = +violation.line1.line
+      line2 = +violation.line2.line
+
+      if path1 is editorPath
+        id = editor.id + ":" + path1 + ":" + line1
+        if markerCache[id]
+          violation.markers.push(markerCache[id])
+        else
+          markerCache[id] = @createCilkscreenMarker(editor, line1, i)
+          violation.markers.push(markerCache[id])
+      if path2 is editorPath
+        id = editor.id + ":" + path2 + ":" + line2
+        if markerCache[id]
+          violation.markers.push(markerCache[id])
+        else
+          markerCache[id] = @createCilkscreenMarker(editor, line2, i)
+          violation.markers.push(markerCache[id])
 
   createCilkscreenMarker: (editor, line, i) ->
     cilkscreenGutter = editor.gutterWithName('cilksan-lint')
