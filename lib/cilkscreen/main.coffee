@@ -110,7 +110,7 @@ class CilkscreenModule
     @currentState.lastUpdated = Date.now()
 
     # Shortcircuit if err is actually null
-    if err is null or err is 2
+    if err is null
       @onStateChange()
       return
 

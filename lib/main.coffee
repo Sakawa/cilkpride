@@ -184,7 +184,7 @@ module.exports = Cilkide =
   onRegisterProject: (directories) ->
     if directories
       for directory in directories
-        @createConfFile(directory)
+        @createConfFile(normalizePath(directory))
 
   createConfFile: (directory) ->
     console.log("Generating a configuration file in #{directory}...")

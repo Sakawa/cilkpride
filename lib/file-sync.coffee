@@ -53,7 +53,7 @@ class FileSync
     (new Promise((resolve, reject) =>
       @createDestFolderIfNecessary(folder, localToRemote, resolve, reject)
     )).then(() =>
-      source.readdir(sourceBaseDir, (err, files) =>
+      source.readdir(path.join(sourceBaseDir, folder), (err, files) =>
         for file in files
           newPath = null
           if localToRemote
@@ -93,13 +93,13 @@ class FileSync
       )
 
   createDestFolderIfNecessary: (folder, localToRemote, resolve, reject) ->
+    console.log("[file-sync] Checking folder #{folder}")
     dest = fs
-    destBaseDir = path.join(@settings.localBaseDir, folder)
+    destPath = path.join(@settings.localBaseDir, folder)
     if localToRemote
-      destBaseDir = path.join(@settings.remoteBaseDir, folder)
+      destPath = path.join(@settings.remoteBaseDir, folder)
       dest = @sftp
 
-    destPath = path.join(destBaseDir, folder)
     dest.stat(destPath, (err, stats) =>
       console.log("[file-sync] SFTP :: stat on #{destPath} :: isRemote #{localToRemote}")
       console.log(stats)
