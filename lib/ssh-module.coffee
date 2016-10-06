@@ -194,6 +194,8 @@ class Instance extends EventEmitter
     @settings = props.settings
     if @settings.launchInstance
       @instance.write('launch-instance\n')
+    else
+      @instance.write('bash\n')
     @output = ''
     # 'ready' event denotes that the instance is ready to process another command
     @on('ready', () =>
