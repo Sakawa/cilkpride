@@ -42,8 +42,6 @@ module.exports = Cilkide =
       if atom.workspace.getActiveTextEditor()
         @statusBarElement.show()
         @updateStatusBar()
-      else
-        @statusBarElement.hide()
     ))
 
     # Local -> Remote syncing.
@@ -122,9 +120,12 @@ module.exports = Cilkide =
   registerEditor: (editor) ->
     console.log("Received a new editor (id #{editor.id})")
 
+    # Cancel if this editor is already associated with a path.
+    return if @editorToPath[editor.id]
+
     # Add the gutter to the newly registered editor. We do this to all
     # editors for consistency - otherwise there will be flashing.
-    editor.addGutter({name: 'cilksan-lint', priority: -1, visible: true})
+    editor.addGutter({name: 'cilksan-lint', priority: -1, visible: true}) if not editor.gutterWithName('cilksan-lint')
 
     @subscriptions.add(editor.onDidChangePath(
       () =>
@@ -147,6 +148,7 @@ module.exports = Cilkide =
     return if not projectPath = @findConfFile(filePath)
 
     @editorToPath[editor.id] = projectPath
+    console.log("[main] Registering #{editor.id} with path #{projectPath}")
     @registerEditorWithProject(projectPath, editor)
 
   # Traverse the directories to determine if this file has a parent directory
@@ -216,6 +218,14 @@ module.exports = Cilkide =
         )
     )
 
+  checkActiveEditorsForProject: () ->
+    # Clear the path-to-path cache.
+    @pathToPath = {}
+
+    atom.workspace.getTextEditors().forEach((editor) =>
+      @registerEditor(editor)
+    )
+
   registerEditorWithProject: (projectPath, editor) ->
     console.log("Trying to register editor id #{editor.id} with #{projectPath} from cilkpride.")
     if projectPath not in Object.getOwnPropertyNames(@projects)
@@ -226,4 +236,6 @@ module.exports = Cilkide =
         path: projectPath
         statusBar: @statusBarElement
       })
+      # Re-check old editors - redundant on start-up but will help prevent bugs.
+      @checkActiveEditorsForProject()
     @projects[projectPath].registerEditor(editor)

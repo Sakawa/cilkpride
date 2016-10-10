@@ -176,7 +176,7 @@ class Project
       if settings.sshEnabled
         return false unless settings.username?.trim?().split(' ').length is 1
         return false unless settings.hostname?.trim?().split(' ').length is 1
-        return false unless settings.localBaseDir?.trim?().split(' ').length is 1
+        return false unless settings.localBaseDir # Windows can have spaces.
         return false unless settings.remoteBaseDir?.trim?().split(' ').length is 1
         return false unless typeof settings.port is "number"
       return true
