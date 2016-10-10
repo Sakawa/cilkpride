@@ -50,6 +50,10 @@ class FileSync
     )
 
   copyFolderRecur: (folder, localToRemote, source, dest, sourceBaseDir) ->
+    if folder in @settings.syncIgnoreDir
+      console.log("[file-sync] Ignore dir #{folder} encountered.")
+      return
+
     (new Promise((resolve, reject) =>
       @createDestFolderIfNecessary(folder, localToRemote, resolve, reject)
     )).then(() =>

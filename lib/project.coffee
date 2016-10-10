@@ -179,6 +179,7 @@ class Project
         return false unless settings.localBaseDir # Windows can have spaces.
         return false unless settings.remoteBaseDir?.trim?().split(' ').length is 1
         return false unless typeof settings.port is "number"
+        return false unless settings.syncIgnoreDir?.constructor is Array
       return true
 
     try

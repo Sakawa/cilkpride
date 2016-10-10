@@ -208,7 +208,8 @@ module.exports = Cilkide =
   "username": "your athena username here",
   "launchInstance": false,
   "localBaseDir": "#{directory}",
-  "remoteBaseDir": "full directory path of the project directory on the remote instance"
+  "remoteBaseDir": "full directory path of the project directory on the remote instance",
+  "syncIgnoreDir": ["/.git", "/log.awsrun"]
 }
         """, {encoding: "utf8"}, (err, written, buffer) ->
           atom.workspace.open(confPath)
