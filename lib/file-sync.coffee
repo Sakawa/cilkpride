@@ -73,7 +73,7 @@ class FileSync
           console.log("[file-sync] STAT :: statting #{fullPath}")
           do (newPath) =>
             source.stat(fullPath, (err, stats) =>
-              throw err if err
+              throw "Something went wrong when trying to get information on #{fullPath}." if err
               if stats.isFile()
                 @copyFile(newPath, localToRemote, settings)
               else if stats.isDirectory()
@@ -90,13 +90,13 @@ class FileSync
     console.log("[file-sync STFP] :: received request for #{file} : #{localToRemote} local -> remote")
     if localToRemote
       @sftp.fastPut(path.join(settings.localBaseDir, file), path.join(settings.remoteBaseDir, file), (err) ->
-        throw err if err
+        throw "Something went wrong when trying to copy #{file} to the remote server." if err
         console.log("[file-sync] SFTP :: fastPut LTR #{file} succeeded")
         callback() if callback
       )
     else
       @sftp.fastGet(path.join(settings.remoteBaseDir, file), path.join(settings.localBaseDir, file), (err) ->
-        throw err if err
+        throw "Something went wrong when trying to copy #{file} from the remote server." if err
         console.log("[file-sync] SFTP :: fastPut RTL #{file} succeeded")
         callback() if callback
       )
@@ -110,7 +110,7 @@ class FileSync
         if err
           @createDestFolderIfNecessary(path.join(destPath, '..'), dest, settings, resolve, reject)
         else if not stats.isDirectory()
-          throw "[file-sync] SFTP :: #{destPath} exists but is not a directory"
+          throw "#{destPath} exists but is not a directory - please verify that the paths are correct in your config file."
         else
           console.log("[file-sync] SFTP :: verified #{destPath} folder exists")
           resolve()
@@ -121,12 +121,12 @@ class FileSync
         console.log(stats)
         if err
           dest.mkdir(destPath, (err) =>
-            throw err if err
+            throw "Something went wrong when trying to create the directory #{destPath}." if err
             console.log("[file-sync] SFTP :: created dest folder #{destPath}")
             resolve()
           )
         else if not stats.isDirectory()
-          throw "[file-sync] SFTP :: #{destPath} exists but is not a directory"
+          throw "#{destPath} exists but is not a directory - please verify that the paths are correct in your config file."
         else
           console.log("[file-sync] SFTP :: verified #{destPath} folder exists")
           resolve()
