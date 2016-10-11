@@ -55,8 +55,12 @@ class FileSync
       console.log("[file-sync] Ignore dir #{folder} encountered.")
       return
 
+    destPath = path.join(settings.localBaseDir, folder)
+    if localToRemote
+      destPath = path.join(settings.remoteBaseDir, folder)
+
     (new Promise((resolve, reject) =>
-      @createDestFolderIfNecessary(folder, localToRemote, settings, resolve, reject)
+      @createDestFolderIfNecessary(destPath, dest, settings, resolve, reject)
     )).then(() =>
       source.readdir(path.join(sourceBaseDir, folder), (err, files) =>
         for file in files
@@ -97,28 +101,36 @@ class FileSync
         callback() if callback
       )
 
-  createDestFolderIfNecessary: (folder, localToRemote, settings, resolve, reject) ->
-    console.log("[file-sync] Checking folder #{folder}")
-    dest = fs
-    destPath = path.join(settings.localBaseDir, folder)
-    if localToRemote
-      destPath = path.join(settings.remoteBaseDir, folder)
-      dest = @sftp
+  createDestFolderIfNecessary: (destPath, dest, settings, resolve, reject) ->
+    console.log("[file-sync] Checking folder #{destPath}")
 
-    dest.stat(destPath, (err, stats) =>
-      console.log("[file-sync] SFTP :: stat on #{destPath} :: isRemote #{localToRemote}")
-      console.log(stats)
-      if err
-        dest.mkdir(destPath, (err) =>
-          throw err if err
-          console.log("[file-sync] SFTP :: created dest folder #{folder} :: isRemote #{localToRemote}")
+    # TODO: Is there a better way of doing this?
+    (new Promise((resolve, reject) =>
+      dest.stat(path.join(destPath, '..'), (err, stats) =>
+        if err
+          @createDestFolderIfNecessary(path.join(destPath, '..'), dest, settings, resolve, reject)
+        else if not stats.isDirectory()
+          throw "[file-sync] SFTP :: #{destPath} exists but is not a directory"
+        else
+          console.log("[file-sync] SFTP :: verified #{destPath} folder exists")
           resolve()
-        )
-      else if not stats.isDirectory()
-        throw "[file-sync] SFTP :: #{folder} exists but is not a directory :: isRemote #{localToRemote}"
-      else
-        console.log("[file-sync] SFTP :: verified #{folder} folder exists")
-        resolve()
+      )
+    )).then(() =>
+      dest.stat(destPath, (err, stats) =>
+        console.log("[file-sync] SFTP :: stat on #{destPath}")
+        console.log(stats)
+        if err
+          dest.mkdir(destPath, (err) =>
+            throw err if err
+            console.log("[file-sync] SFTP :: created dest folder #{destPath}")
+            resolve()
+          )
+        else if not stats.isDirectory()
+          throw "[file-sync] SFTP :: #{destPath} exists but is not a directory"
+        else
+          console.log("[file-sync] SFTP :: verified #{destPath} folder exists")
+          resolve()
+      )
     )
 
   destroy: () ->
