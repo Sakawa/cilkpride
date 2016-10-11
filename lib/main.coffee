@@ -200,15 +200,16 @@ module.exports = Cilkide =
       else
         fs.write(fd, """
 {
+  "username": "your athena username here",
+  "remoteBaseDir": "full directory path of the project directory on the remote instance",
   "cilksanCommand": "make cilksan && ./queens",
 
   "sshEnabled": true,
   "hostname": "athena.dialup.mit.edu",
   "port": 22,
-  "username": "your athena username here",
   "launchInstance": false,
   "localBaseDir": "#{directory}",
-  "remoteBaseDir": "full directory path of the project directory on the remote instance",
+  "syncIgnoreFile": ["/cilkpride-conf.json"],
   "syncIgnoreDir": ["/.git", "/log.awsrun"]
 }
         """, {encoding: "utf8"}, (err, written, buffer) ->
@@ -227,6 +228,20 @@ module.exports = Cilkide =
       @registerEditor(editor)
     )
 
+  destroyProject: (projectPath) ->
+    return if not @projects[projectPath]
+
+    console.log("[main] Destroying project #{projectPath}")
+    console.log(@editorToPath)
+    for editorId in Object.getOwnPropertyNames(@editorToPath)
+      console.log("[main] Destroying project, testing editor #{editorId}")
+      if @editorToPath[editorId] is projectPath
+        delete @editorToPath[editorId]
+    @projects[projectPath].destroy()
+    @pathToPath = {}
+    delete @projects[projectPath]
+    @updateStatusBar()
+
   registerEditorWithProject: (projectPath, editor) ->
     console.log("Trying to register editor id #{editor.id} with #{projectPath} from cilkpride.")
     if projectPath not in Object.getOwnPropertyNames(@projects)
@@ -234,6 +249,7 @@ module.exports = Cilkide =
       @projects[projectPath] = new Project({
         changeDetailPanel: ((tpath) => @changeDetailPanel(tpath))
         onPanelCloseCallback: (() => @onPanelCloseCallback())
+        onDestroy: (() => @destroyProject(projectPath))
         path: projectPath
         statusBar: @statusBarElement
       })

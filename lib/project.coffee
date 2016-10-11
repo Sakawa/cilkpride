@@ -19,11 +19,13 @@ class Project
   editorSubscriptions: null
   editorIds: null
   settings: null
+  configWatch: null
 
   # Properties from parent
   props: null
   changeDetailPanel: null
   onPanelCloseCallback: null
+  onDestroy: null
   path: null
   statusBar: null
 
@@ -42,6 +44,7 @@ class Project
     @changeDetailPanel = @props.changeDetailPanel
     @onPanelCloseCallback = @props.onPanelCloseCallback
     @statusBar = @props.statusBar
+    @onDestroy = @props.onDestroy
 
     @editorSubscriptions = {}
     @editorIds = []
@@ -53,6 +56,19 @@ class Project
         onCloseCallback: (() => @onPanelCloseCallback())
     })
 
+    @refreshConfFile()
+    # Set a watch so that we know when the configuration file is changed.
+    @configWatch = fs.watch("#{path.join(@path, 'cilkpride-conf.json')}", (eventType, filename) =>
+      console.log("[project] Received watch notification on #{filename} with event type #{eventType}")
+      if eventType is "change"
+        @refreshConfFile()
+        console.log("Refreshed config file, state is #{@currentState.state}")
+        if @currentState.state is "ok" and not @cilkscreenMod
+          @init()
+      else if eventType is "rename"
+        @onDestroy()
+    )
+
     atom.commands.add('atom-workspace', 'cilkpride:debug', () =>
       console.log("[debug] Wow! Debug!")
     )
@@ -61,20 +77,16 @@ class Project
 
   init: () ->
     # Check the configuration file for errors first.
-    if not @refreshConfFile()
-      return
-
-    @currentState.state = "ok"
+    return if @currentState.state is "config_error"
 
     # For each module, create a tab for it and initialize the module.
     @cilkscreenMod = new CilkscreenModule({
       changePanel: (() => @changeDetailPanel(@path))
-      getConfSettings: ((refresh) => @getConfSettings(refresh))
+      getSettings: (() => return @settings)
       onStateChange: (() => @updateState(false, @cilkscreenMod))
       runner: new Runner({
         getInstance: ((callback) => @getInstance(callback))
-        settings: @settings
-        refreshConfFile: (() => @getConfSettings(true))
+        getSettings: (() => return @settings)
       })
       path: @path
     })
@@ -87,7 +99,7 @@ class Project
     @consoleMod.registerModule(@cilkscreenMod.name)
 
     if @settings.sshEnabled
-      @sshMod = new SSHModule({settings: @settings, refreshConfFile: (() => @getConfSettings(true))})
+      @sshMod = new SSHModule({getSettings: (() => return @settings)})
       @sshMod.eventEmitter.on('ready', () =>
         console.log("[project] Received ready on SSHModule")
         @signalModules()
@@ -180,6 +192,7 @@ class Project
         return false unless settings.remoteBaseDir?.trim?().split(' ').length is 1
         return false unless typeof settings.port is "number"
         return false unless settings.syncIgnoreDir?.constructor is Array
+        return false unless settings.syncIgnoreFile?.constructor is Array
       return true
 
     try
@@ -193,6 +206,7 @@ class Project
       ))
       throw new Error() if not checkSettings(@settings)
       console.log(@settings)
+      @currentState.state = "ok"
       return true
     catch error
       @currentState.state = "config_error"
@@ -201,18 +215,11 @@ class Project
         Please make sure the configuration file is correctly formatted, and the appropriate fields are filled out.")
       return false
 
-  # TODO: centralize settings here. Too much passing around right now.
-  getConfSettings: (refresh) ->
-    if refresh
-      @refreshConfFile()
-    return @settings
-
   # Uses the cilkscreen target in the Makefile to make the executable so that
   # we can use cilkscreen on the executable.
   makeExecutable: () ->
     # Refresh the configuration to make sure it's up to date.
-    if not @refreshConfFile()
-      return
+    return if @currentState.state is "config_error"
 
     @startModules()
 
@@ -237,15 +244,8 @@ class Project
     saveDisposable = editor.onDidSave(()=>
       console.log("Saved!")
 
-      # If the project did not create modules because of a config error,
-      # try to init when the error is fixed.
-      if @currentState.state is "config_error"
-        if @refreshConfFile()
-          @init() if not @cilkscreenMod
-        else return
-
       if @sshMod
-        @fileSync.copyFile(path.relative(@settings.localBaseDir, normalizePath(editor.getPath())), true, () =>
+        @fileSync.copyFile(path.relative(@settings.localBaseDir, normalizePath(editor.getPath())), true, @settings, () =>
           console.log("[project] Initializing timer with state as #{@currentState.state}")
           @initializeTimer()
         )
@@ -270,7 +270,8 @@ class Project
   destroy: () ->
     @subscriptions.dispose()
 
-    @cilkscreenMod.destroy()
-    @sshMod.destroy()
-    @fileSync.destroy()
-    @consoleMod.destroy()
+    @cilkscreenMod.destroy() if @cilkscreenMod
+    @sshMod.destroy() if @sshMod
+    @fileSync.destroy() if @fileSync
+    @consoleMod.destroy() if @consoleMod
+    @configWatch.close() if @configWatch

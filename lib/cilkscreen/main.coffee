@@ -13,7 +13,7 @@ class CilkscreenModule
 
   props: null
   changePanel: null
-  getConfSettings: null
+  getSettings: null
   onStateChange: null
 
   violations: null
@@ -26,7 +26,7 @@ class CilkscreenModule
     @props = props
     @onCloseCallback = props.onCloseCallback
     @changePanel = props.changePanel
-    @getConfSettings = props.getConfSettings
+    @getSettings = props.getSettings
     @runner = props.runner
     @path = props.path
     @onStateChange = props.onStateChange
@@ -40,7 +40,7 @@ class CilkscreenModule
       startTime: null
       lastRuntime: null
       output: null
-      initialized: not @getConfSettings().sshEnabled
+      initialized: not @getSettings().sshEnabled
     }
 
     @view = new CilkscreenView({
@@ -71,13 +71,13 @@ class CilkscreenModule
 
   # TODO: the modules should push updates to the project class, which will manage everything
   startThread: () ->
-    @runner.spawn(@getConfSettings(true).cilksanCommand, [], {}, (err, output) =>
+    @runner.spawn(@getSettings().cilksanCommand, [], {}, (err, output) =>
       @runnerCallback(err, output)
     )
     @startState()
 
   runnerCallback: (err, output) ->
-    settings = @getConfSettings(true)
+    settings = @getSettings(true)
     console.log("[cilkscreen] Received code #{err}")
     console.log("[cilkscreen] Received output #{output}")
     @currentState.output = output

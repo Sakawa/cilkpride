@@ -5,7 +5,7 @@ module.exports =
 class FileSync
 
   sftp: null
-  settings: null
+  getSettings: null
 
   constructor: (props) ->
     @getSFTP = props.getSFTP
@@ -13,7 +13,7 @@ class FileSync
   updateSFTP: () ->
     @getSFTP((sftp) =>
       @sftp = sftp.sftp
-      @settings = sftp.settings
+      @getSettings = sftp.getSettings
       console.log("[file-sync] Got a new SFTP.")
     )
 
@@ -25,14 +25,15 @@ class FileSync
 
     source = @sftp
     dest = fs
-    sourceBaseDir = path.join(@settings.remoteBaseDir, folder)
-    messageStr = "Synced #{sourceBaseDir} to #{path.join(@settings.localBaseDir, folder)}."
+    settings = @getSettings()
+    sourceBaseDir = path.join(settings.remoteBaseDir, folder)
+    messageStr = "Synced #{sourceBaseDir} to #{path.join(settings.localBaseDir, folder)}."
 
     if localToRemote
       source = fs
       dest = @sftp
-      sourceBaseDir = path.join(@settings.localBaseDir, folder)
-      messageStr = "Synced #{sourceBaseDir} to #{path.join(@settings.remoteBaseDir, folder)}."
+      sourceBaseDir = path.join(settings.localBaseDir, folder)
+      messageStr = "Synced #{sourceBaseDir} to #{path.join(settings.remoteBaseDir, folder)}."
 
     (new Promise((resolve, reject) ->
       source.stat(sourceBaseDir, (err, stats) ->
@@ -45,17 +46,17 @@ class FileSync
           resolve()
       )
     )).then(() =>
-      @copyFolderRecur(folder, localToRemote, source, dest, sourceBaseDir)
+      @copyFolderRecur(folder, localToRemote, source, dest, sourceBaseDir, settings)
       atom.notifications.addSuccess(messageStr)
     )
 
-  copyFolderRecur: (folder, localToRemote, source, dest, sourceBaseDir) ->
-    if folder in @settings.syncIgnoreDir
+  copyFolderRecur: (folder, localToRemote, source, dest, sourceBaseDir, settings) ->
+    if folder in settings.syncIgnoreDir
       console.log("[file-sync] Ignore dir #{folder} encountered.")
       return
 
     (new Promise((resolve, reject) =>
-      @createDestFolderIfNecessary(folder, localToRemote, resolve, reject)
+      @createDestFolderIfNecessary(folder, localToRemote, settings, resolve, reject)
     )).then(() =>
       source.readdir(path.join(sourceBaseDir, folder), (err, files) =>
         for file in files
@@ -70,38 +71,38 @@ class FileSync
             source.stat(fullPath, (err, stats) =>
               throw err if err
               if stats.isFile()
-                @copyFile(newPath, localToRemote)
+                @copyFile(newPath, localToRemote, settings)
               else if stats.isDirectory()
-                @copyFolderRecur(newPath, localToRemote, source, dest, sourceBaseDir)
+                @copyFolderRecur(newPath, localToRemote, source, dest, sourceBaseDir, settings)
               else
                 console.log("[file-sync] SFTP :: unknown filetype #{newPath} encountered")
             )
       )
     )
 
-  copyFile: (file, localToRemote, callback) ->
-    if not @sftp
+  copyFile: (file, localToRemote, settings, callback) ->
+    if not @sftp or file in settings.syncIgnoreFile
       return false
     console.log("[file-sync STFP] :: received request for #{file} : #{localToRemote} local -> remote")
     if localToRemote
-      @sftp.fastPut(path.join(@settings.localBaseDir, file), path.join(@settings.remoteBaseDir, file), (err) ->
+      @sftp.fastPut(path.join(settings.localBaseDir, file), path.join(settings.remoteBaseDir, file), (err) ->
         throw err if err
         console.log("[file-sync] SFTP :: fastPut LTR #{file} succeeded")
         callback() if callback
       )
     else
-      @sftp.fastGet(path.join(@settings.remoteBaseDir, file), path.join(@settings.localBaseDir, file), (err) ->
+      @sftp.fastGet(path.join(settings.remoteBaseDir, file), path.join(settings.localBaseDir, file), (err) ->
         throw err if err
         console.log("[file-sync] SFTP :: fastPut RTL #{file} succeeded")
         callback() if callback
       )
 
-  createDestFolderIfNecessary: (folder, localToRemote, resolve, reject) ->
+  createDestFolderIfNecessary: (folder, localToRemote, settings, resolve, reject) ->
     console.log("[file-sync] Checking folder #{folder}")
     dest = fs
-    destPath = path.join(@settings.localBaseDir, folder)
+    destPath = path.join(settings.localBaseDir, folder)
     if localToRemote
-      destPath = path.join(@settings.remoteBaseDir, folder)
+      destPath = path.join(settings.remoteBaseDir, folder)
       dest = @sftp
 
     dest.stat(destPath, (err, stats) =>
@@ -121,4 +122,4 @@ class FileSync
     )
 
   destroy: () ->
-    @sftp.close() if @sftp
+    @sftp.end() if @sftp

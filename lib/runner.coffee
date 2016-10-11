@@ -6,7 +6,6 @@ module.exports =
 class Runner
 
   instance: null
-  settings: null
   getInstance: null
   callback: null
   refreshConfFile: null
@@ -16,7 +15,7 @@ class Runner
 
   constructor: (props) ->
     @getInstance = props.getInstance
-    @settings = props.settings
+    @getSettings = props.getSettings
     @refreshConfFile = props.refreshConfFile
 
   getNewInstance: (readyCallback) ->
@@ -32,25 +31,22 @@ class Runner
       )
     )
 
-  updateConfFile: () ->
-    @settings = @refreshConfFile()
-
   # TODO: better way of handling options
   spawn: (command, args, options, callback) ->
     @kill()
-    @updateConfFile()
+    settings = @getSettings()
     @callback = callback
-    if @settings.hostname
+    if settings.hostname
       if @instance
-        @instance.spawn(command, args, {pwd: @settings.remoteBaseDir})
+        @instance.spawn(command, args, {pwd: settings.remoteBaseDir})
       else
         return false
     else
       try
-        process.chdir(@settings.localBaseDir)
-        console.log("[runner] Successfully changed pwd to: #{@settings.localBaseDir}")
+        process.chdir(settings.localBaseDir)
+        console.log("[runner] Successfully changed pwd to: #{settings.localBaseDir}")
       catch error
-        console.err("[runner] Could not change pwd to #{@settings.localBaseDir} with error #{error}")
+        console.err("[runner] Could not change pwd to #{settings.localBaseDir} with error #{error}")
       cilkLibPath = atom.config.get('cilkpride.cilkLibPath')
       cilktoolsPath = atom.config.get('cilkpride.cilktoolsPath')
       console.log("[runner] Process environment: ")

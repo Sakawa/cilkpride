@@ -7,13 +7,14 @@ PasswordView = require('./password-view')
 class SSHModule
 
   props: null
-  refreshConfFile: null
-  settings: null
+  getSettings: null
 
   connection: null
   connectionTimeout: null
   consecFailedAttempts: null
   eventEmitter: null
+
+  destroyed: false
 
   password: null
   passwordView: null
@@ -21,8 +22,7 @@ class SSHModule
   constructor: (props) ->
     console.log("[ssh-module] Created a new instance of SSHModule")
     @props = props
-    @settings = props.settings
-    @refreshConfFile = props.refreshConfFile
+    @getSettings = props.getSettings
     @eventEmitter = new EventEmitter()
     @consecFailedAttempts = 0
 
@@ -36,7 +36,8 @@ class SSHModule
 
     conn.on('ready', () =>
       console.log("[ssh-module] Connection ready.")
-      atom.notifications.addSuccess("Successfully SSHed into #{@settings.username}@#{@settings.hostname}.")
+      settings = @getSettings()
+      atom.notifications.addSuccess("Successfully SSHed into #{settings.username}@#{settings.hostname}.")
       @eventEmitter.emit('ready')
       @consecFailedAttempts = 0
     ).on('close', (hadError) =>
@@ -69,18 +70,20 @@ class SSHModule
         # TODO: potential race condition here where @connection is still connecting after a d/c
         @passwordView.onEnter = ((password) => @onEnterPassword(password, finish))
       else
+        settings = @getSettings()
         @passwordView = new PasswordView({
-          description: "Please enter your password for #{@settings.username}@#{@settings.hostname}.\n
+          description: "Please enter your password for #{settings.username}@#{settings.hostname}.\n
             Note: The plugin will attempt to login with this password in the event of network interruptions for the rest of this session."
           onEnter: ((password) => @onEnterPassword(password, finish))
           onCancel: (() => @onCancelPassword())
         })
     )
 
+    settings = @getSettings()
     conn.connect({
-      host: @settings.hostname
-      port: @settings.port
-      username: @settings.username
+      host: settings.hostname
+      port: settings.port
+      username: settings.username
       password: if @password then @password else null
       tryKeyboard: true
       readyTimeout: 20000
@@ -95,6 +98,7 @@ class SSHModule
       console.log("[ssh-module] Module cleaned")
 
   getSFTP: (callback) ->
+    return if @destroyed
     try
       @connection.sftp((err, sftp) =>
         if err
@@ -103,7 +107,7 @@ class SSHModule
           @reconnect()
         else
           console.log("[ssh-module] SFTP :: ready")
-          callback(new SFTP({sftp: sftp, settings: @settings}))
+          callback(new SFTP({sftp: sftp, getSettings: (() => return @getSettings())}))
       )
     catch error
       console.log("[ssh-module] Received error in getSFTP")
@@ -111,6 +115,7 @@ class SSHModule
       @reconnect()
 
   getInstance: (callback) ->
+    return if @destroyed
     try
       @connection.shell({pty: true}, (err, stream) =>
         if err
@@ -119,7 +124,7 @@ class SSHModule
           @reconnect()
         else
           console.log("[ssh-module] Instance :: ready")
-          callback(new Instance({instance: stream, password: @password, settings: @settings}))
+          callback(new Instance({instance: stream, password: @password, getSettings: (() => return @getSettings())}))
       )
     catch error
       console.log("[ssh-module] Received error in getInstance")
@@ -127,8 +132,10 @@ class SSHModule
       @reconnect()
 
   reconnect: () ->
+    return if @destroyed
+
     @clean(@connection)
-    @settings = @refreshConfFile()
+
     if @consecFailedAttempts > 3
       console.log("[ssh-module] >3 consecutive failed attempts, pausing for 30 seconds")
       @connectionTimeout = setTimeout((() => @startConnection()), 30000)
@@ -149,9 +156,10 @@ class SSHModule
     @connection.end() if @connection
 
   destroy: () ->
+    @destroyed = true
     clearTimeout(@connectionTimeout) if @connectionTimeout
-    @connection.end() if @connection
     @eventEmitter.removeAllListeners()
+    @connection.end() if @connection
     @passwordView.detach() if @passwordView
 
 ###
@@ -165,7 +173,7 @@ class SFTP
 
   constructor: (props) ->
     @sftp = props.sftp
-    @settings = props.settings
+    @getSettings = props.getSettings
 
 ###
 Wrapper class for using an instance [6.172 launch-instance]
@@ -180,7 +188,7 @@ class Instance extends EventEmitter
   instance: null
   initialized: false
   passwordFlag: false
-  settings: null
+  getSettings: null
   ready: false
   killFlag: false
 
@@ -191,8 +199,10 @@ class Instance extends EventEmitter
     console.log('[instance] Instance constructed')
     @instance = props.instance
     @stderr = @instance.stderr
-    @settings = props.settings
-    if @settings.launchInstance
+    @getSettings = props.getSettings
+
+    settings = @getSettings()
+    if settings.launchInstance
       @instance.write('launch-instance\n')
     else
       @instance.write('bash\n')
@@ -218,8 +228,10 @@ class Instance extends EventEmitter
     ).on('data', (data) =>
       @output += data
       console.log('STDOUT: ' + data)
+
+      settings = @getSettings()
       # Deals with entering in the user's password on launch-instance
-      if @settings.launchInstance and not @passwordFlag and extractLast(@output, 10) is "Password: "
+      if settings.launchInstance and not @passwordFlag and extractLast(@output, 10) is "Password: "
         @instance.write("#{password}\n")
         @passwordFlag = true
         @resetOutput()
