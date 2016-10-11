@@ -22,12 +22,26 @@ class PasswordView
 
     descriptionDiv = document.createElement('div')
     descriptionDiv.classList.add('password-view-descriptor')
-    descriptionDiv.textContent = props.description
+    passwordPrompt = document.createElement('div')
+    passwordPrompt.classList.add('password-prompt')
+    passwordPrompt.textContent = "Please enter your password for "
+    usernameSpan = document.createElement('span')
+    usernameSpan.classList.add('username-span')
+    usernameSpan.textContent = props.username
+    passwordPrompt.appendChild(usernameSpan)
+    disclaimerDiv = document.createElement('div')
+    disclaimerDiv.classList.add('password-disclaimer')
+    disclaimerDiv.textContent = "Note: The plugin will attempt to login with this password in the event of network interruptions for the rest of this session."
+
+    descriptionDiv.appendChild(passwordPrompt)
+    descriptionDiv.appendChild(disclaimerDiv)
+
     @content.appendChild(descriptionDiv)
 
     @passwordEditor = TextEditorUtil.constructTextEditor({
       mini: true
     })
+    @passwordEditor.element.classList.add('password-view-editor')
     @content.appendChild(@passwordEditor.element)
 
     # Password workaround for TextEditor found from

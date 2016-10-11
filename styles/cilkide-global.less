@@ -180,7 +180,6 @@
   }
 }
 
-
 // Password CSS
 atom-text-editor::shadow .password-lines .line {
   span.text:before {
@@ -195,5 +194,24 @@ atom-text-editor::shadow .password-lines .line {
 }
 
 .password-view-descriptor {
-  margin-bottom: 7px;
+  margin: 3px 8px 8px 8px;
+}
+
+.password-prompt {
+  font-size: 12pt;
+}
+
+.username-span {
+  font-family: Consolas;
+  color: @text-color-highlight;
+}
+
+.editor.password-view-editor {
+  margin-left: 8px;
+  margin-right: 8px;
+}
+
+.password-disclaimer {
+  margin-top: 3px;
+  font-size: 8pt;
 }

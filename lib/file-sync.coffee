@@ -85,8 +85,13 @@ class FileSync
     )
 
   copyFile: (file, localToRemote, settings, callback) ->
-    if not @sftp or file in settings.syncIgnoreFile
+    if file[0] isnt '/'
+      file = "/#{file}"
+    if not @sftp
       return false
+    if file in settings.syncIgnoreFile
+      callback() if callback
+      return
     console.log("[file-sync STFP] :: received request for #{file} : #{localToRemote} local -> remote")
     if localToRemote
       @sftp.fastPut(path.join(settings.localBaseDir, file), path.join(settings.remoteBaseDir, file), (err) ->

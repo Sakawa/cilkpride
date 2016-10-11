@@ -71,9 +71,10 @@ class SSHModule
         @passwordView.onEnter = ((password) => @onEnterPassword(password, finish))
       else
         settings = @getSettings()
+
+
         @passwordView = new PasswordView({
-          description: "Please enter your password for #{settings.username}@#{settings.hostname}.\n
-            Note: The plugin will attempt to login with this password in the event of network interruptions for the rest of this session."
+          username: "#{settings.username}@#{settings.hostname}"
           onEnter: ((password) => @onEnterPassword(password, finish))
           onCancel: (() => @onCancelPassword())
         })
@@ -93,6 +94,8 @@ class SSHModule
 
   clean: (conn) ->
     if conn and conn is @connection
+      clearTimeout(@connectionTimeout) if @connectionTimeout
+      @connectionTimeout = null
       @connection.end()
       @connection = null
       console.log("[ssh-module] Module cleaned")
@@ -153,7 +156,7 @@ class SSHModule
   onCancelPassword: () ->
     @passwordView = null
     console.log("Cancel initiated.")
-    @connection.end() if @connection
+    @clean(@connection)
 
   destroy: () ->
     @destroyed = true
