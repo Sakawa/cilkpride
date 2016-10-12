@@ -14,7 +14,8 @@
   "dependencies": {
     "jquery": "2.2.0",
     "ssh2": "0.5.2",
-    "atom-package-deps": "4.3.1"
+    "atom-package-deps": "4.3.1",
+    "dateformat": "1.0.12"
   },
   "package-deps": [
     "minimap"

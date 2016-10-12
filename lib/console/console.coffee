@@ -1,3 +1,5 @@
+dateFormat = require('dateformat')
+
 module.exports =
 class Console
 
@@ -37,7 +39,9 @@ class Console
       throw new Error("Module was not correctly registered with the console.")
 
     # TODO: update the last updated
-    @outputs[name].children[0].textContent = "#{name} - last updated some longer time ago"
+    currentTime = dateFormat(new Date(), "h:MM TT")
+
+    @outputs[name].children[0].textContent = "#{name} - last updated at #{currentTime}"
     @outputs[name].children[1].textContent = output
 
   resetUI: () ->
