@@ -21,7 +21,7 @@ class Console
 
     moduleDescriptor = document.createElement('div')
     moduleDescriptor.classList.add('console-div-descriptor')
-    moduleDescriptor.textContent = "#{name} - last updated some time ago"
+    moduleDescriptor.textContent = "#{name} - no updates yet!"
 
     moduleContainer = document.createElement('div')
     moduleContainer.classList.add('console-div-container')

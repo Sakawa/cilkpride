@@ -67,7 +67,7 @@ atom-text-editor::shadow .gutter[gutter-name=cilksan-lint] .decoration {
 
       .minimap-canvas-line-container {
         position: absolute;
-        top: 32px;
+        top: 30px;
 
         z-index: 11;
 
@@ -92,6 +92,8 @@ atom-text-editor::shadow .gutter[gutter-name=cilksan-lint] .decoration {
           padding-bottom: 5px;
           text-decoration: underline;
           cursor: pointer;
+          width: 200px;
+          overflow: hidden; // fix this later
         }
 
         .cs-minimap-container {
@@ -104,6 +106,7 @@ atom-text-editor::shadow .gutter[gutter-name=cilksan-lint] .decoration {
             z-index: 11;
             background-color: white;
             opacity: 0.3;
+            pointer-events: none;
           }
 
         }

@@ -17,15 +17,19 @@ class CilkscreenPluginView
   minimapIndex: null
   toggleVisual: true
 
+  currentMinimap: null
+
   # Properties from parents
   props: null
   highlightCallback: null
+  path: null
 
   HALF_CONTEXT: 2
 
   constructor: (props) ->
     @props = props
     @highlightCallback = props.highlightCallback
+    @path = props.path
 
     # Create root element
     @element = document.createElement('div')
@@ -48,10 +52,22 @@ class CilkscreenPluginView
     if @toggleVisual
       @minimapContainer = document.createElement('div')
       @minimapContainer.classList.add('minimap-container')
+      minimapEmptyViolationDiv = document.createElement('ul')
+      minimapEmptyViolationDiv.classList.add('background-message', 'centered', 'cilkpride-normal-whitespace', 'cilkpride-background-message')
+      backgroundMessage = document.createElement('li')
+      backgroundMessage.textContent = "No results yet. Save a file to start cilksan."
+      minimapEmptyViolationDiv.appendChild(backgroundMessage)
+      @minimapContainer.appendChild(minimapEmptyViolationDiv)
       violationWrapper.appendChild(@minimapContainer)
 
     @violationContainer = document.createElement('div')
     @violationContainer.classList.add('violation-container')
+    emptyViolationDiv = document.createElement('ul')
+    emptyViolationDiv.classList.add('background-message', 'centered', 'cilkpride-normal-whitespace', 'cilkpride-background-message')
+    backgroundMessage = document.createElement('li')
+    backgroundMessage.textContent = "Detected race conditions are shown here. None right now!"
+    emptyViolationDiv.appendChild(backgroundMessage)
+    @violationContainer.appendChild(emptyViolationDiv)
     violationContentWrapper.appendChild(@violationContainer)
 
     @element.appendChild(violationWrapper)
@@ -78,7 +94,28 @@ class CilkscreenPluginView
     console.log("updating plugin view: start")
     console.log(violations)
 
-    @createViolationDivs(violations)
+    if violations.length
+      @createViolationDivs(violations)
+    else
+      @createEmptyBackgroundMessage()
+
+  createEmptyBackgroundMessage: () ->
+    @clearChildren()
+
+    if @toggleVisual
+      minimapEmptyViolationDiv = document.createElement('ul')
+      minimapEmptyViolationDiv.classList.add('background-message', 'centered', 'cilkpride-normal-whitespace', 'cilkpride-background-message')
+      backgroundMessage = document.createElement('li')
+      backgroundMessage.textContent = "Nothing to display!"
+      minimapEmptyViolationDiv.appendChild(backgroundMessage)
+      @minimapContainer.appendChild(minimapEmptyViolationDiv)
+
+    emptyViolationDiv = document.createElement('ul')
+    emptyViolationDiv.classList.add('background-message', 'centered', 'cilkpride-normal-whitespace', 'cilkpride-background-message')
+    backgroundMessage = document.createElement('li')
+    backgroundMessage.textContent = "No reported race conditions."
+    emptyViolationDiv.appendChild(backgroundMessage)
+    @violationContainer.appendChild(emptyViolationDiv)
 
   updateMinimap: (editor) ->
     console.log("updateMinimap called with editor: ")
@@ -98,11 +135,12 @@ class CilkscreenPluginView
     console.log(augmentedViolations)
 
     @clearChildren()
+    @currentMinimap = 0
 
     if @toggleVisual
       @minimapOverlay = SVG.createSVGObject(0, 32)
       @minimapOverlay.classList.add('minimap-canvas-overlay')
-      @minimapContainer.appendChild(@minimapOverlay)
+      # @minimapContainer.appendChild(@minimapOverlay)
       $(@minimapOverlay).click((e) =>
         @minimapOnClick(e)
       )
@@ -153,10 +191,11 @@ class CilkscreenPluginView
   createMinimapForLine: (violationLine, minimapPromises, minimapLineContainer) ->
     if violationLine.filename and violationLine.line
       if not @minimaps[violationLine.filename]
-        @minimaps[violationLine.filename] = new MinimapView({filename: violationLine.filename})
+        @minimaps[violationLine.filename] = new MinimapView({filename: violationLine.filename, path: @path})
         # minimapPromises.push(@minimaps[violation.line1.filename].init())
         @minimaps[violationLine.filename].init()
-        @minimapIndex[violationLine.filename] = minimapPromises.length - 1
+        @minimapIndex[violationLine.filename] = @currentMinimap
+        @currentMinimap += 1
         @minimapContainer.appendChild(@minimaps[violationLine.filename].getElement())
       @minimaps[violationLine.filename].addDecoration(violationLine.line)
       lineOverlay = document.createElement('div')

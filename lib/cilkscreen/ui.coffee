@@ -7,9 +7,8 @@ module.exports =
 class CilkscreenUI
 
   props: null
-  onCloseCallback: null
   changePanel: null
-  changeTab: null
+  path: null
 
   pluginView: null
   currentViolationIndex: null
@@ -18,14 +17,14 @@ class CilkscreenUI
 
   constructor: (props) ->
     @props = props
-    @onCloseCallback = props.onCloseCallback
     @changePanel = props.changePanel
-    @changeTab = props.changeTab
+    @path = props.path
 
     @pluginView = new PluginView({
       changePanel: (() => @changePanel())
       onMarkerClick: (() => @onMarkerClickCallback())
       highlightCallback: ((e, index) => @highlightViolation(e, index, false))
+      path: @path
     })
 
     @currentViolations = []

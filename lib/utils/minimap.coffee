@@ -3,6 +3,7 @@ FileLineReader = require('./file-reader')
 $ = require('jquery')
 {CompositeDisposable} = require('atom')
 {normalizePath} = require('../utils/utils')
+path = require('path').posix
 
 NUM_PIXELS_PER_LINE = 6
 
@@ -27,18 +28,19 @@ class Minimap
   # Properties from parent
   props: null
   filename: null
+  projectPath: null
 
   constructor: (props) ->
     @props = props
     @filename = props.filename
+    @projectPath = props.path
 
     @element = document.createElement('div')
     @element.classList.add('cs-minimap-element')
 
     filenameDiv = document.createElement('div')
     filenameDiv.classList.add('cs-minimap-filename')
-    splitPath = @filename.split('/')
-    filenameDiv.textContent = splitPath[splitPath.length - 1]
+    filenameDiv.textContent = path.relative(@projectPath, @filename)
     @element.appendChild(filenameDiv)
     $(filenameDiv).click((e) =>
       console.log("Clicked on a file open div: #{filenameDiv.classList}")
@@ -60,7 +62,6 @@ class Minimap
     @currentId += 1
     @destroy()
     @editor = editor if editor
-    console.log("[minimap] Current text editor path: #{atom.workspace.getActiveTextEditor().getPath()}")
     console.log("[minimap] Normalized path: #{normalizePath(atom.workspace.getActiveTextEditor().getPath())}")
     @editor = atom.workspace.getActiveTextEditor() if normalizePath(atom.workspace.getActiveTextEditor().getPath()) is @filename
     if @editor
@@ -105,13 +106,11 @@ class Minimap
         minimapElement = atom.views.getView(@minimap)
         minimapElement.attach(@minimapContainer)
         minimapElement.setDisplayCodeHighlights(true)
-        minimapElement.style.cssText = """
-          width: 200px;
-          position: relative;
-          z-index: 10;
-        """
+        minimapElement.style.cssText = "width: 200px; position: relative; z-index: 10;"
+
         height = numLines * @minimap.getLineHeight()
         minimapElement.style.height = "#{height}px"
+        minimapElement.style.width = "200px"
         console.log(@minimap.getLineHeight())
         console.log(@minimap.getVerticalScaleFactor())
         console.log(@minimap.getScreenHeight())

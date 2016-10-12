@@ -255,4 +255,5 @@ module.exports = Cilkide =
       })
       # Re-check old editors - redundant on start-up but will help prevent bugs.
       @checkActiveEditorsForProject()
+      @updateStatusBar()
     @projects[projectPath].registerEditor(editor)

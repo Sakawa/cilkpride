@@ -48,6 +48,7 @@ class CilkscreenModule
         @changePanel()
         @tab.click()
       )
+      path: @path
     })
 
     atom.commands.add('atom-workspace', 'cilkpride:debug', () =>
