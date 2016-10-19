@@ -210,7 +210,7 @@ module.exports = Cilkide =
   "launchInstance": false,
   "localBaseDir": "#{directory}",
   "syncIgnoreFile": ["/cilkpride-conf.json"],
-  "syncIgnoreDir": ["/.git", "/log.awsrun"]
+  "syncIgnoreDir": ["/.git", "/log.awsrun", "/log.cqrun"]
 }
         """, {encoding: "utf8"}, (err, written, buffer) ->
           atom.workspace.open(confPath)
