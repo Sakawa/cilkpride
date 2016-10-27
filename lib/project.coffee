@@ -1,6 +1,7 @@
 {CompositeDisposable} = require('atom')
 fs = require('fs')
 path = require('path').posix;
+chokidar = require('chokidar')
 
 {normalizePath} = require('./utils/utils')
 
@@ -20,6 +21,8 @@ class Project
   editorIds: null
   settings: null
   configWatch: null
+
+  directoryWatch: null
 
   # Properties from parent
   props: null
@@ -68,6 +71,8 @@ class Project
       else if eventType is "rename"
         @onDestroy()
     )
+
+    @createDirectoryWatch()
 
     atom.commands.add('atom-workspace', 'cilkpride:debug', () =>
       console.log("[debug] Wow! Debug!")
@@ -158,6 +163,39 @@ class Project
     @fileSync.updateSFTP()
     @cilkscreenMod.updateInstance()
 
+  createDirectoryWatch: () ->
+    console.log("[project] in createDirectoryWatch")
+    return if @directoryWatch or not atom.config.get('cilkpride.watchDirectory', false)
+
+    @directoryWatch = chokidar.watch(@path, {ignored: /[\/\\]\./, persistent: true})
+
+    @directoryWatch.on('add', (filePath) =>
+      console.log("File #{filePath} has been added")
+      if @settings.sshEnabled
+        @fileSync.copyFile(path.relative(@settings.localBaseDir, normalizePath(filePath)), true, @settings, () =>
+          console.log("[project] Initializing timer with state as #{@currentState.state}")
+          @initializeTimer()
+        )
+      else
+        @initializeTimer()
+    )
+    @directoryWatch.on('change', (filePath) =>
+      console.log("File #{filePath} has been changed")
+      if @settings.sshEnabled
+        @fileSync.copyFile(path.relative(@settings.localBaseDir, normalizePath(filePath)), true, @settings, () =>
+          console.log("[project] Initializing timer with state as #{@currentState.state}")
+          @initializeTimer()
+        )
+      else
+        @initializeTimer()
+    )
+    # TODO: For now, don't clean up, but consider removing old files on remote
+    @directoryWatch.on('unlink', (filePath) =>
+      console.log("File #{filePath} has been removed")
+      if @settings.sshEnabled
+        @fileSync.unlink(path.relative(@settings.localBaseDir, normalizePath(filePath)), @settings) if @fileSync
+    )
+
   getInstance: (callback) ->
     @sshMod.getInstance(callback)
 
@@ -241,20 +279,21 @@ class Project
     if editor.id not in @editorIds
       @editorIds.push(editor.id)
 
-    saveDisposable = editor.onDidSave(()=>
-      console.log("Saved!")
+    if not atom.config.get('watchDirectory', false)
+      saveDisposable = editor.onDidSave(()=>
+        console.log("Saved!")
 
-      if @sshMod
-        @fileSync.copyFile(path.relative(@settings.localBaseDir, normalizePath(editor.getPath())), true, @settings, () =>
-          console.log("[project] Initializing timer with state as #{@currentState.state}")
+        if @sshMod
+          @fileSync.copyFile(path.relative(@settings.localBaseDir, normalizePath(editor.getPath())), true, @settings, () =>
+            console.log("[project] Initializing timer with state as #{@currentState.state}")
+            @initializeTimer()
+          )
+        else
           @initializeTimer()
-        )
-      else
-        @initializeTimer()
-    )
+      )
 
-    @editorSubscriptions[editor.id] = saveDisposable
-    @subscriptions.add(saveDisposable)
+      @editorSubscriptions[editor.id] = saveDisposable
+      @subscriptions.add(saveDisposable)
     @cilkscreenMod.registerEditor(editor) if @cilkscreenMod
 
   unregisterEditor: (editorId) ->
@@ -275,3 +314,4 @@ class Project
     @fileSync.destroy() if @fileSync
     @consoleMod.destroy() if @consoleMod
     @configWatch.close() if @configWatch
+    @watchDirectory.close() if @watchDirectory

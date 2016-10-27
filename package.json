@@ -15,7 +15,8 @@
     "jquery": "2.2.0",
     "ssh2": "0.5.2",
     "atom-package-deps": "4.3.1",
-    "dateformat": "1.0.12"
+    "dateformat": "1.0.12",
+    "chokidar": "1.6.1"
   },
   "package-deps": [
     "minimap"
@@ -39,6 +40,12 @@
       "default": "",
       "title": "Cilk Library Path",
       "description": "The location of the Cilk lib files, so that the plugin can appropriately build executables."
+    },
+    "watchDirectory": {
+      "type": "boolean",
+      "default": false,
+      "title": "Watch Project Directory",
+      "description": "Enable this to automatically upload when any file in the directory is changed, not only when you save from Atom. Also automatically syncs at the beginning, after SSHing."
     }
   },
   "consumedServices": {

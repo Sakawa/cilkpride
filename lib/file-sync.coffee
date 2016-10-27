@@ -10,11 +10,18 @@ class FileSync
   constructor: (props) ->
     @getSFTP = props.getSFTP
 
-  updateSFTP: () ->
+  updateSFTP: (callback) ->
     @getSFTP((sftp) =>
+      previousSFTP = @sftp
+
       @sftp = sftp.sftp
       @getSettings = sftp.getSettings
       console.log("[file-sync] Got a new SFTP.")
+
+      if previousSFTP is null and atom.config.get('cilkpride.watchDirectory', false)
+        @copyFolder('/', true)
+
+      callback() if callback
     )
 
   # Folder syncing
@@ -94,10 +101,14 @@ class FileSync
       return
     console.log("[file-sync STFP] :: received request for #{file} : #{localToRemote} local -> remote")
     if localToRemote
-      @sftp.fastPut(path.join(settings.localBaseDir, file), path.join(settings.remoteBaseDir, file), (err) ->
-        throw "Something went wrong when trying to copy #{file} to the remote server." if err
-        console.log("[file-sync] SFTP :: fastPut LTR #{file} succeeded")
-        callback() if callback
+      (new Promise((resolve, reject) =>
+        @createDestFolderIfNecessary(path.dirname(path.join(settings.remoteBaseDir, file)), @sftp, settings, resolve, reject)
+      )).then(() =>
+        @sftp.fastPut(path.join(settings.localBaseDir, file), path.join(settings.remoteBaseDir, file), (err) ->
+          throw "Something went wrong when trying to copy #{file} to the remote server." if err
+          console.log("[file-sync] SFTP :: fastPut LTR #{file} succeeded")
+          callback() if callback
+        )
       )
     else
       @sftp.fastGet(path.join(settings.remoteBaseDir, file), path.join(settings.localBaseDir, file), (err) ->
@@ -105,6 +116,13 @@ class FileSync
         console.log("[file-sync] SFTP :: fastPut RTL #{file} succeeded")
         callback() if callback
       )
+
+  unlink: (file, settings, callback) ->
+    @sftp.unlink(path.join(settings.remoteBaseDir, file), (err) ->
+      console.log("[file-sync] Failed to remove #{file}") if err
+      console.log("[file-sync] SFTP :: unlink #{file} succeeded")
+      callback() if callback
+    )
 
   createDestFolderIfNecessary: (destPath, dest, settings, resolve, reject) ->
     console.log("[file-sync] Checking folder #{destPath}")
