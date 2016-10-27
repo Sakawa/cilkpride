@@ -106,11 +106,11 @@ class Minimap
         minimapElement = atom.views.getView(@minimap)
         minimapElement.attach(@minimapContainer)
         minimapElement.setDisplayCodeHighlights(true)
-        minimapElement.style.cssText = "width: 200px; position: relative; z-index: 10;"
+        minimapElement.style.cssText = "width: 150px; position: relative; z-index: 10;"
 
         height = numLines * @minimap.getLineHeight()
         minimapElement.style.height = "#{height}px"
-        minimapElement.style.width = "200px"
+        minimapElement.style.width = "150px"
         console.log(@minimap.getLineHeight())
         console.log(@minimap.getVerticalScaleFactor())
         console.log(@minimap.getScreenHeight())

@@ -102,6 +102,9 @@ class CilkscreenUI
           markerCache[id] = @createCilkscreenMarker(editor, line2, i)
           violation.markers.push(markerCache[id])
 
+    if @currentHighlightedIndex isnt null
+      @highlightMarkers(@currentHighlightedIndex)
+
   createCilkscreenMarker: (editor, line, i) ->
     cilkscreenGutter = editor.gutterWithName('cilksan-lint')
     range = [[line - 1, 0], [line - 1, Infinity]]
@@ -127,9 +130,16 @@ class CilkscreenUI
           marker.destroy()
 
   highlightMarkers: (index) ->
+    console.log("[ui] marker")
+    console.log(@currentViolations[index])
     for marker in @currentViolations[index].markers
       console.log("Highlighting marker...")
       marker.highlightMarker()
+    if @currentViolations[index].minimapMarkers
+      for marker in @currentViolations[index].minimapMarkers
+        console.log("[ui] highlighting marker")
+        console.log(marker)
+        marker.classList.add('highlighted')
 
   resetMarkers: () ->
     console.log("in reset markers")
@@ -139,6 +149,9 @@ class CilkscreenUI
       for marker in @currentViolations[@currentHighlightedIndex].markers
         console.log("Resetting marker...")
         marker.resetMarker()
+      if @currentViolations[@currentHighlightedIndex].minimapMarkers
+        for marker in @currentViolations[@currentHighlightedIndex].minimapMarkers
+          marker.classList.remove('highlighted')
 
   # Highlight-related functions
 

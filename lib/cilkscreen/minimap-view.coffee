@@ -90,7 +90,7 @@ class MinimapView
       minimapElement.attach(@element)
       minimapElement.setDisplayCodeHighlights(true)
       minimapElement.style.cssText = """
-        width: 200px;
+        width: 150px;
         position: relative;
         z-index: 10;
       """

@@ -33,6 +33,32 @@ atom-text-editor::shadow .gutter[gutter-name=cilksan-lint] .decoration {
   }
 }
 
+.minimap-canvas-line-container {
+
+  .cilksan-marker {
+    &.alert {
+      position: absolute;
+      display: inline-block;
+      font-size: 12px;
+      margin: 0;
+      padding: 0;
+      cursor: pointer;
+
+      &:after {
+        .octicon-font();
+        content: @alert;
+        color: @text-color-error;
+      }
+
+      &.highlighted:after {
+        color: @text-color-warning;
+        z-index: 1;
+      }
+    }
+  }
+
+}
+
 // Detail View CSS
 
 .cilkscreen-detail-view {
@@ -73,7 +99,7 @@ atom-text-editor::shadow .gutter[gutter-name=cilksan-lint] .decoration {
 
         .minimap-line-overlay {
           position: absolute;
-          width: 200px;
+          width: 150px;
           height: 4px;
 
           cursor: pointer;
@@ -92,7 +118,7 @@ atom-text-editor::shadow .gutter[gutter-name=cilksan-lint] .decoration {
           padding-bottom: 5px;
           text-decoration: underline;
           cursor: pointer;
-          width: 200px;
+          width: 150px;
           overflow: hidden; // fix this later
         }
 
@@ -134,6 +160,7 @@ atom-text-editor::shadow .gutter[gutter-name=cilksan-lint] .decoration {
     float: right;
     position: relative;
     display: inline-block;
+    overflow: auto;
 
     .minimap-resize-div {
       position: absolute;

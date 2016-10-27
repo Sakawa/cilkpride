@@ -162,10 +162,17 @@ class CilkscreenPluginView
         onViolationClickCallback: ((e, index) => @highlightCallback(e, index, false))
       })
       @violationContainer.appendChild(violationView.getElement())
+      violation.minimapMarkers = []
 
       if @toggleVisual
-        @createMinimapForLine(violation.line1, minimapPromises, minimapLineContainer)
-        @createMinimapForLine(violation.line2, minimapPromises, minimapLineContainer)
+        @createMinimapForLine(violation, violation.line1, minimapPromises, minimapLineContainer)
+        @createMinimapForLine(violation, violation.line2, minimapPromises, minimapLineContainer)
+
+      do (index) =>
+        for marker in violation.minimapMarkers
+          $(marker).on('click', (e) =>
+            @highlightCallback(e, +index, true)
+          )
 
     # if @toggleVisual
     #   Promise.all(minimapPromises).then(() =>
@@ -188,7 +195,7 @@ class CilkscreenPluginView
     #       @drawViolationConnector(augmentedViolations[index], index)
     #   )
 
-  createMinimapForLine: (violationLine, minimapPromises, minimapLineContainer) ->
+  createMinimapForLine: (violation, violationLine, minimapPromises, minimapLineContainer) ->
     if violationLine.filename and violationLine.line
       if not @minimaps[violationLine.filename]
         @minimaps[violationLine.filename] = new MinimapView({filename: violationLine.filename, path: @path})
@@ -204,6 +211,15 @@ class CilkscreenPluginView
       lineOverlay.style.left = (MinimapUtil.getLeftSide(@minimapIndex[violationLine.filename])) + "px"
       minimapLineContainer.appendChild(lineOverlay)
       DetailCodeView.attachFileOpenListener(lineOverlay, violationLine.filename, violationLine.line)
+
+      # Create a marker next to the minimap as well
+      console.log("[cilkscreen-plugin-view] Adding markers")
+      marker = document.createElement('div')
+      marker.classList.add('icon', 'alert', 'cilksan-marker')
+      marker.style.top = (MinimapUtil.getLineTop(violationLine.line, -8)) + "px"
+      marker.style.left = (MinimapUtil.getLeftSide(@minimapIndex[violationLine.filename], -15)) + "px"
+      minimapLineContainer.appendChild(marker)
+      violation.minimapMarkers.push(marker)
 
   minimapOnClick: (e) ->
     rect = @minimapOverlay.getBoundingClientRect();
