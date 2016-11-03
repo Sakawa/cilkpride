@@ -142,6 +142,7 @@ class SSHModule
 
     if @consecFailedAttempts > 3
       console.log("[ssh-module] >3 consecutive failed attempts, pausing for 30 seconds")
+      clearTimeout(@connectionTimeout) if @connectionTimeout
       @connectionTimeout = setTimeout((() => @startConnection()), 30000)
     else
       @startConnection()

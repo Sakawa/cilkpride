@@ -93,6 +93,11 @@ class Minimap
           console.log("minimap changed!")
           console.log(obj)
         )
+        @minimap.onDidDestroy((obj) =>
+          console.log("minimap destroyed!")
+          @minimap = null
+          return @init()
+        )
 
         @minimapOverlay = document.createElement('div')
         @minimapOverlay.classList.add('minimap-overlay')
@@ -101,6 +106,8 @@ class Minimap
           @minimapOnClick(e)
         )
 
+        textEditorElement = atom.views.getView(@editor)
+        @subscriptions.add(textEditorElement.onDidChangeScrollTop((() => @updateScrollOverlay())))
         @subscriptions.add(atom.views.pollDocument((() => @updateScrollOverlay())))
 
         minimapElement = atom.views.getView(@minimap)
@@ -191,6 +198,7 @@ class Minimap
     return @minimap.getHeight()
 
   destroy: () ->
+    @subscriptions.dispose()
     $(@minimapContainer).empty() if @minimapContainer
     @editor = null if @editor
     @minimap.destroy() if @minimap

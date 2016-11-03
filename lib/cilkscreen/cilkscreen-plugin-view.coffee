@@ -10,6 +10,7 @@ SVG = require('../utils/svg')
 module.exports =
 class CilkscreenPluginView
   element: null
+  subscriptions: null
   violationContainer: null
   violationContentWrapper: null
   minimapContainer: null
@@ -30,6 +31,8 @@ class CilkscreenPluginView
     @props = props
     @highlightCallback = props.highlightCallback
     @path = props.path
+
+    @subscriptions = new CompositeDisposable()
 
     # Create root element
     @element = document.createElement('div')
@@ -71,6 +74,13 @@ class CilkscreenPluginView
     violationContentWrapper.appendChild(@violationContainer)
 
     @element.appendChild(violationWrapper)
+
+    @subscriptions.add(atom.workspace.onDidChangeActivePaneItem(() =>
+      return if not editorPath = atom.workspace.getActiveTextEditor()?.getPath()
+
+      if @minimaps and @minimaps[normalizePath(editorPath)]
+        @minimaps[normalizePath(editorPath)].init(atom.workspace.getActiveTextEditor())
+    ))
 
   horizontalResizeStart: () =>
     # console.log("Horizontal resize start")

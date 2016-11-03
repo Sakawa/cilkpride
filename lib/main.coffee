@@ -40,9 +40,7 @@ module.exports = Cilkide =
     # the correct status for the current project.
     @subscriptions.add(atom.workspace.onDidChangeActivePaneItem((item) =>
       console.log("Changed active pane item...")
-      if atom.workspace.getActiveTextEditor()
-        @statusBarElement.show()
-        @updateStatusBar()
+      @updateStatusBar()
     ))
 
     # Local -> Remote syncing.
