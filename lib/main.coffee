@@ -233,6 +233,10 @@ module.exports = Cilkide =
 
     console.log("[main] Destroying project #{projectPath}")
     console.log(@editorToPath)
+    if projectPath is @panelPath
+      @onPanelCloseCallback()
+      @detailPanel.destroy()
+      @panelPath = null
     for editorId in Object.getOwnPropertyNames(@editorToPath)
       console.log("[main] Destroying project, testing editor #{editorId}")
       if @editorToPath[editorId] is projectPath

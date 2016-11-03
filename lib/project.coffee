@@ -61,18 +61,17 @@ class Project
 
     @refreshConfFile()
     # Set a watch so that we know when the configuration file is changed.
-    @configWatch = fs.watch("#{path.join(@path, 'cilkpride-conf.json')}", (eventType, filename) =>
-      console.log("[project] Received watch notification on #{filename} with event type #{eventType}")
-      if eventType is "change"
-        @refreshConfFile()
-        console.log("Refreshed config file, state is #{@currentState.state}")
-        if @currentState.state is "ok" and not @cilkscreenMod
-          @init()
-      else if eventType is "rename"
-        @onDestroy()
+    @configWatch = chokidar.watch(path.join(@path, 'cilkpride-conf.json'))
+    @configWatch.on('change', (path) =>
+      console.log("[project] Received watch (change) notification on config")
+      @refreshConfFile()
+      console.log("Refreshed config file, state is #{@currentState.state}")
+      if @currentState.state is "ok" and not @cilkscreenMod
+        @init()
+    ).on('unlink', (path) =>
+      console.log("[project] Received watch (unlink) notification on config")
+      @onDestroy()
     )
-
-    @createDirectoryWatch()
 
     atom.commands.add('atom-workspace', 'cilkpride:debug', () =>
       console.log("[debug] Wow! Debug!")
@@ -110,6 +109,8 @@ class Project
         @signalModules()
       )
       @fileSync = new FileSync({getSFTP: ((callback) => @getSFTP(callback))})
+    else
+      @createDirectoryWatch
 
   updateState: (repressUpdate, module) ->
     console.log("[project] Updating status bar for #{@path}, current path being #{@statusBar.getCurrentPath()}")
@@ -160,7 +161,8 @@ class Project
     return
 
   signalModules: () ->
-    @fileSync.updateSFTP()
+    # Start watching directories when FileSync is good to go.
+    @fileSync.updateSFTP((() => @createDirectoryWatch()))
     @cilkscreenMod.updateInstance()
 
   createDirectoryWatch: () ->
@@ -192,6 +194,11 @@ class Project
     # TODO: For now, don't clean up, but consider removing old files on remote
     @directoryWatch.on('unlink', (filePath) =>
       console.log("File #{filePath} has been removed")
+      if @settings.sshEnabled
+        @fileSync.unlink(path.relative(@settings.localBaseDir, normalizePath(filePath)), @settings) if @fileSync
+    )
+    @directoryWatch.on('unlinkDir', (filePath) =>
+      console.log("[project] Directory #{filePath} has been removed")
       if @settings.sshEnabled
         @fileSync.unlink(path.relative(@settings.localBaseDir, normalizePath(filePath)), @settings) if @fileSync
     )

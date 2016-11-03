@@ -84,7 +84,6 @@ class CilkscreenModule
     @currentState.output = output
     if err is 0
       console.log("[cilkscreen] Killing old markers, if any...")
-      @view.destroyOldMarkers()
       console.log("[cilkscreen] Parsing data...")
       Parser.processViolations(output, (results) =>
         @updateState(err, results)
@@ -143,3 +142,4 @@ class CilkscreenModule
 
   destroy: () ->
     @runner.destroy()
+    @view.destroyOldMarkers()

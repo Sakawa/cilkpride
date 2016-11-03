@@ -31,6 +31,7 @@ class CilkscreenUI
 
   createUI: (violations) ->
     @currentViolations = violations
+    @destroyOldMarkers()
     @createMarkers(violations)
     @pluginView.setViolations(violations)
 
@@ -114,8 +115,7 @@ class CilkscreenUI
       (index) =>
         @onMarkerClickCallback(index)
     )
-    cilkscreenGutter.decorateMarker(marker, {type: 'gutter', item: markerView})
-    return markerView
+    return cilkscreenGutter.decorateMarker(marker, {type: 'gutter', item: markerView})
 
   onMarkerClickCallback: (index) ->
     @changePanel()
@@ -124,10 +124,12 @@ class CilkscreenUI
   destroyOldMarkers: () ->
     if @currentViolations
       for violation in @currentViolations
-        console.log("Removing markers...")
-        console.log(violation.markers)
-        for marker in violation.markers
-          marker.destroy()
+        if violation.markers
+          console.log("Removing markers...")
+          console.log(violation.markers)
+          for marker in violation.markers
+            console.log(marker)
+            marker.destroy()
 
   highlightMarkers: (index) ->
     console.log("[ui] marker")

@@ -7,9 +7,12 @@ class FileSync
   sftp: null
   getSettings: null
 
+  # Constructs a new FileSync object.
+  #   props.getSFTP - functions that retrieves a new SFTP object
   constructor: (props) ->
     @getSFTP = props.getSFTP
 
+  # Gets a new SFTP object, and then calls callback.
   updateSFTP: (callback) ->
     @getSFTP((sftp) =>
       previousSFTP = @sftp
@@ -17,9 +20,6 @@ class FileSync
       @sftp = sftp.sftp
       @getSettings = sftp.getSettings
       console.log("[file-sync] Got a new SFTP.")
-
-      if previousSFTP is null and atom.config.get('cilkpride.watchDirectory', false)
-        @copyFolder('/', true)
 
       callback() if callback
     )
@@ -30,9 +30,9 @@ class FileSync
     if not @sftp
       return false
 
+    settings = @getSettings()
     source = @sftp
     dest = fs
-    settings = @getSettings()
     sourceBaseDir = path.join(settings.remoteBaseDir, folder)
     messageStr = "Synced #{sourceBaseDir} to #{path.join(settings.localBaseDir, folder)}."
 
@@ -42,6 +42,7 @@ class FileSync
       sourceBaseDir = path.join(settings.localBaseDir, folder)
       messageStr = "Synced #{sourceBaseDir} to #{path.join(settings.remoteBaseDir, folder)}."
 
+    # Verify that the directory we're trying to copy from actually exists.
     (new Promise((resolve, reject) ->
       source.stat(sourceBaseDir, (err, stats) ->
         console.log(err) if err
@@ -58,7 +59,12 @@ class FileSync
     )
 
   copyFolderRecur: (folder, localToRemote, source, dest, sourceBaseDir, settings) ->
-    if folder in settings.syncIgnoreDir
+    # Check if we should ignore this directory.
+    if folder[0] = '/'
+      folderAlternative = folder.substring(1)
+    else
+      folderAlternative = "/#{folder}"
+    if folder in settings.syncIgnoreDir or folderAlternative in settings.syncIgnoreDir
       console.log("[file-sync] Ignore dir #{folder} encountered.")
       return
 
@@ -66,12 +72,13 @@ class FileSync
     if localToRemote
       destPath = path.join(settings.remoteBaseDir, folder)
 
+    # Check if the destination folder we're trying to copy to exists.
+    # If it doesn't, create it (and any parent folders, too).
     (new Promise((resolve, reject) =>
       @createDestFolderIfNecessary(destPath, dest, settings, resolve, reject)
     )).then(() =>
       source.readdir(path.join(sourceBaseDir, folder), (err, files) =>
         for file in files
-          newPath = null
           if localToRemote
             newPath = path.join(folder, file)
           else
@@ -92,13 +99,17 @@ class FileSync
     )
 
   copyFile: (file, localToRemote, settings, callback) ->
-    if file[0] isnt '/'
-      file = "/#{file}"
     if not @sftp
       return false
-    if file in settings.syncIgnoreFile
+    # Check if we should ignore this file.
+    if file[0] isnt '/'
+      fileAlternative = "/#{file}"
+    else
+      fileAlternative = file.substring(1)
+    if file in settings.syncIgnoreFile or fileAlternative in settings.syncIgnoreFile
       callback() if callback
       return
+
     console.log("[file-sync STFP] :: received request for #{file} : #{localToRemote} local -> remote")
     if localToRemote
       (new Promise((resolve, reject) =>
@@ -111,10 +122,14 @@ class FileSync
         )
       )
     else
-      @sftp.fastGet(path.join(settings.remoteBaseDir, file), path.join(settings.localBaseDir, file), (err) ->
-        throw "Something went wrong when trying to copy #{file} from the remote server." if err
-        console.log("[file-sync] SFTP :: fastPut RTL #{file} succeeded")
-        callback() if callback
+      (new Promise((resolve, reject) =>
+        @createDestFolderIfNecessary(path.dirname(path.join(settings.localBaseDir, file)), fs, settings, resolve, reject)
+      )).then(() =>
+        @sftp.fastGet(path.join(settings.remoteBaseDir, file), path.join(settings.localBaseDir, file), (err) ->
+          throw "Something went wrong when trying to copy #{file} from the remote server." if err
+          console.log("[file-sync] SFTP :: fastPut RTL #{file} succeeded")
+          callback() if callback
+        )
       )
 
   unlink: (file, settings, callback) ->
@@ -129,9 +144,10 @@ class FileSync
 
     # TODO: Is there a better way of doing this?
     (new Promise((resolve, reject) =>
-      dest.stat(path.join(destPath, '..'), (err, stats) =>
+      parentDirectory = path.join(destPath, '..')
+      dest.stat(parentDirectory, (err, stats) =>
         if err
-          @createDestFolderIfNecessary(path.join(destPath, '..'), dest, settings, resolve, reject)
+          @createDestFolderIfNecessary(parentDirectory, dest, settings, resolve, reject)
         else if not stats.isDirectory()
           throw "#{destPath} exists but is not a directory - please verify that the paths are correct in your config file."
         else
