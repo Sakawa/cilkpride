@@ -200,7 +200,7 @@ class Project
     @directoryWatch.on('unlinkDir', (filePath) =>
       console.log("[project] Directory #{filePath} has been removed")
       if @settings.sshEnabled
-        @fileSync.unlink(path.relative(@settings.localBaseDir, normalizePath(filePath)), @settings) if @fileSync
+        @fileSync.rmdir(path.relative(@settings.localBaseDir, normalizePath(filePath)), @settings) if @fileSync
     )
 
   getInstance: (callback) ->
@@ -286,7 +286,7 @@ class Project
     if editor.id not in @editorIds
       @editorIds.push(editor.id)
 
-    if not atom.config.get('watchDirectory', false)
+    if not atom.config.get('cilkpride.watchDirectory', false)
       saveDisposable = editor.onDidSave(()=>
         console.log("Saved!")
 

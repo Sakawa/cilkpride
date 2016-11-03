@@ -89,7 +89,7 @@ class FileSync
             source.stat(fullPath, (err, stats) =>
               throw "Something went wrong when trying to get information on #{fullPath}." if err
               if stats.isFile()
-                @copyFile(newPath, localToRemote, settings)
+                @copyFileInternal(newPath, localToRemote, settings)
               else if stats.isDirectory()
                 @copyFolderRecur(newPath, localToRemote, source, dest, sourceBaseDir, settings)
               else
@@ -101,12 +101,14 @@ class FileSync
   copyFile: (file, localToRemote, settings, callback) ->
     if not @sftp
       return false
+
     # Check if we should ignore this file.
     if file[0] isnt '/'
       fileAlternative = "/#{file}"
     else
       fileAlternative = file.substring(1)
     if file in settings.syncIgnoreFile or fileAlternative in settings.syncIgnoreFile
+      console.log("[file-sync] SFTP :: ignored file #{file}")
       callback() if callback
       return
 
@@ -115,27 +117,59 @@ class FileSync
       (new Promise((resolve, reject) =>
         @createDestFolderIfNecessary(path.dirname(path.join(settings.remoteBaseDir, file)), @sftp, settings, resolve, reject)
       )).then(() =>
-        @sftp.fastPut(path.join(settings.localBaseDir, file), path.join(settings.remoteBaseDir, file), (err) ->
-          throw "Something went wrong when trying to copy #{file} to the remote server." if err
-          console.log("[file-sync] SFTP :: fastPut LTR #{file} succeeded")
-          callback() if callback
-        )
+        @copyFileInternal(file, localToRemote, settings, callback)
       )
     else
       (new Promise((resolve, reject) =>
         @createDestFolderIfNecessary(path.dirname(path.join(settings.localBaseDir, file)), fs, settings, resolve, reject)
       )).then(() =>
-        @sftp.fastGet(path.join(settings.remoteBaseDir, file), path.join(settings.localBaseDir, file), (err) ->
-          throw "Something went wrong when trying to copy #{file} from the remote server." if err
-          console.log("[file-sync] SFTP :: fastPut RTL #{file} succeeded")
-          callback() if callback
-        )
+        @copyFileInternal(file, localToRemote, settings, callback)
+      )
+
+  copyFileInternal: (file, localToRemote, settings, callback) ->
+    if not @sftp
+      return false
+
+    # Check if we should ignore this file.
+    if file[0] isnt '/'
+      fileAlternative = "/#{file}"
+    else
+      fileAlternative = file.substring(1)
+    if file in settings.syncIgnoreFile or fileAlternative in settings.syncIgnoreFile
+      console.log("[file-sync] SFTP :: ignored file #{file}")
+      callback() if callback
+      return
+
+    console.log("[file-sync STFP] :: received request for #{file} : #{localToRemote} local -> remote")
+    if localToRemote
+      @sftp.fastPut(path.join(settings.localBaseDir, file), path.join(settings.remoteBaseDir, file), (err) ->
+        throw "Something went wrong when trying to copy #{file} to the remote server." if err
+        console.log("[file-sync] SFTP :: fastPut LTR #{file} succeeded")
+        callback() if callback
+      )
+    else
+      @sftp.fastGet(path.join(settings.remoteBaseDir, file), path.join(settings.localBaseDir, file), (err) ->
+        throw "Something went wrong when trying to copy #{file} from the remote server." if err
+        console.log("[file-sync] SFTP :: fastPut RTL #{file} succeeded")
+        callback() if callback
       )
 
   unlink: (file, settings, callback) ->
     @sftp.unlink(path.join(settings.remoteBaseDir, file), (err) ->
-      console.log("[file-sync] Failed to remove #{file}") if err
-      console.log("[file-sync] SFTP :: unlink #{file} succeeded")
+      if err
+        console.log("[file-sync] Failed to remove #{file}")
+      else
+        console.log("[file-sync] SFTP :: unlink #{file} succeeded")
+      callback() if callback
+    )
+
+  rmdir: (folder, settings, callback) ->
+    @sftp.rmdir(path.join(settings.remoteBaseDir, folder), (err) ->
+      if err
+        console.log(err)
+        console.log("[file-sync] Failed to remove folder #{folder}")
+      else
+        console.log("[file-sync] SFTP:: rmdir #{folder} succeeded")
       callback() if callback
     )
 
