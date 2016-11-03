@@ -32,6 +32,8 @@ class DetailCodeView
   createVisualViolationView: () ->
     violationView = document.createElement('div')
     violationView.classList.add('violation-div', 'visual')
+    if @index % 2 is 0
+      violationView.classList.add('even')
     $(violationView).click((e) =>
       console.log("[detail-code-view] violation view #{@index} clicked")
       @onViolationClickCallback(e, @index)

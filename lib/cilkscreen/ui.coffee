@@ -136,7 +136,7 @@ class CilkscreenUI
     console.log(@currentViolations[index])
     for marker in @currentViolations[index].markers
       console.log("Highlighting marker...")
-      marker.highlightMarker()
+      marker.properties.item.highlightMarker()
     if @currentViolations[index].minimapMarkers
       for marker in @currentViolations[index].minimapMarkers
         console.log("[ui] highlighting marker")
@@ -150,7 +150,7 @@ class CilkscreenUI
       console.log(@currentViolations[@currentHighlightedIndex])
       for marker in @currentViolations[@currentHighlightedIndex].markers
         console.log("Resetting marker...")
-        marker.resetMarker()
+        marker.properties.item.resetMarker()
       if @currentViolations[@currentHighlightedIndex].minimapMarkers
         for marker in @currentViolations[@currentHighlightedIndex].minimapMarkers
           marker.classList.remove('highlighted')
