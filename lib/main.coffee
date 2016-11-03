@@ -33,6 +33,7 @@ module.exports = Cilkide =
     @statusBarElement = new StatusBarView({
       onClickCallback: () => @onStatusTileClick()
       onRegisterProjectCallback: (directories) => @onRegisterProject(directories)
+      onConnectCallback: () => @connectCurrentProject()
     })
 
     # Add a hook when we're changing active panes so that the status tile shows
@@ -227,6 +228,10 @@ module.exports = Cilkide =
     atom.workspace.getTextEditors().forEach((editor) =>
       @registerEditor(editor)
     )
+
+  connectCurrentProject: () ->
+    if currentProject = @getActivePanePath()
+      @projects[currentProject].connectSSH()
 
   destroyProject: (projectPath) ->
     return if not @projects[projectPath]

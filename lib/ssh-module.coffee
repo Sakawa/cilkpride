@@ -26,13 +26,14 @@ class SSHModule
     @eventEmitter = new EventEmitter()
     @consecFailedAttempts = 0
 
-    @startConnection()
-
   startConnection: () ->
-    @eventEmitter.emit('connecting')
+    clearTimeout(@connectionTimeout) if @connectionTimeout
 
     conn = new Client()
     @connection = conn
+
+    @eventEmitter.emit('connecting')
+
 
     conn.on('ready', () =>
       console.log("[ssh-module] Connection ready.")
@@ -43,6 +44,7 @@ class SSHModule
     ).on('close', (hadError) =>
       console.log("[ssh-module] SFTP :: closed")
       @clean(conn)
+      @eventEmitter.emit('cancelled')
     ).on('continue', () ->
       console.log("[ssh-module] SFTP :: continue received")
     ).on('end', () =>
@@ -71,7 +73,6 @@ class SSHModule
         @passwordView.onEnter = ((password) => @onEnterPassword(password, finish))
       else
         settings = @getSettings()
-
 
         @passwordView = new PasswordView({
           username: "#{settings.username}@#{settings.hostname}"
@@ -157,6 +158,7 @@ class SSHModule
     @passwordView = null
     console.log("Cancel initiated.")
     @clean(@connection)
+    @eventEmitter.emit('cancelled')
 
   destroy: () ->
     @destroyed = true

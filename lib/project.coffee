@@ -51,15 +51,16 @@ class Project
 
     @editorSubscriptions = {}
     @editorIds = []
-    @currentState = {
-      state: "start"
-    }
     @subscriptions = new CompositeDisposable()
     @detailPanel = new CilkideDetailPanel({
         onCloseCallback: (() => @onPanelCloseCallback())
     })
+    @currentState = {
+      state: "start"
+    }
 
     @refreshConfFile()
+
     # Set a watch so that we know when the configuration file is changed.
     @configWatch = chokidar.watch(path.join(@path, 'cilkpride-conf.json'))
     @configWatch.on('change', (path) =>
@@ -108,6 +109,17 @@ class Project
         console.log("[project] Received ready on SSHModule")
         @signalModules()
       )
+      @sshMod.eventEmitter.on('cancelled', () =>
+        console.log("[project] Received cancel from SSHModule")
+        @currentState.state = "not_connected"
+        @updateState(false)
+      )
+      @sshMod.eventEmitter.on('connecting', () =>
+        console.log("[project] Received connecting from SSHModule")
+        @currentState.state = "connecting"
+        @updateState(false)
+      )
+      @sshMod.startConnection()
       @fileSync = new FileSync({getSFTP: ((callback) => @getSFTP(callback))})
     else
       @createDirectoryWatch
@@ -115,6 +127,8 @@ class Project
   updateState: (repressUpdate, module) ->
     console.log("[project] Updating status bar for #{@path}, current path being #{@statusBar.getCurrentPath()}")
     console.log("[project] Current state is #{@currentState.state}")
+    console.log(@settings)
+    console.log(@sshMod)
 
     if module and module.currentState.output
       @consoleMod.updateOutput(module.name, module.currentState.output)
@@ -128,9 +142,14 @@ class Project
       console.log("[project] status bar: config error")
       return @statusBar.displayConfigError(repressUpdate)
 
-    # Modules still loading...
-    if not @cilkscreenMod.currentState.initialized
-      console.log("[project] status bar: cilkscreen not init'd")
+    # SSH is enabled but there is no connection
+    if @settings.sshEnabled and not @sshMod?.connection?
+      console.log("[project] status bar: not connected")
+      return @statusBar.displayNotConnected(repressUpdate)
+
+    # SSHModule still loading...
+    if @currentState.state is "connecting"
+      console.log("[project] status bar: cilksan not init'd")
       return @statusBar.displayLoading(repressUpdate)
 
     # All modules loaded, display status based off if (in priority)
@@ -160,10 +179,15 @@ class Project
 
     return
 
+  connectSSH: () ->
+    @sshMod.startConnection()
+
   signalModules: () ->
     # Start watching directories when FileSync is good to go.
     @fileSync.updateSFTP((() => @createDirectoryWatch()))
     @cilkscreenMod.updateInstance()
+
+    @currentState.state = "ok"
 
   createDirectoryWatch: () ->
     console.log("[project] in createDirectoryWatch")
@@ -252,6 +276,7 @@ class Project
       throw new Error() if not checkSettings(@settings)
       console.log(@settings)
       @currentState.state = "ok"
+      @updateState()
       return true
     catch error
       @currentState.state = "config_error"

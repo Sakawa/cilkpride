@@ -22,11 +22,13 @@ class StatusBarView
   props: null
   onClickCallback: null
   onRegisterProjectCallback: null
+  onConnectCallback: null
 
   constructor: (props) ->
     @props = props
     @onClickCallback = props.onClickCallback
     @onRegisterProjectCallback = props.onRegisterProjectCallback
+    @onConnectCallback = props.onConnectCallback
 
     @element = document.createElement('div')
     @element.classList.add('cilkide-status-view', 'inline-block')
@@ -113,6 +115,12 @@ class StatusBarView
     @icon.classList.add('icon', 'icon-question')
     @icon.textContent = "Cilkpride not yet run (Save to start)"
     $(@icon).on('click', (e) => @onClickCallback())
+
+  displayNotConnected: () ->
+    @resetState()
+    @icon.classList.add('icon', 'icon-plug')
+    @icon.textContent = "Not connected to SSH server"
+    $(@icon).on('click', (e) => @onConnectCallback())
 
   constructTimerText: (time) ->
     msToFinish = time - Date.now()
