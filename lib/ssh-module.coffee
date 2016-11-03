@@ -8,11 +8,14 @@ class SSHModule
 
   props: null
   getSettings: null
+  onStateChange: null
 
   connection: null
   connectionTimeout: null
   consecFailedAttempts: null
   eventEmitter: null
+
+  state: null
 
   destroyed: false
 
@@ -23,8 +26,10 @@ class SSHModule
     console.log("[ssh-module] Created a new instance of SSHModule")
     @props = props
     @getSettings = props.getSettings
+    @onStateChange = props.onStateChange
     @eventEmitter = new EventEmitter()
     @consecFailedAttempts = 0
+    @state = "not_connected"
 
   startConnection: () ->
     clearTimeout(@connectionTimeout) if @connectionTimeout
@@ -32,7 +37,8 @@ class SSHModule
     conn = new Client()
     @connection = conn
 
-    @eventEmitter.emit('connecting')
+    @state = "connecting"
+    @onStateChange()
 
 
     conn.on('ready', () =>
@@ -40,11 +46,14 @@ class SSHModule
       settings = @getSettings()
       atom.notifications.addSuccess("Successfully SSHed into #{settings.username}@#{settings.hostname}.")
       @eventEmitter.emit('ready')
+      @state = "connected"
+      @onStateChange()
       @consecFailedAttempts = 0
     ).on('close', (hadError) =>
       console.log("[ssh-module] SFTP :: closed")
       @clean(conn)
-      @eventEmitter.emit('cancelled')
+      @state = "not_connected"
+      @onStateChange()
     ).on('continue', () ->
       console.log("[ssh-module] SFTP :: continue received")
     ).on('end', () =>
@@ -159,7 +168,8 @@ class SSHModule
     @passwordView = null
     console.log("Cancel initiated.")
     @clean(@connection)
-    @eventEmitter.emit('cancelled')
+    @state = "not_connected"
+    @onStateChange()
 
   destroy: () ->
     @destroyed = true

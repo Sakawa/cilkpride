@@ -104,20 +104,13 @@ class Project
     @consoleMod.registerModule(@cilkscreenMod.name)
 
     if @settings.sshEnabled
-      @sshMod = new SSHModule({getSettings: (() => return @settings)})
+      @sshMod = new SSHModule({
+        getSettings: (() => return @settings)
+        onStateChange: (() => @updateState(false))
+      })
       @sshMod.eventEmitter.on('ready', () =>
         console.log("[project] Received ready on SSHModule")
         @signalModules()
-      )
-      @sshMod.eventEmitter.on('cancelled', () =>
-        console.log("[project] Received cancel from SSHModule")
-        @currentState.state = "not_connected"
-        @updateState(false)
-      )
-      @sshMod.eventEmitter.on('connecting', () =>
-        console.log("[project] Received connecting from SSHModule")
-        @currentState.state = "connecting"
-        @updateState(false)
       )
       @sshMod.startConnection()
       @fileSync = new FileSync({getSFTP: ((callback) => @getSFTP(callback))})
@@ -142,15 +135,16 @@ class Project
       console.log("[project] status bar: config error")
       return @statusBar.displayConfigError(repressUpdate)
 
-    # SSH is enabled but there is no connection
-    if @settings.sshEnabled and not @sshMod?.connection?
-      console.log("[project] status bar: not connected")
-      return @statusBar.displayNotConnected(repressUpdate)
+    # SSH statuses take next priority
+    if @settings.sshEnabled and @sshMod
+      if @sshMod.state is "not_connected"
+        console.log("[project] status bar: not connected")
+        return @statusBar.displayNotConnected(repressUpdate)
 
-    # SSHModule still loading...
-    if @currentState.state is "connecting"
-      console.log("[project] status bar: cilksan not init'd")
-      return @statusBar.displayLoading(repressUpdate)
+      # SSHModule still loading...
+      if @sshMod.state is "connecting"
+        console.log("[project] status bar: sshMod still connecting")
+        return @statusBar.displayLoading(repressUpdate)
 
     # All modules loaded, display status based off if (in priority)
     # 1. Any module is still running
