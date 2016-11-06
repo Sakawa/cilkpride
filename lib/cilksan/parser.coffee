@@ -4,18 +4,18 @@ CustomSet = require('../utils/set')
 FileLineReader = require('../utils/file-reader')
 
 module.exports =
-class CilkscreenParser
+class CilksanParser
 
-  # This is the main function in the parser for cilkscreen results.
+  # This is the main function in the parser for cilksan results.
   # External classes should only call this function, and not any others.
   @processViolations: (text, callback, remoteDir, localDir) ->
-    violations = CilkscreenParser.parseCilkscreenOutput(text, remoteDir, localDir)
-    CilkscreenParser.getViolationLineCode(violations, callback)
+    violations = CilksanParser.parseCilksanOutput(text, remoteDir, localDir)
+    CilksanParser.getViolationLineCode(violations, callback)
 
-  # Cilkscreen-related functions
+  # Cilksan-related functions
   # TODO: could replace this with smart regex
-  @parseCilkscreenOutput: (text, remoteDir, localDir) ->
-    console.log("[parser] remote dir: #{remoteDir} | local dir: #{localDir}")
+  @parseCilksanOutput: (text, remoteDir, localDir) ->
+    console.log("[cilksan-parser] remote dir: #{remoteDir} | local dir: #{localDir}")
     text = text.split('\n')
     violations = []
     currentViolation = null
@@ -57,7 +57,7 @@ class CilkscreenParser
             rawText: line
           }
 
-          console.log("[cilkscreen-parser] Line data")
+          console.log("[cilksan-parser] Line data")
           console.log(lineData)
 
           if currentViolation.line1
@@ -93,7 +93,7 @@ class CilkscreenParser
     violationSet.add(violations, mergeStacktraces)
     violations = violationSet.getContents()
 
-    console.log("Pruned violations...")
+    console.log("[cilksan-parser] Pruned violations...")
     console.log(violations)
     return violations
 
@@ -124,7 +124,7 @@ class CilkscreenParser
     )
 
     FileLineReader.readLineNumBatch(readRequestArray, (texts) =>
-      CilkscreenParser.groupCodeWithViolations(violations, texts)
+      CilksanParser.groupCodeWithViolations(violations, texts)
       next(violations)
     )
 
@@ -145,6 +145,6 @@ class CilkscreenParser
           violation.line2.lineRange = text.lineRange
           codeSnippetsFound++
       if codeSnippetsFound < 2 and violation.line1.filename isnt null and violation.line2.filename isnt null
-        console.log("groupCodeWithViolations: too few snippets found for a violation")
-    console.log("Finished groupCodeWithViolations")
+        console.log("[cilksan-parser] groupCodeWithViolations: too few snippets found for a violation")
+    console.log("[cilksan-parser] Finished groupCodeWithViolations")
     console.log(violations)

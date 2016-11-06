@@ -1,8 +1,5 @@
-extend = require('util')._extend;
-process = require('process')
-
-Parser = require('./parser')
 CilkscreenView = require('./ui')
+Parser = require('./parser')
 
 module.exports =
 class CilkscreenModule

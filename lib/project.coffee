@@ -6,7 +6,8 @@ chokidar = require('chokidar')
 {normalizePath} = require('./utils/utils')
 
 CilkideDetailPanel = require('./cilkide-detail-panel')
-CilkscreenModule = require('./cilkscreen/main')
+CilksanModule = require('./cilksan/main')
+CilkprofModule = require('./cilkprof/main')
 SSHModule = require('./ssh-module')
 FileSync = require('./file-sync')
 Runner = require('./runner')
@@ -33,7 +34,8 @@ class Project
   statusBar: null
 
   # Module imports
-  cilkscreenMod: null
+  cilksanMod: null
+  cilkprofMod: null
   sshMod: null
   fileSync: null
   consoleMod: null
@@ -67,7 +69,7 @@ class Project
       console.log("[project] Received watch (change) notification on config")
       @refreshConfFile()
       console.log("Refreshed config file, state is #{@currentState.state}")
-      if @currentState.state is "ok" and not @cilkscreenMod
+      if @currentState.state is "ok" and not @cilksanMod
         @init()
     ).on('unlink', (path) =>
       console.log("[project] Received watch (unlink) notification on config")
@@ -85,10 +87,21 @@ class Project
     return if @currentState.state is "config_error"
 
     # For each module, create a tab for it and initialize the module.
-    @cilkscreenMod = new CilkscreenModule({
+    @cilksanMod = new CilksanModule({
       changePanel: (() => @changeDetailPanel(@path))
       getSettings: (() => return @settings)
-      onStateChange: (() => @updateState(false, @cilkscreenMod))
+      onStateChange: (() => @updateState(false, @cilksanMod))
+      runner: new Runner({
+        getInstance: ((callback) => @getInstance(callback))
+        getSettings: (() => return @settings)
+      })
+      path: @path
+    })
+
+    @cilkprofMod = new CilkprofModule({
+      changePanel: (() => @changeDetailPanel(@path))
+      getSettings: (() => return @settings)
+      onStateChange: (() => @updateState(false, @cilkprofMod))
       runner: new Runner({
         getInstance: ((callback) => @getInstance(callback))
         getSettings: (() => return @settings)
@@ -98,10 +111,12 @@ class Project
 
     @consoleMod = new Console({})
 
-    @cilkscreenMod.tab = @detailPanel.registerModuleTab("Cilksan", @cilkscreenMod.getView())
+    @cilksanMod.tab = @detailPanel.registerModuleTab("Cilksan", @cilksanMod.getView())
     @consoleMod.tab = @detailPanel.registerModuleTab("Console", @consoleMod)
+    @cilkprofMod.tab = @detailPanel.registerModuleTab("Cilkprof", @cilkprofMod.getView())
 
-    @consoleMod.registerModule(@cilkscreenMod.name)
+    @consoleMod.registerModule(@cilksanMod.name)
+    @consoleMod.registerModule(@cilkprofMod.name)
 
     if @settings.sshEnabled
       @sshMod = new SSHModule({
@@ -152,20 +167,20 @@ class Project
     # 3. Any module is reporting a error
     # 4. All modules are reporting start.
     # 4. All modules are reporting OK.
-    if not @cilkscreenMod.currentState.ready
-      if @cilkscreenMod.currentState.lastRuntime
-        return @statusBar.displayCountdown(@cilkscreenMod.currentState.startTime +
-          @cilkscreenMod.currentState.lastRuntime)
+    if not @cilksanMod.currentState.ready
+      if @cilksanMod.currentState.lastRuntime
+        return @statusBar.displayCountdown(@cilksanMod.currentState.startTime +
+          @cilksanMod.currentState.lastRuntime)
       else
         return @statusBar.displayCountdown()
 
-    if @cilkscreenMod.currentState.state is "execution_error"
+    if @cilksanMod.currentState.state is "execution_error"
       return @statusBar.displayExecutionError(repressUpdate)
 
-    if @cilkscreenMod.currentState.state is "error"
+    if @cilksanMod.currentState.state is "error"
       return @statusBar.displayErrors(repressUpdate)
 
-    if @cilkscreenMod.currentState.state is "start"
+    if @cilksanMod.currentState.state is "start"
       return @statusBar.displayStart(repressUpdate)
 
     console.log("[project] status bar: fallthrough")
@@ -179,7 +194,8 @@ class Project
   signalModules: () ->
     # Start watching directories when FileSync is good to go.
     @fileSync.updateSFTP((() => @createDirectoryWatch()))
-    @cilkscreenMod.updateInstance()
+    @cilksanMod.updateInstance()
+    @cilkprofMod.updateInstance()
 
     @currentState.state = "ok"
 
@@ -247,7 +263,7 @@ class Project
   refreshConfFile: () ->
     checkSettings = (settings) ->
       console.log("[project] Checking settings...")
-      return false unless settings.cilksanCommand
+      return false unless settings.cilksanCommand and settings.cilkprofCommand
       if settings.sshEnabled
         return false unless settings.username?.trim?().split(' ').length is 1
         return false unless settings.hostname?.trim?().split(' ').length is 1
@@ -288,13 +304,15 @@ class Project
     @startModules()
 
   startModules: () ->
-    @cilkscreenMod.startThread()
+    @cilksanMod.startThread()
+    @cilkprofMod.startThread()
 
   killModules: () ->
     console.log("Attempting to kill modules for path #{@path}...")
     clearInterval(@idleTimeout)
 
-    @cilkscreenMod.kill()
+    @cilksanMod.kill()
+    @cilkprofMod.kill()
     return true
 
   # Hooks
@@ -320,7 +338,8 @@ class Project
 
       @editorSubscriptions[editor.id] = saveDisposable
       @subscriptions.add(saveDisposable)
-    @cilkscreenMod.registerEditor(editor) if @cilkscreenMod
+    @cilksanMod.registerEditor(editor) if @cilksanMod
+    @cilkprofMod.registerEditor(editor) if @cilkprofMod
 
   unregisterEditor: (editorId) ->
     @subscriptions.remove(@editorSubscriptions[editorId])
@@ -335,7 +354,8 @@ class Project
   destroy: () ->
     @subscriptions.dispose()
 
-    @cilkscreenMod.destroy() if @cilkscreenMod
+    @cilksanMod.destroy() if @cilksanMod
+    @cilkprofMod.destroy() if @cilkprofMod
     @sshMod.destroy() if @sshMod
     @fileSync.destroy() if @fileSync
     @consoleMod.destroy() if @consoleMod
