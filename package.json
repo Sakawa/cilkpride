@@ -43,7 +43,7 @@
     },
     "watchDirectory": {
       "type": "boolean",
-      "default": false,
+      "default": true,
       "title": "Watch Project Directory",
       "description": "Enable this to automatically upload when any file in the directory is changed, not only when you save from Atom. Also automatically syncs at the beginning, after SSHing."
     }
