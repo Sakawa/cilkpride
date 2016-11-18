@@ -152,21 +152,22 @@ class Project
     # 3. Any module is reporting a error
     # 4. All modules are reporting start.
     # 4. All modules are reporting OK.
-    if not @cilkscreenMod.currentState.ready
-      if @cilkscreenMod.currentState.lastRuntime
-        return @statusBar.displayCountdown(@cilkscreenMod.currentState.startTime +
-          @cilkscreenMod.currentState.lastRuntime)
-      else
-        return @statusBar.displayCountdown()
+    if @cilkscreenMod
+      if not @cilkscreenMod.currentState.ready
+        if @cilkscreenMod.currentState.lastRuntime
+          return @statusBar.displayCountdown(@cilkscreenMod.currentState.startTime +
+            @cilkscreenMod.currentState.lastRuntime)
+        else
+          return @statusBar.displayCountdown()
 
-    if @cilkscreenMod.currentState.state is "execution_error"
-      return @statusBar.displayExecutionError(repressUpdate)
+      if @cilkscreenMod.currentState.state is "execution_error"
+        return @statusBar.displayExecutionError(repressUpdate)
 
-    if @cilkscreenMod.currentState.state is "error"
-      return @statusBar.displayErrors(repressUpdate)
+      if @cilkscreenMod.currentState.state is "error"
+        return @statusBar.displayErrors(repressUpdate)
 
-    if @cilkscreenMod.currentState.state is "start"
-      return @statusBar.displayStart(repressUpdate)
+      if @cilkscreenMod.currentState.state is "start"
+        return @statusBar.displayStart(repressUpdate)
 
     console.log("[project] status bar: fallthrough")
     @statusBar.displayNoErrors(repressUpdate)
@@ -250,9 +251,13 @@ class Project
       return false unless settings.cilksanCommand
       if settings.sshEnabled
         return false unless settings.username?.trim?().split(' ').length is 1
+        console.log("[project] passed username check")
         return false unless settings.hostname?.trim?().split(' ').length is 1
+        console.log("[project] passed hostname check")
         return false unless settings.localBaseDir # Windows can have spaces.
+        console.log("[project] passed localBaseDir check")
         return false unless settings.remoteBaseDir?.trim?().split(' ').length is 1
+        console.log("[project] passed remoteBaseDir check")
         return false unless typeof settings.port is "number"
         return false unless settings.syncIgnoreDir?.constructor is Array
         return false unless settings.syncIgnoreFile?.constructor is Array
@@ -273,6 +278,7 @@ class Project
       @updateState()
       return true
     catch error
+      console.log(error)
       @currentState.state = "config_error"
       @updateState()
       atom.notifications.addError("Cilkpride was unable to read #{path.join(@path, 'cilkpride-conf.json')}.

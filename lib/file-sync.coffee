@@ -193,9 +193,10 @@ class FileSync
         console.log("[file-sync] SFTP :: stat on #{destPath}")
         console.log(stats)
         if err
+          console.log(err)
           dest.mkdir(destPath, (err) =>
-            throw "Something went wrong when trying to create the directory #{destPath}." if err
-            console.log("[file-sync] SFTP :: created dest folder #{destPath}")
+            console.log(["file-sync] SFTP :: dest folder creation"])
+            console.log(err)
             resolve()
           )
         else if not stats.isDirectory()
