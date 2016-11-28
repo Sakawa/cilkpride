@@ -1,4 +1,5 @@
 Parser = require('./parser')
+CilkprofView = require('./ui')
 
 module.exports =
 class CilkprofModule
@@ -38,13 +39,13 @@ class CilkprofModule
       initialized: not @getSettings().sshEnabled
     }
 
-    # @view = new CilkscreenView({
-    #   changePanel: (() =>
-    #     @changePanel()
-    #     @tab.click()
-    #   )
-    #   path: @path
-    # })
+    @view = new CilkprofView({
+      changePanel: (() =>
+        @changePanel()
+        @tab.click()
+      )
+      path: @path
+    })
 
   updateInstance: () ->
     @currentState.initialized = false
@@ -72,16 +73,15 @@ class CilkprofModule
     console.log("[cilkprof] Received output #{output}")
     @currentState.output = output
     if err is 0
-      Parser.parseResults(output, (results) =>
-        console.log("[cilkprof] Received results")
-        console.log(results)
-      )
+      results = Parser.parseResults(output)
+      @generateUI(results)
     else
       @updateState(err, null)
 
   generateUI: (parserResults) ->
     # @violations = parserResults
-    # @view.createUI(parserResults)
+    console.log(parserResults)
+    @view.createUI(parserResults)
 
   # State-based functions
 
@@ -125,7 +125,7 @@ class CilkprofModule
     # @view.createMarkersForEditor(editor)
 
   getView: () ->
-    # return @view
+    return @view
 
   destroy: () ->
     @runner.destroy()

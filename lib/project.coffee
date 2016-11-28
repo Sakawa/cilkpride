@@ -112,8 +112,8 @@ class Project
     @consoleMod = new Console({})
 
     @cilksanMod.tab = @detailPanel.registerModuleTab("Cilksan", @cilksanMod.getView())
-    @consoleMod.tab = @detailPanel.registerModuleTab("Console", @consoleMod)
     @cilkprofMod.tab = @detailPanel.registerModuleTab("Cilkprof", @cilkprofMod.getView())
+    @consoleMod.tab = @detailPanel.registerModuleTab("Console", @consoleMod)
 
     @consoleMod.registerModule(@cilksanMod.name)
     @consoleMod.registerModule(@cilkprofMod.name)

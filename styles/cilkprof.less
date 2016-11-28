@@ -1,0 +1,129 @@
+@import "ui-variables";
+@import "octicon-mixins";
+@import "octicon-utf-codes";
+@import "font-awesome/less/font-awesome";
+
+@view-width: 100%;
+
+// Detail View CSS
+
+.cilkprof-detail-view {
+  width: @view-width;
+  margin-bottom: 0px;
+  border-collapse: collapse;
+  height: 100%;
+
+  .cilkprof-content-wrapper {
+    height: 100%;
+    overflow: auto;
+    display: table-row;
+
+    .callgraph-container {
+      position: relative;
+      display: none;
+      height: 100%;
+      overflow: auto;
+      // border-bottom: 1px solid #3C3C3C;
+      white-space: nowrap;
+      width: 50%;
+    }
+
+    .cilkprof-table-content-wrapper {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      overflow: auto;
+      display: inline-block;
+      border-left: 1px solid gray;
+
+      .cilkprof-content-container {
+        margin-top: 10px;
+
+        .cilkprof-table {
+          border-collapse: collapse;
+          margin: auto;
+          padding-top: 10px;
+
+          &.cilkprof-table-raw {
+
+            .cilkprof-table-work-bar-text.cilkprof-table-raw {
+              display: block !important;
+            }
+
+            .cilkprof-table-work-bar-text.cilkprof-table-percent {
+              display: none !important;
+            }
+          }
+
+          table, th, td {
+            border: 1px solid @text-color-subtle;
+            font-size: 11pt;
+          }
+
+          th, td {
+            padding: 10px 5px;
+          }
+
+          th {
+            text-align: center;
+            padding-left: 5px;
+
+            &::after {
+              .fa-icon();
+              content: @fa-var-sort;
+              padding: 0 5px;
+            }
+
+            &.sort-desc::after {
+              .fa-icon();
+              content: @fa-var-sort-desc;
+              padding: 0 5px;
+            }
+
+            &.sort-asc::after {
+              .fa-icon();
+              content: @fa-var-sort-asc;
+              padding: 0 5px;
+            }
+          }
+
+          td {
+            text-align: right;
+
+            .cilkprof-table-work-bar-wrapper {
+              width: 150px;
+              height: 20px;
+              text-align: center;
+              border: @text-color-highlight 1px solid;
+              border-radius: 2px;
+              cursor: pointer;
+
+              .cilkprof-table-work-bar-load {
+                height: 100%;
+                color: @text-color-selected;
+
+                .cilkprof-table-work-bar-text {
+                  width: 150px;
+                  height: 20px;
+                  padding-bottom: 2px;
+
+                  &.cilkprof-table-raw {
+                    display: none;
+                  }
+
+                  &.cilkprof-table-percent {
+                    display: block;
+                  }
+                }
+              }
+            }
+          }
+
+          .highlighted {
+            background-color: @background-color-selected;
+          }
+        }
+      }
+    }
+  }
+}

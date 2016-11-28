@@ -16,7 +16,8 @@
     "ssh2": "0.5.2",
     "atom-package-deps": "4.3.1",
     "dateformat": "1.0.12",
-    "chokidar": "1.6.1"
+    "chokidar": "1.6.1",
+    "d3": "4.3.0"
   },
   "package-deps": [
     "minimap"
