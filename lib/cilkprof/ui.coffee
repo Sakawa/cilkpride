@@ -3,6 +3,7 @@
 
 $ = require('jquery')
 d3interpolate = require('d3-interpolate')
+path = require('path').posix
 
 module.exports =
 class CilkprofUI
@@ -92,6 +93,9 @@ class CilkprofUI
   createCilkprofTable: (results) ->
     console.log("[cilkprof-ui] called createCilkprofTable")
     console.log(results)
+    results.csv.sort((a,b) ->
+      return parseFloat(b["work on work"]) - parseFloat(a["work on work"])
+    )
 
     @clearChildren()
     cilkprofTable = document.createElement('table')
@@ -128,6 +132,7 @@ class CilkprofUI
     , this)
     cilkprofTable.appendChild(headerRow)
 
+    # Content
     tableBody = document.createElement('tbody')
     for result in results.csv
       entryRow = document.createElement('tr')
@@ -138,7 +143,19 @@ class CilkprofUI
         else if header.name is "Span"
           entryRowEntry.appendChild(@createBarGraphSpan(result[header.data], results.span))
         else
-          entryRowEntry.textContent = result[header.data]
+          textWrapper = document.createElement('div')
+          textWrapper.classList.add('cilkprof-table-text-wrapper')
+          textWrapper.textContent = result[header.data]
+          entryRowEntry.appendChild(textWrapper)
+        if header.data is "file" or header.data is "line"
+          textWrapper.classList.add('cilkprof-table-file-line')
+          do (result) =>
+            $(textWrapper).on('click', (e) =>
+              console.log(result)
+              atom.workspace.open(path.join(@path, result["file"]), {initialLine: +result["line"] - 1, initialColumn: Infinity})
+              e.stopPropagation()
+            )
+
         entryRowEntry.dataset.cilkprof = result[header.data]
         entryRow.appendChild(entryRowEntry)
       tableBody.appendChild(entryRow)
