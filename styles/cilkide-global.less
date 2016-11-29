@@ -43,7 +43,7 @@ ul.background-message.cilkpride-background-message {
   }
 
   .cilkide-tab {
-    color: #ffffff;
+    color: @text-color-subtle;
     float: left;
     position: relative;
     padding: 3px 15px;
@@ -55,12 +55,13 @@ ul.background-message.cilkpride-background-message {
     cursor: pointer;
 
     &.selected {
-      background: @background-color-selected;
+      background-color: @background-color-selected;
+      color: @text-color-selected;
       cursor: default;
     }
 
     &:hover {
-      background: @background-color-selected;
+      background-color: @background-color-selected;
     }
 
     span.icon-check:before {
@@ -223,7 +224,7 @@ atom-text-editor::shadow .password-lines .line {
 }
 
 .username-span {
-  font-family: Consolas;
+  font-family: Consolas, Monaco, monospace;
   color: @text-color-highlight;
 }
 

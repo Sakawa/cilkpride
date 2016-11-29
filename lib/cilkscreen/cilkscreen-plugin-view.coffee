@@ -13,10 +13,10 @@ class CilkscreenPluginView
   subscriptions: null
   violationContainer: null
   violationContentWrapper: null
+
   minimapContainer: null
   minimaps: null
   minimapIndex: null
-  toggleVisual: true
 
   currentMinimap: null
 
@@ -44,24 +44,22 @@ class CilkscreenPluginView
     violationContentWrapper = document.createElement('div')
     @violationContentWrapper = violationContentWrapper
     violationContentWrapper.classList.add('violation-content-wrapper')
-    if @toggleVisual
-      violationContentWrapper.classList.add('visual')
-      minimapResizeDiv = document.createElement('div')
-      minimapResizeDiv.classList.add('minimap-resize-div')
-      violationContentWrapper.appendChild(minimapResizeDiv)
-      $(minimapResizeDiv).on('mousedown', @horizontalResizeStart)
+    violationContentWrapper.classList.add('visual')
+    minimapResizeDiv = document.createElement('div')
+    minimapResizeDiv.classList.add('minimap-resize-div')
+    violationContentWrapper.appendChild(minimapResizeDiv)
+    $(minimapResizeDiv).on('mousedown', @horizontalResizeStart)
     violationWrapper.appendChild(violationContentWrapper)
 
-    if @toggleVisual
-      @minimapContainer = document.createElement('div')
-      @minimapContainer.classList.add('minimap-container')
-      minimapEmptyViolationDiv = document.createElement('ul')
-      minimapEmptyViolationDiv.classList.add('background-message', 'centered', 'cilkpride-normal-whitespace', 'cilkpride-background-message')
-      backgroundMessage = document.createElement('li')
-      backgroundMessage.textContent = "No results yet. Save a file to start cilksan."
-      minimapEmptyViolationDiv.appendChild(backgroundMessage)
-      @minimapContainer.appendChild(minimapEmptyViolationDiv)
-      violationWrapper.appendChild(@minimapContainer)
+    @minimapContainer = document.createElement('div')
+    @minimapContainer.classList.add('minimap-container')
+    minimapEmptyViolationDiv = document.createElement('ul')
+    minimapEmptyViolationDiv.classList.add('background-message', 'centered', 'cilkpride-normal-whitespace', 'cilkpride-background-message')
+    backgroundMessage = document.createElement('li')
+    backgroundMessage.textContent = "No results yet. Save a file to start cilksan."
+    minimapEmptyViolationDiv.appendChild(backgroundMessage)
+    @minimapContainer.appendChild(minimapEmptyViolationDiv)
+    violationWrapper.appendChild(@minimapContainer)
 
     @violationContainer = document.createElement('div')
     @violationContainer.classList.add('violation-container')
@@ -112,13 +110,12 @@ class CilkscreenPluginView
   createEmptyBackgroundMessage: () ->
     @clearChildren()
 
-    if @toggleVisual
-      minimapEmptyViolationDiv = document.createElement('ul')
-      minimapEmptyViolationDiv.classList.add('background-message', 'centered', 'cilkpride-normal-whitespace', 'cilkpride-background-message')
-      backgroundMessage = document.createElement('li')
-      backgroundMessage.textContent = "Nothing to display!"
-      minimapEmptyViolationDiv.appendChild(backgroundMessage)
-      @minimapContainer.appendChild(minimapEmptyViolationDiv)
+    minimapEmptyViolationDiv = document.createElement('ul')
+    minimapEmptyViolationDiv.classList.add('background-message', 'centered', 'cilkpride-normal-whitespace', 'cilkpride-background-message')
+    backgroundMessage = document.createElement('li')
+    backgroundMessage.textContent = "Nothing to display!"
+    minimapEmptyViolationDiv.appendChild(backgroundMessage)
+    @minimapContainer.appendChild(minimapEmptyViolationDiv)
 
     emptyViolationDiv = document.createElement('ul')
     emptyViolationDiv.classList.add('background-message', 'centered', 'cilkpride-normal-whitespace', 'cilkpride-background-message')
@@ -130,15 +127,12 @@ class CilkscreenPluginView
   updateMinimap: (editor) ->
     console.log("updateMinimap called with editor: ")
     console.log(editor)
-    if @toggleVisual
-      console.log(@minimaps)
-      if @minimaps and @minimaps[normalizePath(editor.getPath())]
-        @minimaps[normalizePath(editor.getPath())].init(editor)
-        console.log("updating minimap @ updateMinimap")
-      else
-        console.log("not updating @ updateMinimap 1")
+    console.log(@minimaps)
+    if @minimaps and @minimaps[normalizePath(editor.getPath())]
+      @minimaps[normalizePath(editor.getPath())].init(editor)
+      console.log("updating minimap @ updateMinimap")
     else
-      console.log('not updating @ updateMinimap 2')
+      console.log("not updating @ updateMinimap 1")
 
   createViolationDivs: (augmentedViolations) ->
     console.log("createViolationDivs: called with ")
@@ -147,26 +141,23 @@ class CilkscreenPluginView
     @clearChildren()
     @currentMinimap = 0
 
-    if @toggleVisual
-      @minimapOverlay = SVG.createSVGObject(0, 32)
-      @minimapOverlay.classList.add('minimap-canvas-overlay')
-      # @minimapContainer.appendChild(@minimapOverlay)
-      $(@minimapOverlay).click((e) =>
-        @minimapOnClick(e)
-      )
+    @minimapOverlay = SVG.createSVGObject(0, 32)
+    @minimapOverlay.classList.add('minimap-canvas-overlay')
+    # @minimapContainer.appendChild(@minimapOverlay)
+    $(@minimapOverlay).click((e) =>
+      @minimapOnClick(e)
+    )
 
     # TODO: figure out a better way to store the visual stuff here
-    if @toggleVisual
-      @minimaps = {}
-      @minimapIndex = {}
-      minimapPromises = []
-      minimapLineContainer = document.createElement('div')
-      minimapLineContainer.classList.add('minimap-canvas-line-container')
-      @minimapContainer.appendChild(minimapLineContainer)
+    @minimaps = {}
+    @minimapIndex = {}
+    minimapPromises = []
+    minimapLineContainer = document.createElement('div')
+    minimapLineContainer.classList.add('minimap-canvas-line-container')
+    @minimapContainer.appendChild(minimapLineContainer)
     for index in [0 ... augmentedViolations.length]
       violation = augmentedViolations[index]
       violationView = new DetailCodeView({
-        isVisual: @toggleVisual,
         index: index,
         violation: violation,
         onViolationClickCallback: ((e, index) => @highlightCallback(e, index, false))
@@ -174,9 +165,8 @@ class CilkscreenPluginView
       @violationContainer.appendChild(violationView.getElement())
       violation.minimapMarkers = []
 
-      if @toggleVisual
-        @createMinimapForLine(violation, violation.line1, minimapPromises, minimapLineContainer)
-        @createMinimapForLine(violation, violation.line2, minimapPromises, minimapLineContainer)
+      @createMinimapForLine(violation, violation.line1, minimapPromises, minimapLineContainer)
+      @createMinimapForLine(violation, violation.line2, minimapPromises, minimapLineContainer)
 
       do (index) =>
         for marker in violation.minimapMarkers
@@ -315,8 +305,7 @@ class CilkscreenPluginView
     console.log("Clearing children...")
 
     $(@violationContainer).empty()
-    if @toggleVisual
-      $(@minimapContainer).empty()
+    $(@minimapContainer).empty()
 
   # Tear down any state and detach
   destroy: ->
