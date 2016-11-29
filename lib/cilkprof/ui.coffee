@@ -1,5 +1,6 @@
-{CompositeDisposable} = require('atom')
+{CompositeDisposable, Range} = require('atom')
 {normalizePath} = require('../utils/utils')
+CilkprofMarkerView = require('./cilkprof-marker-view')
 
 $ = require('jquery')
 d3interpolate = require('d3-interpolate')
@@ -15,6 +16,8 @@ class CilkprofUI
   element: null
   subscriptions: null
 
+  markers: null
+
   contentContainer: null
   tableContentWrapper: null
   callgraphContainer: null
@@ -25,6 +28,7 @@ class CilkprofUI
     @path = props.path
 
     @subscriptions = new CompositeDisposable()
+    @markers = {}
 
     # Create root element
     @element = document.createElement('div')
@@ -66,6 +70,7 @@ class CilkprofUI
     console.log("[cilkprof] updating view - begin")
     # make stuff here (table)
     if results.csv.length
+      @createMarkers(results)
       @createCilkprofTable(results)
       # @createCallgraph
     else
@@ -108,7 +113,9 @@ class CilkprofUI
       {name: "Executions (total)", data: "count on work"},
       {name: "Span", data: "span on span"},
       {name: "Executions (span)", data: "count on span"},
-      {name: "Parallelism", data: "parallelism on work"}
+      {name: "Parallelism", data: "parallelism on work"},
+      {name: "Local Work", data: "local work on work"},
+      {name: "Local Span", data: "local span on span"}
     ]
 
     callsiteHeader = document.createElement('colgroup')
@@ -125,7 +132,7 @@ class CilkprofUI
       headerRowEntry.textContent = header.name
       if index is 0
         headerRowEntry.colSpan = 2
-      if header.name is "Work" or header.name is "Span"
+      if header.name is "Work" or header.name is "Span" or header.name is "Local Work" or header.name is "Local Span"
         headerRowEntry.classList.add('cilkprof-table-toggle-raw')
         headerRowEntry.textContent += " (%)"
       headerRow.appendChild(headerRowEntry)
@@ -138,9 +145,9 @@ class CilkprofUI
       entryRow = document.createElement('tr')
       for header in headers
         entryRowEntry = document.createElement('td')
-        if header.name is "Work"
+        if header.name is "Work" or header.name is "Local Work"
           entryRowEntry.appendChild(@createBarGraphSpan(result[header.data], results.work))
-        else if header.name is "Span"
+        else if header.name is "Span" or header.name is "Local Span"
           entryRowEntry.appendChild(@createBarGraphSpan(result[header.data], results.span))
         else
           textWrapper = document.createElement('div')
@@ -267,7 +274,75 @@ class CilkprofUI
     )
     return bar
 
+  # Marker related functions
 
+  createMarkers: (results) ->
+    # Build a small cache of file path -> editor
+    editorCache = {}
+    editors = atom.workspace.getTextEditors()
+    for textEditor in editors
+      editorPath = normalizePath(textEditor.getPath?())
+      if editorPath
+        if editorPath in editorCache
+          editorCache[editorPath].push(textEditor)
+        else
+          editorCache[editorPath] = [textEditor]
+
+    # first aggregate results for every line
+    cleanResults = {}
+    for line in results.csv
+      id = line["file"] + ':' + line["line"]
+      if id in cleanResults
+        for header in ["work on work", "span on span"]
+          cleanResults[id][header] += parseFloat(line[header])
+        for header in ["count on work", "count on span"]
+          cleanResults[id][header] = max(cleanResults[id][header], parseFloat(line[header]))
+      else
+        cleanResults[id] = {}
+        for header in ["work on work", "span on span", "count on work", "count on span"]
+          cleanResults[id][header] = parseFloat(line[header])
+    console.log("[cilkprof-ui]")
+    console.log(cleanResults)
+
+    for id in Object.getOwnPropertyNames(cleanResults)
+      info = cleanResults[id]
+      fileLineArray = id.split(':')
+      filepath = path.join(@path, fileLineArray[0])
+      fileline = +(fileLineArray[1])
+      console.log("[cilkprof-ui] checking filepath #{filepath} : #{fileline}")
+      @markers[id] = new CilkprofMarkerView({
+          work: info["work on work"]
+          totalWork: results.work
+          span: info["span on span"]
+          totalSpan: results.span
+          totalCount: info["count on work"]
+          spanCount: info["count on span"]
+      })
+      do (id, fileline) =>
+        editorCache[filepath]?.forEach((textEditor) =>
+          @createCilkprofMarker(textEditor, id, fileline)
+        )
+
+  createCilkprofMarker: (editor, id, line) ->
+    console.log("[cilkprof-marker] received #{line}")
+    cilkprofGutter = editor.gutterWithName('cilkprof')
+    range = new Range([line - 1, 0], [line - 1, Infinity])
+    marker = editor.markBufferRange(range, {id: 'cilkprof'})
+    cilkprofGutter.decorateMarker(marker, {type: 'gutter', item: @markers[id]})
+
+  createMarkersForEditor: (editor) ->
+    return if not editorPath = normalizePath(editor.getPath?())
+
+    for id in Object.getOwnPropertyNames(@markers)
+      console.log("[cilkprof-ui] checking id #{id}")
+      violation = @markers[id]
+      fileLineArray = id.split(':')
+      filepath = fileLineArray[0]
+      fileline = +(fileLineArray[1])
+      console.log("[cilkprof-ui] checking filepath #{filepath} against #{editorPath}")
+
+      if path.join(@path, filepath) is editorPath
+        @createCilkprofMarker(editor, id, fileline)
 
   # Returns an object that can be retrieved when package is activated
   serialize: ->

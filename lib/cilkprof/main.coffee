@@ -1,5 +1,6 @@
 Parser = require('./parser')
 CilkprofView = require('./ui')
+CilkprofMarkerView = require('./cilkprof-marker-view')
 
 module.exports =
 class CilkprofModule
@@ -46,6 +47,11 @@ class CilkprofModule
       )
       path: @path
     })
+
+    # debug below
+    atom.commands.add('atom-workspace', 'cilkpride:debug', (event) =>
+      @debugTest()
+    )
 
   updateInstance: () ->
     @currentState.initialized = false
@@ -121,11 +127,47 @@ class CilkprofModule
     @tab.setState("busy")
     @onStateChange()
 
-  registerEditor: (editor) ->
-    # @view.createMarkersForEditor(editor)
-
   getView: () ->
     return @view
 
   destroy: () ->
     @runner.destroy()
+
+  registerEditor: (editor) ->
+    @view.createMarkersForEditor(editor)
+
+  ####
+  debugTest: () ->
+    info = {
+      work: 90
+      totalWork: 100
+      span: 50
+      totalSpan: 100
+      totalCount: 1000000000
+      spanCount: 500
+    }
+
+    currentTE = atom.workspace.getActiveTextEditor()
+    for marker in currentTE.findMarkers()
+        marker.destroy()
+    if gutter = currentTE.gutterWithName('cilkpride-debug')
+      gutter.destroy()
+    newGutter = currentTE.addGutter({name: 'cilkpride-debug', priority: -101, visible: true})
+    console.log(newGutter)
+
+    # Create gutter test
+    cilkprofMarker = new CilkprofMarkerView(info)
+    marker = currentTE.markBufferRange([[1, 0], [1, Infinity]])
+    newGutter.decorateMarker(marker, {type: 'gutter', item: cilkprofMarker})
+
+    info2 = {
+      work: 10
+      totalWork: 100
+      span: 30
+      totalSpan: 100
+      totalCount: 10000
+      spanCount: 98
+    }
+    cilkprofMarker2 = new CilkprofMarkerView(info2)
+    marker2 = currentTE.markBufferRange([[2,0], [2, Infinity]])
+    newGutter.decorateMarker(marker2, {type: 'gutter', item: cilkprofMarker2})

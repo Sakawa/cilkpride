@@ -64,53 +64,52 @@ module.exports = Cilkide =
     @exec = 0.7
     @gamma = 1.2
 
-    # these all are debug things now
-    atom.commands.add('atom-workspace', 'cilkpride:debug', (event) =>
-      currentTE = atom.workspace.getActiveTextEditor()
-      for marker in currentTE.findMarkers()
-          marker.destroy()
-      if gutter = currentTE.gutterWithName('cilkpride-debug')
-        gutter.destroy()
-      newGutter = currentTE.addGutter({name: 'cilkpride-debug', priority: -101, visible: true})
-      console.log(newGutter)
-      console.log(interpolate)
-
-      # Version 1
-      pill = document.createElement('div')
-      pill.classList.add('badge')
-      pillSpan = document.createElement('span')
-      pillSpan.textContent = @exec
-      pill.appendChild(pillSpan)
-      marker = currentTE.markBufferRange([[71, 0], [71, Infinity]])
-      newGutter.decorateMarker(marker, {type: 'gutter', item: pill})
-
-      interpolator = interpolate.interpolateRgb.gamma(@gamma)("#282c34", "red")
-      bgColor = color.color(interpolator(@work))
-      pill.style.opacity = @work
-      pill.style.backgroundColor = bgColor.toString()
-      pill.style.color = "black"# interpolate.interpolateRgb.gamma(2.2)(interpolator(work), "#282c34")(exec)
-      pill.style.padding = "4px 8px 4px 8px"
-
-      # Version 2
-      boxLayer = document.createElement('div')
-      # boxLayer.style.position = "relative"
-      boxLayer.style.paddingLeft = "10px"
-      copies = Math.ceil(@exec * 10)
-      for i in [0..copies]
-        smallBox = document.createElement('div')
-        smallBox.style.position = "absolute"
-        smallBox.style.zIndex = "-#{i + 1}"
-        smallBox.style.backgroundColor = interpolator(@work)
-        smallBox.style.left = "#{(i * 7 + 38)}px"
-        smallBox.style.height = "20px"
-        smallBox.style.width = "20px"
-        smallBox.style.border = "1px solid black"
-        boxLayer.appendChild(smallBox)
-
-      marker = currentTE.markBufferRange([[71,0], [71, 31]])
-      currentTE.decorateMarker(marker, {type: 'overlay', item: boxLayer, position: 'head'})
-    )
-
+    # # these all are debug things now
+    # atom.commands.add('atom-workspace', 'cilkpride:debug', (event) =>
+    #   currentTE = atom.workspace.getActiveTextEditor()
+    #   for marker in currentTE.findMarkers()
+    #       marker.destroy()
+    #   if gutter = currentTE.gutterWithName('cilkpride-debug')
+    #     gutter.destroy()
+    #   newGutter = currentTE.addGutter({name: 'cilkpride-debug', priority: -101, visible: true})
+    #   console.log(newGutter)
+    #   console.log(interpolate)
+    #
+    #   # Version 1
+    #   pill = document.createElement('div')
+    #   pill.classList.add('badge')
+    #   pillSpan = document.createElement('span')
+    #   pillSpan.textContent = @exec
+    #   pill.appendChild(pillSpan)
+    #   marker = currentTE.markBufferRange([[71, 0], [71, Infinity]])
+    #   newGutter.decorateMarker(marker, {type: 'gutter', item: pill})
+    #
+    #   interpolator = interpolate.interpolateRgb.gamma(@gamma)("#282c34", "red")
+    #   bgColor = color.color(interpolator(@work))
+    #   pill.style.opacity = @work
+    #   pill.style.backgroundColor = bgColor.toString()
+    #   pill.style.color = "black"# interpolate.interpolateRgb.gamma(2.2)(interpolator(work), "#282c34")(exec)
+    #   pill.style.padding = "4px 8px 4px 8px"
+    #
+    #   # Version 2
+    #   boxLayer = document.createElement('div')
+    #   # boxLayer.style.position = "relative"
+    #   boxLayer.style.paddingLeft = "10px"
+    #   copies = Math.ceil(@exec * 10)
+    #   for i in [0..copies]
+    #     smallBox = document.createElement('div')
+    #     smallBox.style.position = "absolute"
+    #     smallBox.style.zIndex = "-#{i + 1}"
+    #     smallBox.style.backgroundColor = interpolator(@work)
+    #     smallBox.style.left = "#{(i * 7 + 38)}px"
+    #     smallBox.style.height = "20px"
+    #     smallBox.style.width = "20px"
+    #     smallBox.style.border = "1px solid black"
+    #     boxLayer.appendChild(smallBox)
+    #
+    #   marker = currentTE.markBufferRange([[71,0], [71, 31]])
+    #   currentTE.decorateMarker(marker, {type: 'overlay', item: boxLayer, position: 'head'})
+    # )
 
     console.log("Cilkscreen plugin activated!")
 
@@ -180,6 +179,8 @@ module.exports = Cilkide =
     # Add the gutter to the newly registered editor. We do this to all
     # editors for consistency - otherwise there will be flashing.
     editor.addGutter({name: 'cilksan-lint', priority: -1, visible: true}) if not editor.gutterWithName('cilksan-lint')
+    # for cilkprof testing purposes
+    editor.addGutter({name: 'cilkprof', priority: -2, visible: true}) if not editor.gutterWithName('cilkprof')
 
     @subscriptions.add(editor.onDidChangePath(
       () =>

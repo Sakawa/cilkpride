@@ -5,6 +5,62 @@
 
 @view-width: 100%;
 
+// Debug CSS goes here
+atom-text-editor::shadow .gutter[gutter-name=cilkprof] {
+  width: 60px;
+  text-align: center;
+}
+
+atom-text-editor::shadow .gutter[gutter-name=cilkprof] .decoration {
+  .cilkprof-marker-test-1-work {
+    width: 50px;
+    height: 10px;
+    text-align: center;
+    border: @text-color-highlight 1px solid;
+    border-radius: 1px;
+
+    .cilkprof-marker-test-1-work-inner {
+      position: relative;
+      height: 100%;
+      color: @text-color-selected;
+      background-color: darken(red, 10%);
+
+      .cilkprof-marker-test-1-work-bar-text {
+        font-family: Segoe UI;
+        position: absolute;
+        top: -3px;
+        font-size: 8pt;
+        width: 50px;
+        height: 10px;
+      }
+    }
+  }
+
+  .cilkprof-marker-test-1-span {
+    width: 50px;
+    height: 10px;
+    text-align: center;
+    border: @text-color-highlight 1px solid;
+    border-radius: 1px;
+
+    .cilkprof-marker-test-1-span-inner {
+      position: relative;
+      height: 100%;
+      color: @text-color-selected;
+      background-color: blue;
+
+      .cilkprof-marker-test-1-span-bar-text {
+        font-family: Segoe UI;
+        font-size: 8pt;
+        position: absolute;
+        top: -2px;
+        width: 50px;
+        height: 10px;
+      }
+    }
+  }
+}
+
 // Detail View CSS
 
 .cilkprof-detail-view {
