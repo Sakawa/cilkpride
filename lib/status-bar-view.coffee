@@ -1,6 +1,8 @@
 $ = require('jquery')
 path = require('path').posix
 
+Debug = require('./utils/debug')
+
 MILLI_IN_SEC = 1000
 MILLI_IN_MIN = MILLI_IN_SEC * 60
 MILLI_IN_HOUR = MILLI_IN_MIN * 60
@@ -140,7 +142,7 @@ class StatusBarView
     return timerText
 
   updatePath: (path) ->
-    console.log("Updating status bar tile path to #{path}.")
+    Debug.log("Updating status bar tile path to #{path}.")
     @currentPath = path
 
   setTimer: () ->

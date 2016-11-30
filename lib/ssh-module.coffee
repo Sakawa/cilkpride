@@ -3,6 +3,7 @@ EventEmitter = require('events')
 
 {extractLast} = require('./utils/utils')
 PasswordView = require('./password-view')
+Debug = require('./utils/debug')
 
 class SSHModule
 
@@ -23,7 +24,7 @@ class SSHModule
   passwordView: null
 
   constructor: (props) ->
-    console.log("[ssh-module] Created a new instance of SSHModule")
+    Debug.log("[ssh-module] Created a new instance of SSHModule")
     @props = props
     @getSettings = props.getSettings
     @onStateChange = props.onStateChange
@@ -42,7 +43,7 @@ class SSHModule
 
 
     conn.on('ready', () =>
-      console.log("[ssh-module] Connection ready.")
+      Debug.log("[ssh-module] Connection ready.")
       settings = @getSettings()
       atom.notifications.addSuccess("Successfully SSHed into #{settings.username}@#{settings.hostname}.")
       @eventEmitter.emit('ready')
@@ -50,17 +51,17 @@ class SSHModule
       @onStateChange()
       @consecFailedAttempts = 0
     ).on('close', (hadError) =>
-      console.log("[ssh-module] SFTP :: closed")
+      Debug.log("[ssh-module] SFTP :: closed")
       @clean(conn)
       @state = "not_connected"
       @onStateChange()
     ).on('continue', () ->
-      console.log("[ssh-module] SFTP :: continue received")
+      Debug.log("[ssh-module] SFTP :: continue received")
     ).on('end', () =>
-      console.log("[ssh-module] SFTP :: end signal received")
+      Debug.log("[ssh-module] SFTP :: end signal received")
       @clean(conn)
     ).on('error', (error) =>
-      console.log("[ssh-module] SFTP :: received error #{error.level}")
+      Debug.log("[ssh-module] SFTP :: received error #{error.level}")
       @clean(conn)
       # possible errors:
       # client-dns - DNS failure to lookup a hostname
@@ -75,7 +76,7 @@ class SSHModule
         @password = null
       @reconnect()
     ).on('keyboard-interactive', (name, instructions, instructionsLang, prompts, finish) =>
-      console.log("[ssh-module] SFTP :: received keyboard interactive request")
+      Debug.log("[ssh-module] SFTP :: received keyboard interactive request")
       if @passwordView
         # rewire the old password view to pass the password to the new connection
         # TODO: potential race condition here where @connection is still connecting after a d/c
@@ -100,7 +101,7 @@ class SSHModule
       readyTimeout: 20000
       keepaliveInterval: 60000
     })
-    console.log("[ssh-module] Starting to connect...")
+    Debug.log("[ssh-module] Starting to connect...")
 
   clean: (conn) ->
     if conn and conn is @connection
@@ -108,23 +109,23 @@ class SSHModule
       @connectionTimeout = null
       @connection.end()
       @connection = null
-      console.log("[ssh-module] Module cleaned")
+      Debug.log("[ssh-module] Module cleaned")
 
   getSFTP: (callback) ->
     return if @destroyed
     try
       @connection.sftp((err, sftp) =>
         if err
-          console.log("[ssh-module] Received error in sftp")
-          console.log(err)
+          Debug.log("[ssh-module] Received error in sftp")
+          Debug.log(err)
           @reconnect()
         else
-          console.log("[ssh-module] SFTP :: ready")
+          Debug.log("[ssh-module] SFTP :: ready")
           callback(new SFTP({sftp: sftp, getSettings: (() => return @getSettings())}))
       )
     catch error
-      console.log("[ssh-module] Received error in getSFTP")
-      console.log(error)
+      Debug.log("[ssh-module] Received error in getSFTP")
+      Debug.log(error)
       @reconnect()
 
   getInstance: (callback) ->
@@ -132,16 +133,16 @@ class SSHModule
     try
       @connection.shell({pty: true}, (err, stream) =>
         if err
-          console.log("[ssh-module] Received error in shell")
-          console.log(err)
+          Debug.log("[ssh-module] Received error in shell")
+          Debug.log(err)
           @reconnect()
         else
-          console.log("[ssh-module] Instance :: ready")
+          Debug.log("[ssh-module] Instance :: ready")
           callback(new Instance({instance: stream, password: @password, getSettings: (() => return @getSettings())}))
       )
     catch error
-      console.log("[ssh-module] Received error in getInstance")
-      console.log(error)
+      Debug.log("[ssh-module] Received error in getInstance")
+      Debug.log(error)
       @reconnect()
 
   reconnect: () ->
@@ -150,7 +151,7 @@ class SSHModule
     @clean(@connection)
 
     if @consecFailedAttempts > 3
-      console.log("[ssh-module] >3 consecutive failed attempts, pausing for 30 seconds")
+      Debug.log("[ssh-module] >3 consecutive failed attempts, pausing for 30 seconds")
       clearTimeout(@connectionTimeout) if @connectionTimeout
       @connectionTimeout = setTimeout((() => @startConnection()), 30000)
     else
@@ -166,7 +167,7 @@ class SSHModule
 
   onCancelPassword: () ->
     @passwordView = null
-    console.log("Cancel initiated.")
+    Debug.log("Cancel initiated.")
     @clean(@connection)
     @state = "not_connected"
     @onStateChange()
@@ -212,7 +213,7 @@ class Instance extends EventEmitter
   command: null
 
   constructor: (props) ->
-    console.log('[instance] Instance constructed')
+    Debug.log('[instance] Instance constructed')
     @instance = props.instance
     @stderr = @instance.stderr
     @getSettings = props.getSettings
@@ -225,9 +226,9 @@ class Instance extends EventEmitter
     @output = ''
     # 'ready' event denotes that the instance is ready to process another command
     @on('ready', () =>
-      console.log('[instance] Instance received ready signal')
+      Debug.log('[instance] Instance received ready signal')
       if @command
-        console.log('[instance] Performing backlogged command...')
+        Debug.log('[instance] Performing backlogged command...')
         command = @command
         @command = null
         command()
@@ -236,14 +237,14 @@ class Instance extends EventEmitter
 
   init: (password) ->
     @instance.on('close', () =>
-      console.log('[instance] Connection closed')
+      Debug.log('[instance] Connection closed')
       @destroy()
     ).on('end', () =>
-      console.log('[instance] Connection ended')
+      Debug.log('[instance] Connection ended')
       @destroy()
     ).on('data', (data) =>
       @output += data
-      console.log('STDOUT: ' + data)
+      Debug.log('STDOUT: ' + data)
 
       settings = @getSettings()
       # Deals with entering in the user's password on launch-instance
@@ -269,23 +270,23 @@ class Instance extends EventEmitter
           @emit('data', exitResults.exitCode, @output.substring(0, exitResults.index))
         @resetOutput()
         @emit('ready')
-        console.log("[ssh-module] Instance emitted ready!")
+        Debug.log("[ssh-module] Instance emitted ready!")
     ).on('error', (err) =>
-      console.log("[instance] Error received")
-      console.log(err)
+      Debug.log("[instance] Error received")
+      Debug.log(err)
       @destroy()
     ).on('finish', () =>
-      console.log('[instance] Instance finished.')
+      Debug.log('[instance] Instance finished.')
       @destroy()
     )
 
     @instance.stderr.on('data', (data) ->
-      console.log('STDERR: ' + data)
+      Debug.log('STDERR: ' + data)
     )
 
   spawn: (command, args, options) ->
     # TODO: Should we ignore commands that are input when the network isn't ready?
-    console.log("[instance] received spawn request: init: #{@initialized} | ready: #{@ready}")
+    Debug.log("[instance] received spawn request: init: #{@initialized} | ready: #{@ready}")
     if not @initialized or not @ready
       @command = (() => @spawn(command, args, options))
       return
@@ -294,7 +295,7 @@ class Instance extends EventEmitter
     if options?.pwd
       commandString += "cd #{options.pwd}; "
     commandString += command + " " + args.join(' ')
-    console.log("[instance] running #{commandString};")
+    Debug.log("[instance] running #{commandString};")
     @instance.write("#{commandString}; echo cilkide exit code: $?\n")
 
   kill: () ->
@@ -309,10 +310,10 @@ class Instance extends EventEmitter
   parseExitCode: (output) ->
     results = regex.exec(output)
     if results is null
-      console.log("[instance] no cilkide exit code found")
+      Debug.log("[instance] no cilkide exit code found")
       return false
     else
-      console.log("[instance] found exit code #{parseInt(results[1])}")
+      Debug.log("[instance] found exit code #{parseInt(results[1])}")
       return {exitCode: parseInt(results[1]), index: results.index}
 
   destroy: () ->

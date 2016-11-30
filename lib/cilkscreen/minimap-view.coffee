@@ -1,6 +1,7 @@
 TextEditor = null
 FileLineReader = require('../utils/file-reader')
 $ = require('jquery')
+Debug = require('../utils/debug')
 
 NUM_PIXELS_PER_LINE = 6
 
@@ -31,7 +32,7 @@ class MinimapView
     filenameDiv.textContent = splitPath[splitPath.length - 1]
     @element.appendChild(filenameDiv)
     $(filenameDiv).click((e) =>
-      console.log("Clicked on a file open div: #{filenameDiv.classList}")
+      Debug.log("Clicked on a file open div: #{filenameDiv.classList}")
       atom.workspace.open(@filename, {initialLine: 0, initialColumn: Infinity})
     )
 
@@ -39,10 +40,10 @@ class MinimapView
 
   init: (editor) ->
     if editor
-      console.log("init started for #{@filename} minimap for editor #{editor.id} for filename #{@filename}")
+      Debug.log("init started for #{@filename} minimap for editor #{editor.id} for filename #{@filename}")
       @editor = editor
     else
-      console.log("init started for #{@filename} minimap for filename #{@filename}")
+      Debug.log("init started for #{@filename} minimap for filename #{@filename}")
       data = FileLineReader.readFile(@filename)
       hiddenEditor = @constructTextEditor({ mini: false })
       @editor = hiddenEditor
@@ -52,19 +53,19 @@ class MinimapView
     @buildMinimap()
 
     promise.then(() =>
-      console.log("#{@filename} minimap init promise returned")
-      console.log(@decorationQueue)
+      Debug.log("#{@filename} minimap init promise returned")
+      Debug.log(@decorationQueue)
       for range in @decorationQueue
         marker = @editor.markBufferRange(range, {id: 'cilkscreen-minimap'})
         @minimap.decorateMarker(marker, {type: 'line', scope: '.cilkscreen .minimap-marker', plugin: "cilkscreen", color: "#961B05"})
       @ready = true
-      console.log("#{@filename} minimap ready")
+      Debug.log("#{@filename} minimap ready")
 
       minimapView = atom.views.getView(@minimap)
       minimapView.requestForcedUpdate()
-      console.log(minimapView)
-      console.log(minimapView.shadowRoot)
-      console.log(minimapView.shadowRoot.children[0])
+      Debug.log(minimapView)
+      Debug.log(minimapView.shadowRoot)
+      Debug.log(minimapView.shadowRoot.children[0])
     )
     return @promise
 
@@ -95,7 +96,7 @@ class MinimapView
         z-index: 10;
       """
       minimapElement.style.height = "#{numLines * @minimap.getLineHeight()}px"
-      console.log(@minimap.getLineHeight())
+      Debug.log(@minimap.getLineHeight())
       resolve()
     )
 
@@ -110,10 +111,10 @@ class MinimapView
   addDecoration: (line) ->
     range = [[line - 1, 0], [line - 1, Infinity]]
     if not @ready
-      console.log("#{@filename} minimap not ready for decoration, adding to queue")
+      Debug.log("#{@filename} minimap not ready for decoration, adding to queue")
       @decorationQueue.push(range)
     else
-      console.log("#{@filename} minimap ready for decoration, adding directly")
+      Debug.log("#{@filename} minimap ready for decoration, adding directly")
       marker = @editor.markBufferRange(range, {id: 'cilkscreen-minimap'})
       @minimap.decorateMarker(marker, {type: 'line', scope: '.cilkscreen .minimap-marker', plugin: "cilkscreen", color: "#961B05"})
 

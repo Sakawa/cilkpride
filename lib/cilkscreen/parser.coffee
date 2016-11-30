@@ -2,6 +2,7 @@ path = require('path').posix
 
 CustomSet = require('../utils/set')
 FileLineReader = require('../utils/file-reader')
+Debug = require('../utils/debug')
 
 module.exports =
 class CilkscreenParser
@@ -15,7 +16,7 @@ class CilkscreenParser
   # Cilkscreen-related functions
   # TODO: could replace this with smart regex
   @parseCilkscreenOutput: (text, remoteDir, localDir) ->
-    console.log("[parser] remote dir: #{remoteDir} | local dir: #{localDir}")
+    Debug.log("[parser] remote dir: #{remoteDir} | local dir: #{localDir}")
     text = text.split('\n')
     violations = []
     currentViolation = null
@@ -32,12 +33,12 @@ class CilkscreenParser
         if line.indexOf("access at") isnt -1
           splitLine = line.trim().split(' ')
           accessType = splitLine[0]
-          # console.log(splitLine)
+          # Debug.log(splitLine)
           sourceCodeLine = splitLine[4].slice(1, -1)
-          # console.log(sourceCodeLine)
+          # Debug.log(sourceCodeLine)
           # There will be 5 elements if the line has a source code annotation.
           if splitLine.length is 5
-            # console.log(sourceCodeLine)
+            # Debug.log(sourceCodeLine)
             splitIndex = sourceCodeLine.lastIndexOf(':')
             sourceCodeFile = sourceCodeLine.substr(0, splitIndex)
             sourceCodeLine = +sourceCodeLine.substr(splitIndex + 1)
@@ -57,8 +58,8 @@ class CilkscreenParser
             rawText: line
           }
 
-          console.log("[cilkscreen-parser] Line data")
-          console.log(lineData)
+          Debug.log("[cilkscreen-parser] Line data")
+          Debug.log(lineData)
 
           if currentViolation.line1
             currentViolation.line2 = lineData
@@ -69,7 +70,7 @@ class CilkscreenParser
             lineId = lineData.filename + ":" + lineData.line
             currentViolation.stacktrace[lineId] = []
         # else if line.indexOf("called by") isnt -1
-        #   # console.log(currentViolation)
+        #   # Debug.log(currentViolation)
         #   currentStacktrace.push(line)
         else
           lineId = currentViolation.line2.filename + ":" + currentViolation.line2.line
@@ -93,8 +94,8 @@ class CilkscreenParser
     violationSet.add(violations, mergeStacktraces)
     violations = violationSet.getContents()
 
-    console.log("Pruned violations...")
-    console.log(violations)
+    Debug.log("Pruned violations...")
+    Debug.log(violations)
     return violations
 
   @getViolationLineCode: (violations, next) ->
@@ -131,9 +132,9 @@ class CilkscreenParser
   @groupCodeWithViolations: (violations, texts) ->
     for violation in violations
       codeSnippetsFound = 0
-      # console.log(violation)
+      # Debug.log(violation)
       for text in texts
-        # console.log(text)
+        # Debug.log(text)
         if codeSnippetsFound is 2
           break
         if violation.line1.filename is text.filename and violation.line1.line - 2 is text.lineRange[0]
@@ -145,6 +146,6 @@ class CilkscreenParser
           violation.line2.lineRange = text.lineRange
           codeSnippetsFound++
       if codeSnippetsFound < 2 and violation.line1.filename isnt null and violation.line2.filename isnt null
-        console.log("groupCodeWithViolations: too few snippets found for a violation")
-    console.log("Finished groupCodeWithViolations")
-    console.log(violations)
+        Debug.log("groupCodeWithViolations: too few snippets found for a violation")
+    Debug.log("Finished groupCodeWithViolations")
+    Debug.log(violations)

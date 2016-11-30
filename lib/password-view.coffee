@@ -1,6 +1,7 @@
 $ = require('jquery')
 {TextEditorUtil} = require('./utils/utils')
 {CompositeDisposable} = require('atom')
+Debug = require('./utils/debug')
 
 module.exports =
 class PasswordView
@@ -14,7 +15,7 @@ class PasswordView
   onCancel: null
 
   constructor: (props) ->
-    console.log("[password-view] Password modal created")
+    Debug.log("[password-view] Password modal created")
     @subscriptions = new CompositeDisposable()
     @onEnter = props.onEnter
     @onCancel = props.onCancel # caution: these callbacks may be overwritten!
@@ -54,13 +55,13 @@ class PasswordView
       passwordElement.append('<style id="password-style">.password-lines .line span.text:before {content:"' + string + '";}</style>')
     )
     @subscriptions.add(atom.commands.add('atom-text-editor', 'core:confirm', () =>
-      console.log("[password-view] Pressed enter")
+      Debug.log("[password-view] Pressed enter")
       password = @passwordEditor.getText()
       @detach()
       @onEnter(password)
     ))
     @subscriptions.add(atom.commands.add('atom-text-editor', 'core:cancel', () =>
-      console.log("[password-view] Pressed cancel")
+      Debug.log("[password-view] Pressed cancel")
       @detach()
       @onCancel()
     ))

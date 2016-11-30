@@ -6,6 +6,7 @@ DetailCodeView = require('./detail-code-view')
 MinimapView = require('../utils/minimap')
 {MinimapUtil, normalizePath} = require('../utils/utils')
 SVG = require('../utils/svg')
+Debug = require('../utils/debug')
 
 module.exports =
 class CilkscreenPluginView
@@ -81,12 +82,12 @@ class CilkscreenPluginView
     ))
 
   horizontalResizeStart: () =>
-    # console.log("Horizontal resize start")
+    # Debug.log("Horizontal resize start")
     $(document).on('mousemove', @horizontalResizeMove)
     $(document).on('mouseup', @horizontalResizeStop)
 
   horizontalResizeStop: () =>
-    # console.log("Horizontal resize stop")
+    # Debug.log("Horizontal resize stop")
     $(document).off('mousemove', @horizontalResizeMove)
     $(document).off('mouseup', @horizontalResizeStop)
 
@@ -94,13 +95,13 @@ class CilkscreenPluginView
     return @horizontalResizeStop() unless event.which is 1
 
     element = $(@violationContentWrapper)
-    # console.log("Horizontal resize move")
+    # Debug.log("Horizontal resize move")
     width = element.offset().left + element.outerWidth() - event.pageX
     element.width(width)
 
   update: (violations) ->
-    console.log("updating plugin view: start")
-    console.log(violations)
+    Debug.log("updating plugin view: start")
+    Debug.log(violations)
 
     if violations.length
       @createViolationDivs(violations)
@@ -125,18 +126,18 @@ class CilkscreenPluginView
     @violationContainer.appendChild(emptyViolationDiv)
 
   updateMinimap: (editor) ->
-    console.log("updateMinimap called with editor: ")
-    console.log(editor)
-    console.log(@minimaps)
+    Debug.log("updateMinimap called with editor: ")
+    Debug.log(editor)
+    Debug.log(@minimaps)
     if @minimaps and @minimaps[normalizePath(editor.getPath())]
       @minimaps[normalizePath(editor.getPath())].init(editor)
-      console.log("updating minimap @ updateMinimap")
+      Debug.log("updating minimap @ updateMinimap")
     else
-      console.log("not updating @ updateMinimap 1")
+      Debug.log("not updating @ updateMinimap 1")
 
   createViolationDivs: (augmentedViolations) ->
-    console.log("createViolationDivs: called with ")
-    console.log(augmentedViolations)
+    Debug.log("createViolationDivs: called with ")
+    Debug.log(augmentedViolations)
 
     @clearChildren()
     @currentMinimap = 0
@@ -176,14 +177,14 @@ class CilkscreenPluginView
 
     # if @toggleVisual
     #   Promise.all(minimapPromises).then(() =>
-    #     console.log("All promises done!")
-    #     console.log(@minimaps)
-    #     console.log(Object.getOwnPropertyNames(@minimaps))
+    #     Debug.log("All promises done!")
+    #     Debug.log(@minimaps)
+    #     Debug.log(Object.getOwnPropertyNames(@minimaps))
     #     maxHeight = -1
     #     minimaps = Object.getOwnPropertyNames(@minimaps)
     #     for minimap in minimaps
     #       height = @minimaps[minimap].getHeight()
-    #       console.log("looking at: #{height} height")
+    #       Debug.log("looking at: #{height} height")
     #       if maxHeight < height
     #         maxHeight = height
     #     @minimapOverlay.style.height = maxHeight + "px"
@@ -213,7 +214,7 @@ class CilkscreenPluginView
       DetailCodeView.attachFileOpenListener(lineOverlay, violationLine.filename, violationLine.line)
 
       # Create a marker next to the minimap as well
-      console.log("[cilkscreen-plugin-view] Adding markers")
+      Debug.log("[cilkscreen-plugin-view] Adding markers")
       marker = document.createElement('div')
       marker.classList.add('icon', 'alert', 'cilksan-marker')
       marker.style.top = (MinimapUtil.getLineTop(violationLine.line, -8)) + "px"
@@ -225,9 +226,9 @@ class CilkscreenPluginView
     rect = @minimapOverlay.getBoundingClientRect();
     left = Math.round(e.pageX - rect.left)
     top = Math.round(e.pageY - rect.top)
-    console.log("clicked: left: #{e.pageX - rect.left}, top: #{e.pageY - rect.top}")
+    Debug.log("clicked: left: #{e.pageX - rect.left}, top: #{e.pageY - rect.top}")
     violationId = e.target.getAttribute('violation-id')
-    console.log("clicked on id: #{violationId}")
+    Debug.log("clicked on id: #{violationId}")
     if violationId
       @highlightCallback(e, +violationId, true)
     else
@@ -235,16 +236,16 @@ class CilkscreenPluginView
 
   drawViolationConnector: (violation, index) ->
     DEBUG = false
-    console.log("Drawing violation connector.") if DEBUG
-    console.log(violation) if DEBUG
+    Debug.log("Drawing violation connector.") if DEBUG
+    Debug.log(violation) if DEBUG
 
     if not violation.line1.filename or not violation.line2.filename
       return
 
     # The violation is within the same file, so we'll have to draw a curved line.
     if violation.line1.filename is violation.line2.filename
-      console.log(@minimapIndex) if DEBUG
-      console.log(@minimapIndex[violation.line1.filename]) if DEBUG
+      Debug.log(@minimapIndex) if DEBUG
+      Debug.log(@minimapIndex[violation.line1.filename]) if DEBUG
       startX = MinimapUtil.getLeftSide(@minimapIndex[violation.line1.filename])
       line1Y = MinimapUtil.getLineTop(violation.line1.line)
       line2Y = MinimapUtil.getLineTop(violation.line2.line)
@@ -261,24 +262,24 @@ class CilkscreenPluginView
         endX = MinimapUtil.getLeftSide(@minimapIndex[violation.line2.filename]) - 2
       line1Y = MinimapUtil.getLineTop(violation.line1.line)
       line2Y = MinimapUtil.getLineTop(violation.line2.line)
-      console.log("Drawing a curve from #{startX},#{line1Y} to #{endX}, #{line2Y}") if DEBUG
+      Debug.log("Drawing a curve from #{startX},#{line1Y} to #{endX}, #{line2Y}") if DEBUG
       SVG.addSVGLine(@minimapOverlay, "#{index}", startX, line1Y, endX, line2Y)
 
   highlightViolation: (index, shouldScroll) ->
-    console.log("Clicked on a highlight violation for index #{index}")
+    Debug.log("Clicked on a highlight violation for index #{index}")
 
-    console.log("Highlighting violation: #{index}")
+    Debug.log("Highlighting violation: #{index}")
     if not @violationContainer.children[index]
-      console.log("Uh oh, current violation not found but highlightViolation triggered")
+      Debug.log("Uh oh, current violation not found but highlightViolation triggered")
     else
-      console.log($("[violation-id=#{index}]"))
+      Debug.log($("[violation-id=#{index}]"))
       @setHighlight(index)
       if shouldScroll
         @scrollToViolation(index)
 
   resetHighlight: (index) ->
-    console.log("resetHighlight: #{index}")
-    console.log(@violationContainer.children)
+    Debug.log("resetHighlight: #{index}")
+    Debug.log(@violationContainer.children)
 
     return if index is null
     violationDiv = @violationContainer.children[index]
@@ -294,7 +295,7 @@ class CilkscreenPluginView
     @update(violations)
 
   scrollToViolation: (index) ->
-    console.log("Trying to scroll to index #{index}")
+    Debug.log("Trying to scroll to index #{index}")
     violationTop = @violationContainer.children[index].offsetTop
     @violationContainer.scrollTop = violationTop - 10
 
@@ -302,14 +303,14 @@ class CilkscreenPluginView
   serialize: ->
 
   clearChildren: () ->
-    console.log("Clearing children...")
+    Debug.log("Clearing children...")
 
     $(@violationContainer).empty()
     $(@minimapContainer).empty()
 
   # Tear down any state and detach
   destroy: ->
-    console.log("Destroying plugin view")
+    Debug.log("Destroying plugin view")
     @element.remove()
 
   getElement: () ->

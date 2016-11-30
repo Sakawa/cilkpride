@@ -1,6 +1,7 @@
 TextEditor = null
 CustomSet = require('../utils/set')
 $ = require('jquery')
+Debug = require('../utils/debug')
 
 VERBS_PT = {
   "read": "read",
@@ -32,7 +33,7 @@ class DetailCodeView
     if @index % 2 is 0
       violationView.classList.add('even')
     $(violationView).click((e) =>
-      console.log("[detail-code-view] violation view #{@index} clicked")
+      Debug.log("[detail-code-view] violation view #{@index} clicked")
       @onViolationClickCallback(e, @index)
     )
     # violationView.addEventListener("click", ((e) => @onViolationClickCallback(e, @index)), true)
@@ -44,9 +45,9 @@ class DetailCodeView
 
   constructVisualPreview: (lineInfo, stacktrace, isFirst) ->
     if stacktrace?
-      console.log("Called constructVisualPreview with stack trace: ")
-      console.log(stacktrace)
-    console.log(lineInfo)
+      Debug.log("Called constructVisualPreview with stack trace: ")
+      Debug.log(stacktrace)
+    Debug.log(lineInfo)
 
     divToAdd = document.createElement('div')
     divToAdd.classList.add('code-container-table', 'visual-detail')
@@ -54,9 +55,9 @@ class DetailCodeView
       divToAdd.classList.add('bottom')
 
     # First we check if there is a source annotation to use.
-    # console.log("LineInfoText: ")
-    # console.log(lineInfo.text)
-    # console.log(lineInfo.text is undefined)
+    # Debug.log("LineInfoText: ")
+    # Debug.log(lineInfo.text)
+    # Debug.log(lineInfo.text is undefined)
     if lineInfo.text is undefined
       emptyDiv = document.createElement('div')
       emptyDiv.classList.add('empty')
@@ -124,8 +125,8 @@ class DetailCodeView
       stacktraceDiv = document.createElement('div')
       stacktraceDiv.classList.add('stacktrace-container')
       for file in Object.getOwnPropertyNames(stacktrace)
-        console.log(stacktrace[file])
-        console.log(stacktrace[file].length)
+        Debug.log(stacktrace[file])
+        Debug.log(stacktrace[file].length)
 
         for i in [0 ... stacktrace[file].length]
           st = stacktrace[file][i]
@@ -156,7 +157,7 @@ class DetailCodeView
             additionalInfoButton.textContent = "(see full stack trace)"
 
             $(additionalInfoButton).click((e) =>
-              console.log("Toggled the stacktrace.")
+              Debug.log("Toggled the stacktrace.")
               $(additionalInfoContainer).toggleClass('clicked')
               if $(additionalInfoContainer).hasClass('clicked')
                 additionalInfoButton.textContent = "(hide full stack trace)"
@@ -188,12 +189,12 @@ class DetailCodeView
     return lineEditor
 
   parseStacktrace: (stacktrace) ->
-    console.log("In parseStacktrace")
+    Debug.log("In parseStacktrace")
     for file in Object.getOwnPropertyNames(stacktrace)
-      console.log(stacktrace[file])
-      console.log(stacktrace[file].length)
+      Debug.log(stacktrace[file])
+      Debug.log(stacktrace[file].length)
       for i in [0 ... stacktrace[file].length]
-        console.log("Doing #{i}")
+        Debug.log("Doing #{i}")
         stacktrace[file][i] = stacktrace[file][i].map(
           (item) ->
             paren = item.indexOf('(')
@@ -226,7 +227,7 @@ class DetailCodeView
 
   @attachFileOpenListener: (node, filename, lineNum) ->
     $(node).click((e) ->
-      console.log("Clicked on a file open div: #{node.classList}")
+      Debug.log("Clicked on a file open div: #{node.classList}")
       atom.workspace.open(filename, {initialLine: +lineNum - 1, initialColumn: Infinity})
       e.stopPropagation()
     )

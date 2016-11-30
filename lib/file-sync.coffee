@@ -1,5 +1,6 @@
 fs = require('fs')
 path = require('path').posix
+Debug = require('./utils/debug')
 
 module.exports =
 class FileSync
@@ -19,7 +20,7 @@ class FileSync
 
       @sftp = sftp.sftp
       @getSettings = sftp.getSettings
-      console.log("[file-sync] Got a new SFTP.")
+      Debug.log("[file-sync] Got a new SFTP.")
 
       callback() if callback
     )
@@ -45,8 +46,8 @@ class FileSync
     # Verify that the directory we're trying to copy from actually exists.
     (new Promise((resolve, reject) ->
       source.stat(sourceBaseDir, (err, stats) ->
-        console.log(err) if err
-        console.log(stats) if stats
+        Debug.log(err) if err
+        Debug.log(stats) if stats
         unless stats?.isDirectory()
           atom.notifications.addError("Error: Source directory #{sourceBaseDir} doesn't exist.")
           reject()
@@ -65,7 +66,7 @@ class FileSync
     else
       folderAlternative = "/#{folder}"
     if folder in settings.syncIgnoreDir or folderAlternative in settings.syncIgnoreDir
-      console.log("[file-sync] Ignore dir #{folder} encountered.")
+      Debug.log("[file-sync] Ignore dir #{folder} encountered.")
       return
 
     destPath = path.join(settings.localBaseDir, folder)
@@ -84,7 +85,7 @@ class FileSync
           else
             newPath = path.join(folder, file.filename)
           fullPath = path.join(sourceBaseDir, newPath)
-          console.log("[file-sync] STAT :: statting #{fullPath}")
+          Debug.log("[file-sync] STAT :: statting #{fullPath}")
           do (newPath) =>
             source.stat(fullPath, (err, stats) =>
               throw "Something went wrong when trying to get information on #{fullPath}." if err
@@ -93,7 +94,7 @@ class FileSync
               else if stats.isDirectory()
                 @copyFolderRecur(newPath, localToRemote, source, dest, sourceBaseDir, settings)
               else
-                console.log("[file-sync] SFTP :: unknown filetype #{newPath} encountered")
+                Debug.log("[file-sync] SFTP :: unknown filetype #{newPath} encountered")
             )
       )
     )
@@ -108,11 +109,11 @@ class FileSync
     else
       fileAlternative = file.substring(1)
     if file in settings.syncIgnoreFile or fileAlternative in settings.syncIgnoreFile
-      console.log("[file-sync] SFTP :: ignored file #{file}")
+      Debug.log("[file-sync] SFTP :: ignored file #{file}")
       callback() if callback
       return
 
-    console.log("[file-sync STFP] :: received request for #{file} : #{localToRemote} local -> remote")
+    Debug.log("[file-sync STFP] :: received request for #{file} : #{localToRemote} local -> remote")
     if localToRemote
       (new Promise((resolve, reject) =>
         @createDestFolderIfNecessary(path.dirname(path.join(settings.remoteBaseDir, file)), @sftp, settings, resolve, reject)
@@ -136,45 +137,45 @@ class FileSync
     else
       fileAlternative = file.substring(1)
     if file in settings.syncIgnoreFile or fileAlternative in settings.syncIgnoreFile
-      console.log("[file-sync] SFTP :: ignored file #{file}")
+      Debug.log("[file-sync] SFTP :: ignored file #{file}")
       callback() if callback
       return
 
-    console.log("[file-sync STFP] :: received request for #{file} : #{localToRemote} local -> remote")
+    Debug.log("[file-sync STFP] :: received request for #{file} : #{localToRemote} local -> remote")
     if localToRemote
       @sftp.fastPut(path.join(settings.localBaseDir, file), path.join(settings.remoteBaseDir, file), (err) ->
         throw "Something went wrong when trying to copy #{file} to the remote server." if err
-        console.log("[file-sync] SFTP :: fastPut LTR #{file} succeeded")
+        Debug.log("[file-sync] SFTP :: fastPut LTR #{file} succeeded")
         callback() if callback
       )
     else
       @sftp.fastGet(path.join(settings.remoteBaseDir, file), path.join(settings.localBaseDir, file), (err) ->
         throw "Something went wrong when trying to copy #{file} from the remote server." if err
-        console.log("[file-sync] SFTP :: fastPut RTL #{file} succeeded")
+        Debug.log("[file-sync] SFTP :: fastPut RTL #{file} succeeded")
         callback() if callback
       )
 
   unlink: (file, settings, callback) ->
     @sftp.unlink(path.join(settings.remoteBaseDir, file), (err) ->
       if err
-        console.log("[file-sync] Failed to remove #{file}")
+        Debug.log("[file-sync] Failed to remove #{file}")
       else
-        console.log("[file-sync] SFTP :: unlink #{file} succeeded")
+        Debug.log("[file-sync] SFTP :: unlink #{file} succeeded")
       callback() if callback
     )
 
   rmdir: (folder, settings, callback) ->
     @sftp.rmdir(path.join(settings.remoteBaseDir, folder), (err) ->
       if err
-        console.log(err)
-        console.log("[file-sync] Failed to remove folder #{folder}")
+        Debug.log(err)
+        Debug.log("[file-sync] Failed to remove folder #{folder}")
       else
-        console.log("[file-sync] SFTP:: rmdir #{folder} succeeded")
+        Debug.log("[file-sync] SFTP:: rmdir #{folder} succeeded")
       callback() if callback
     )
 
   createDestFolderIfNecessary: (destPath, dest, settings, resolve, reject) ->
-    console.log("[file-sync] Checking folder #{destPath}")
+    Debug.log("[file-sync] Checking folder #{destPath}")
 
     # TODO: Is there a better way of doing this?
     (new Promise((resolve, reject) =>
@@ -185,24 +186,24 @@ class FileSync
         else if not stats.isDirectory()
           throw "#{destPath} exists but is not a directory - please verify that the paths are correct in your config file."
         else
-          console.log("[file-sync] SFTP :: verified #{destPath} folder exists")
+          Debug.log("[file-sync] SFTP :: verified #{destPath} folder exists")
           resolve()
       )
     )).then(() =>
       dest.stat(destPath, (err, stats) =>
-        console.log("[file-sync] SFTP :: stat on #{destPath}")
-        console.log(stats)
+        Debug.log("[file-sync] SFTP :: stat on #{destPath}")
+        Debug.log(stats)
         if err
-          console.log(err)
+          Debug.log(err)
           dest.mkdir(destPath, (err) =>
-            console.log(["file-sync] SFTP :: dest folder creation"])
-            console.log(err)
+            Debug.log(["file-sync] SFTP :: dest folder creation"])
+            Debug.log(err)
             resolve()
           )
         else if not stats.isDirectory()
           throw "#{destPath} exists but is not a directory - please verify that the paths are correct in your config file."
         else
-          console.log("[file-sync] SFTP :: verified #{destPath} folder exists")
+          Debug.log("[file-sync] SFTP :: verified #{destPath} folder exists")
           resolve()
       )
     )

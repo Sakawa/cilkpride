@@ -2,6 +2,7 @@ MarkerView = require('./cilkscreen-marker-view')
 PluginView = require('./cilkscreen-plugin-view')
 
 {normalizePath} = require('../utils/utils')
+Debug = require('../utils/debug')
 
 module.exports =
 class CilkscreenUI
@@ -125,31 +126,31 @@ class CilkscreenUI
     if @currentViolations
       for violation in @currentViolations
         if violation.markers
-          console.log("Removing markers...")
-          console.log(violation.markers)
+          Debug.log("Removing markers...")
+          Debug.log(violation.markers)
           for marker in violation.markers
-            console.log(marker)
+            Debug.log(marker)
             marker.destroy()
 
   highlightMarkers: (index) ->
-    console.log("[ui] marker")
-    console.log(@currentViolations[index])
+    Debug.log("[ui] marker")
+    Debug.log(@currentViolations[index])
     for marker in @currentViolations[index].markers
-      console.log("Highlighting marker...")
+      Debug.log("Highlighting marker...")
       marker.properties.item.highlightMarker()
     if @currentViolations[index].minimapMarkers
       for marker in @currentViolations[index].minimapMarkers
-        console.log("[ui] highlighting marker")
-        console.log(marker)
+        Debug.log("[ui] highlighting marker")
+        Debug.log(marker)
         marker.classList.add('highlighted')
 
   resetMarkers: () ->
-    console.log("in reset markers")
-    console.log(@currentHighlightedIndex)
+    Debug.log("in reset markers")
+    Debug.log(@currentHighlightedIndex)
     if @currentHighlightedIndex isnt null
-      console.log(@currentViolations[@currentHighlightedIndex])
+      Debug.log(@currentViolations[@currentHighlightedIndex])
       for marker in @currentViolations[@currentHighlightedIndex].markers
-        console.log("Resetting marker...")
+        Debug.log("Resetting marker...")
         marker.properties.item.resetMarker()
       if @currentViolations[@currentHighlightedIndex].minimapMarkers
         for marker in @currentViolations[@currentHighlightedIndex].minimapMarkers
@@ -158,7 +159,7 @@ class CilkscreenUI
   # Highlight-related functions
 
   highlightViolation: (e, index, shouldScroll) ->
-    console.log("highlightViolation called: #{index}")
+    Debug.log("highlightViolation called: #{index}")
     e.stopPropagation() if e
 
     # If we're already highlighting the correct violation, just scroll.
