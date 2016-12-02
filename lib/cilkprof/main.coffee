@@ -49,9 +49,9 @@ class CilkprofModule
     })
 
     # debug below
-    atom.commands.add('atom-workspace', 'cilkpride:debug', (event) =>
-      @debugTest()
-    )
+    # atom.commands.add('atom-workspace', 'cilkpride:debug', (event) =>
+    #   @debugTest()
+    # )
 
   updateInstance: () ->
     @currentState.initialized = false

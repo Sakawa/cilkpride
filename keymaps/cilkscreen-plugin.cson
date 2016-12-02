@@ -10,3 +10,4 @@
 'atom-text-editor':
   'ctrl-alt-g': 'cilkpride:sync-local-remote'
   'ctrl-alt-j': 'cilkpride:sync-remote-local'
+  'ctrl-alt-b': 'cilkpride:debug2'

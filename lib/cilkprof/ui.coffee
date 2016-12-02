@@ -310,18 +310,19 @@ class CilkprofUI
       filepath = path.join(@path, fileLineArray[0])
       fileline = +(fileLineArray[1])
       console.log("[cilkprof-ui] checking filepath #{filepath} : #{fileline}")
-      @markers[id] = new CilkprofMarkerView({
-          work: info["work on work"]
-          totalWork: results.work
-          span: info["span on span"]
-          totalSpan: results.span
-          totalCount: info["count on work"]
-          spanCount: info["count on span"]
-      })
-      do (id, fileline) =>
-        editorCache[filepath]?.forEach((textEditor) =>
-          @createCilkprofMarker(textEditor, id, fileline)
-        )
+      if info["work on work"] / results.work > 0.01
+        @markers[id] = new CilkprofMarkerView({
+            work: info["work on work"]
+            totalWork: results.work
+            span: info["span on span"]
+            totalSpan: results.span
+            totalCount: info["count on work"]
+            spanCount: info["count on span"]
+        })
+        do (id, fileline) =>
+          editorCache[filepath]?.forEach((textEditor) =>
+            @createCilkprofMarker(textEditor, id, fileline)
+          )
 
   createCilkprofMarker: (editor, id, line) ->
     console.log("[cilkprof-marker] received #{line}")

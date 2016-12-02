@@ -18,6 +18,10 @@
         {
           'label': 'Sync Project (Remote -> Local)',
           'command': 'cilkpride:sync-remote-local'
+        },
+        {
+          'label': 'Debug2',
+          'command': 'cilkpride:debug2'
         }
       ]
     ]

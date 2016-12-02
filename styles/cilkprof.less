@@ -12,9 +12,58 @@ atom-text-editor::shadow .gutter[gutter-name=cilkprof] {
 }
 
 atom-text-editor::shadow .gutter[gutter-name=cilkprof] .decoration {
-  .cilkprof-marker-test-1-work {
+  .cilkprof-marker-test-0-work {
     width: 50px;
-    height: 10px;
+    height: 9px;
+    text-align: center;
+    border: @text-color-highlight 1px solid;
+    border-radius: 1px;
+
+    .cilkprof-marker-test-0-work-inner {
+      position: relative;
+      height: 100%;
+      color: @text-color-selected;
+      background-color: darken(red, 10%);
+
+      .cilkprof-marker-test-0-work-bar-text {
+        font-family: Segoe UI;
+        position: absolute;
+        top: -3px;
+        font-size: 8pt;
+        width: 50px;
+        height: 9px;
+      }
+    }
+  }
+
+  .cilkprof-marker-test-0-span {
+    width: 50px;
+    height: 9px;
+    text-align: center;
+    border: @text-color-highlight 1px solid;
+    border-radius: 1px;
+
+    .cilkprof-marker-test-0-span-inner {
+      position: relative;
+      height: 100%;
+      color: @text-color-selected;
+      background-color: blue;
+
+      .cilkprof-marker-test-0-span-bar-text {
+        font-family: Segoe UI;
+        font-size: 8pt;
+        position: absolute;
+        top: -3px;
+        width: 50px;
+        height: 9px;
+      }
+    }
+  }
+
+  .cilkprof-marker-test-1-work {
+    width: 54px;
+    height: 16px;
+    margin: 3px 2px;
     text-align: center;
     border: @text-color-highlight 1px solid;
     border-radius: 1px;
@@ -28,55 +77,6 @@ atom-text-editor::shadow .gutter[gutter-name=cilkprof] .decoration {
       .cilkprof-marker-test-1-work-bar-text {
         font-family: Segoe UI;
         position: absolute;
-        top: -3px;
-        font-size: 8pt;
-        width: 50px;
-        height: 10px;
-      }
-    }
-  }
-
-  .cilkprof-marker-test-1-span {
-    width: 50px;
-    height: 10px;
-    text-align: center;
-    border: @text-color-highlight 1px solid;
-    border-radius: 1px;
-
-    .cilkprof-marker-test-1-span-inner {
-      position: relative;
-      height: 100%;
-      color: @text-color-selected;
-      background-color: blue;
-
-      .cilkprof-marker-test-1-span-bar-text {
-        font-family: Segoe UI;
-        font-size: 8pt;
-        position: absolute;
-        top: -2px;
-        width: 50px;
-        height: 10px;
-      }
-    }
-  }
-
-  .cilkprof-marker-test-2-work {
-    width: 54px;
-    height: 16px;
-    margin: 3px 2px;
-    text-align: center;
-    border: @text-color-highlight 1px solid;
-    border-radius: 1px;
-
-    .cilkprof-marker-test-2-work-inner {
-      position: relative;
-      height: 100%;
-      color: @text-color-selected;
-      background-color: darken(red, 10%);
-
-      .cilkprof-marker-test-2-work-bar-text {
-        font-family: Segoe UI;
-        position: absolute;
         font-size: 10pt;
         top: -3px;
         width: 54px;
@@ -85,6 +85,67 @@ atom-text-editor::shadow .gutter[gutter-name=cilkprof] .decoration {
     }
   }
 
+  .cilkprof-marker-test-3 {
+    width: 54px;
+    height: 16px;
+    margin: 3px 2px;
+    text-align: center;
+    border: @text-color-highlight 1px solid;
+    border-radius: 1px;
+    position: relative;
+
+    .cilkprof-marker-test-3-inner1 {
+      position: absolute;
+      left: 0;
+      height: 100%;
+      color: @text-color-selected;
+      background-color: darken(red, 10%);
+      display: inline-block;
+
+      .cilkprof-marker-test-3-bar-text {
+        font-family: Segoe UI;
+        position: absolute;
+        top: -3px;
+        font-size: 10pt;
+        width: 54px;
+        height: 16px;
+      }
+    }
+
+    .cilkprof-marker-test-3-inner2 {
+      background-color: green;
+      display: inline-block;
+      height: 100%;
+      position: absolute;
+    }
+  }
+
+  .hidden {
+    display: none;
+  }
+
+  .line {
+    fill: none;
+    stroke: white;
+    stroke-width: 2.5px;
+  }
+
+  .dashed-line {
+    fill: none;
+    stroke: white;
+    stroke-width: 2px;
+    stroke-dasharay: '5, 5';
+  }
+
+  .area {
+    fill: #4a4a4a;
+  }
+
+  .axis {
+    path {
+      stroke: white;
+    }
+  }
 }
 
 // Detail View CSS
