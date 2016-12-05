@@ -61,7 +61,7 @@ class CilkprofMarker
         .x((d) -> return x(d.index))
         .y((d) -> return y(d.time))
 
-      data = @calculateWorkSpan(info.work, info.span, info.totalWork, info.totalSpan)
+      data = @calculateWorkSpan(info.work, info.spanOnWork, info.totalWork, info.totalSpan)
       console.info(data)
       x.domain([1, MAX_CORES]);
       y.domain([0, 1]);
@@ -91,8 +91,8 @@ class CilkprofMarker
     else if type is 3
       element = document.createElement('div')
       runningTime = (info.totalWork - info.totalSpan) / CURRENT_CORES + info.totalSpan
-      percent1 = (info.work - info.span) / CURRENT_CORES / runningTime
-      percent2 = info.span / runningTime
+      percent1 = (info.work - info.spanOnWork) / CURRENT_CORES / runningTime
+      percent2 = info.spanOnWork / runningTime
       bar = document.createElement('div')
       bar.classList.add("cilkprof-marker-test-#{type}")
       percent1001 = Math.round(percent1 * 10000) / 100

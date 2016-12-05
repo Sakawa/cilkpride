@@ -293,13 +293,13 @@ class CilkprofUI
     for line in results.csv
       id = line["file"] + ':' + line["line"]
       if id in cleanResults
-        for header in ["work on work", "span on span"]
+        for header in ["work on work", "span on span", "span on work"]
           cleanResults[id][header] += parseFloat(line[header])
         for header in ["count on work", "count on span"]
           cleanResults[id][header] = max(cleanResults[id][header], parseFloat(line[header]))
       else
         cleanResults[id] = {}
-        for header in ["work on work", "span on span", "count on work", "count on span"]
+        for header in ["work on work", "span on span", "count on work", "count on span", "span on work"]
           cleanResults[id][header] = parseFloat(line[header])
     console.log("[cilkprof-ui]")
     console.log(cleanResults)
@@ -313,6 +313,7 @@ class CilkprofUI
       if info["work on work"] / results.work > 0.01
         @markers[id] = new CilkprofMarkerView({
             work: info["work on work"]
+            spanOnWork: info["span on work"]
             totalWork: results.work
             span: info["span on span"]
             totalSpan: results.span
