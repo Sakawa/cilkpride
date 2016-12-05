@@ -9,6 +9,7 @@ color = require('d3-color')
 
 Project = require('./project')
 StatusBarView = require('./status-bar-view')
+Debug = require('./utils/debug')
 
 module.exports = Cilkide =
   projects: {}
@@ -42,7 +43,7 @@ module.exports = Cilkide =
     # Add a hook when we're changing active panes so that the status tile shows
     # the correct status for the current project.
     @subscriptions.add(atom.workspace.onDidChangeActivePaneItem((item) =>
-      console.log("Changed active pane item...")
+      Debug.log("Changed active pane item...")
       @updateStatusBar()
     ))
 
@@ -111,7 +112,7 @@ module.exports = Cilkide =
     #   currentTE.decorateMarker(marker, {type: 'overlay', item: boxLayer, position: 'head'})
     # )
 
-    console.log("Cilkscreen plugin activated!")
+    Debug.log("Cilkscreen plugin activated!")
 
   deactivate: ->
     @subscriptions.dispose()
@@ -137,14 +138,14 @@ module.exports = Cilkide =
       @statusBarElement.displayPluginDisabled()
       return
 
-    console.log("Switched active panes. Editor id is #{editor.id}.")
+    Debug.log("Switched active panes. Editor id is #{editor.id}.")
     if projectPath = @editorToPath[editor.id]
       @statusBarElement.updatePath(projectPath)
       @projects[projectPath].updateState(true)
     else
       @statusBarElement.updatePath(null)
       @statusBarElement.displayPluginDisabled()
-    console.log("Project path is #{projectPath}")
+    Debug.log("Project path is #{projectPath}")
 
   onStatusTileClick: () ->
     @changeDetailPanel(@getActivePanePath())
@@ -156,7 +157,7 @@ module.exports = Cilkide =
     if tpath isnt @panelPath or not @detailPanel
       if @detailPanel
         @detailPanel.destroy()
-        console.log("Destroyed detail panel.")
+        Debug.log("Destroyed detail panel.")
       @detailPanel = atom.workspace.addBottomPanel(item: project.getDetailPanel(), visible: true)
       @panelPath = tpath
     else
@@ -171,7 +172,7 @@ module.exports = Cilkide =
   # Event handlers
 
   registerEditor: (editor) ->
-    console.log("Received a new editor (id #{editor.id})")
+    Debug.log("Received a new editor (id #{editor.id})")
 
     # Cancel if this editor is already associated with a path.
     return if @editorToPath[editor.id]
@@ -184,8 +185,8 @@ module.exports = Cilkide =
 
     @subscriptions.add(editor.onDidChangePath(
       () =>
-        console.log("Editor changed path: " + editor.id)
-        console.log("The new path is now: #{normalizePath(editor.getPath?())}")
+        Debug.log("Editor changed path: " + editor.id)
+        Debug.log("The new path is now: #{normalizePath(editor.getPath?())}")
         if oldPath = @editorToPath[editor.id]
           @projects[oldPath].unregisterEditor(editor.id)
         if newPath = normalizePath(editor.getPath?())
@@ -203,26 +204,26 @@ module.exports = Cilkide =
     return if not projectPath = @findConfFile(filePath)
 
     @editorToPath[editor.id] = projectPath
-    console.log("[main] Registering #{editor.id} with path #{projectPath}")
+    Debug.log("[main] Registering #{editor.id} with path #{projectPath}")
     @registerEditorWithProject(projectPath, editor)
 
   # Traverse the directories to determine if this file has a parent directory
   # that contains a configuration file.
   findConfFile: (filePath) ->
     traversedPaths = []
-    console.log("File path: #{filePath}")
+    Debug.log("File path: #{filePath}")
     projectPath = path.join(filePath, '..')
-    console.log("Project path: #{projectPath}")
+    Debug.log("Project path: #{projectPath}")
     if not rootDir = path.parse(projectPath).root
       # On Windows machines, due to path normalization we must break on '.'
       rootDir = '.'
-    console.log("Root dir: #{rootDir}")
+    Debug.log("Root dir: #{rootDir}")
     loop
-      console.log("Testing for Makefile: #{projectPath}")
+      Debug.log("Testing for Makefile: #{projectPath}")
       traversedPaths.push(projectPath)
       # If we've seen this path before, break early.
       if @pathToPath[projectPath] isnt undefined
-        console.log("Quick escape: #{@pathToPath[projectPath]}")
+        Debug.log("Quick escape: #{@pathToPath[projectPath]}")
         return @pathToPath[projectPath]
       try
         stats = fs.statSync(path.join(projectPath, 'cilkpride-conf.json'))
@@ -244,7 +245,7 @@ module.exports = Cilkide =
         @createConfFile(normalizePath(directory))
 
   createConfFile: (directory) ->
-    console.log("Generating a configuration file in #{directory}...")
+    Debug.log("Generating a configuration file in #{directory}...")
     confPath = path.join(directory, 'cilkpride-conf.json')
     fs.open(confPath, 'wx', (err, fd) ->
       if err
@@ -290,14 +291,14 @@ module.exports = Cilkide =
   destroyProject: (projectPath) ->
     return if not @projects[projectPath]
 
-    console.log("[main] Destroying project #{projectPath}")
-    console.log(@editorToPath)
+    Debug.log("[main] Destroying project #{projectPath}")
+    Debug.log(@editorToPath)
     if projectPath is @panelPath
       @onPanelCloseCallback()
       @detailPanel.destroy()
       @panelPath = null
     for editorId in Object.getOwnPropertyNames(@editorToPath)
-      console.log("[main] Destroying project, testing editor #{editorId}")
+      Debug.log("[main] Destroying project, testing editor #{editorId}")
       if @editorToPath[editorId] is projectPath
         delete @editorToPath[editorId]
     @projects[projectPath].destroy()
@@ -306,9 +307,9 @@ module.exports = Cilkide =
     @updateStatusBar()
 
   registerEditorWithProject: (projectPath, editor) ->
-    console.log("Trying to register editor id #{editor.id} with #{projectPath} from cilkpride.")
+    Debug.log("Trying to register editor id #{editor.id} with #{projectPath} from cilkpride.")
     if projectPath not in Object.getOwnPropertyNames(@projects)
-      console.log("Path doesn't currently exist, so making a new one...")
+      Debug.log("Path doesn't currently exist, so making a new one...")
       @projects[projectPath] = new Project({
         changeDetailPanel: ((tpath) => @changeDetailPanel(tpath))
         onPanelCloseCallback: (() => @onPanelCloseCallback())

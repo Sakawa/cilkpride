@@ -1,4 +1,5 @@
 $ = require('jquery')
+Debug = require('./utils/debug')
 
 module.exports =
 class CilkideDetailPanel
@@ -49,12 +50,12 @@ class CilkideDetailPanel
     @clickTriggers = {}
 
   resizeStart: () =>
-    # console.log("Resize start")
+    # Debug.log("Resize start")
     $(document).on('mousemove', @resizeMove)
     $(document).on('mouseup', @resizeStop)
 
   resizeStop: () =>
-    # console.log("Resize stop")
+    # Debug.log("Resize stop")
     $(document).off('mousemove', @resizeMove)
     $(document).off('mouseup', @resizeStop)
 
@@ -62,7 +63,7 @@ class CilkideDetailPanel
     return @resizeStop() unless event.which is 1
 
     element = $(@element)
-    # console.log("Horizontal resize move")
+    # Debug.log("Horizontal resize move")
     height = element.offset().top + element.outerHeight() - event.pageY
     element.height(height)
 
@@ -104,7 +105,7 @@ class Tab
     )
 
   setState: (state) ->
-    console.log("[tab] setting state to #{state}")
+    Debug.log("[tab] setting state to #{state}")
     @resetState()
     if state is "ok"
       @icon.classList.add('icon', 'icon-check')

@@ -12,6 +12,7 @@ SSHModule = require('./ssh-module')
 FileSync = require('./file-sync')
 Runner = require('./runner')
 Console = require('./console/console')
+Debug = require('./utils/debug')
 
 module.exports =
 class Project
@@ -66,18 +67,18 @@ class Project
     # Set a watch so that we know when the configuration file is changed.
     @configWatch = chokidar.watch(path.join(@path, 'cilkpride-conf.json'))
     @configWatch.on('change', (path) =>
-      console.log("[project] Received watch (change) notification on config")
+      Debug.log("[project] Received watch (change) notification on config")
       @refreshConfFile()
-      console.log("Refreshed config file, state is #{@currentState.state}")
+      Debug.log("Refreshed config file, state is #{@currentState.state}")
       if @currentState.state is "ok" and not @cilksanMod
         @init()
     ).on('unlink', (path) =>
-      console.log("[project] Received watch (unlink) notification on config")
+      Debug.log("[project] Received watch (unlink) notification on config")
       @onDestroy()
     )
 
     atom.commands.add('atom-workspace', 'cilkpride:debug', () =>
-      console.log("[debug] Wow! Debug!")
+      Debug.log("[debug] Wow! Debug!")
     )
 
     @init()
@@ -124,7 +125,7 @@ class Project
         onStateChange: (() => @updateState(false))
       })
       @sshMod.eventEmitter.on('ready', () =>
-        console.log("[project] Received ready on SSHModule")
+        Debug.log("[project] Received ready on SSHModule")
         @signalModules()
       )
       @sshMod.startConnection()
@@ -133,32 +134,32 @@ class Project
       @createDirectoryWatch
 
   updateState: (repressUpdate, module) ->
-    console.log("[project] Updating status bar for #{@path}, current path being #{@statusBar.getCurrentPath()}")
-    console.log("[project] Current state is #{@currentState.state}")
-    console.log(@settings)
-    console.log(@sshMod)
+    Debug.log("[project] Updating status bar for #{@path}, current path being #{@statusBar.getCurrentPath()}")
+    Debug.log("[project] Current state is #{@currentState.state}")
+    Debug.log(@settings)
+    Debug.log(@sshMod)
 
     if module and module.currentState.output
       @consoleMod.updateOutput(module.name, module.currentState.output)
 
     if @path isnt @statusBar.getCurrentPath()
-      console.log("[project] status bar: path mismatch")
+      Debug.log("[project] status bar: path mismatch")
       return
 
     # Global project states take priority - config errors, etc.
     if @currentState.state is "config_error"
-      console.log("[project] status bar: config error")
+      Debug.log("[project] status bar: config error")
       return @statusBar.displayConfigError(repressUpdate)
 
     # SSH statuses take next priority
     if @settings.sshEnabled and @sshMod
       if @sshMod.state is "not_connected"
-        console.log("[project] status bar: not connected")
+        Debug.log("[project] status bar: not connected")
         return @statusBar.displayNotConnected(repressUpdate)
 
       # SSHModule still loading...
       if @sshMod.state is "connecting"
-        console.log("[project] status bar: sshMod still connecting")
+        Debug.log("[project] status bar: sshMod still connecting")
         return @statusBar.displayLoading(repressUpdate)
 
     # All modules loaded, display status based off if (in priority)
@@ -167,23 +168,24 @@ class Project
     # 3. Any module is reporting a error
     # 4. All modules are reporting start.
     # 4. All modules are reporting OK.
-    if not @cilksanMod.currentState.ready
-      if @cilksanMod.currentState.lastRuntime
-        return @statusBar.displayCountdown(@cilksanMod.currentState.startTime +
-          @cilksanMod.currentState.lastRuntime)
-      else
-        return @statusBar.displayCountdown()
+    if @cilksanMod
+      if not @cilksanMod.currentState.ready
+        if @cilksanMod.currentState.lastRuntime
+          return @statusBar.displayCountdown(@cilksanMod.currentState.startTime +
+            @cilksanMod.currentState.lastRuntime)
+        else
+          return @statusBar.displayCountdown()
 
-    if @cilksanMod.currentState.state is "execution_error"
-      return @statusBar.displayExecutionError(repressUpdate)
+      if @cilksanMod.currentState.state is "execution_error"
+        return @statusBar.displayExecutionError(repressUpdate)
 
-    if @cilksanMod.currentState.state is "error"
-      return @statusBar.displayErrors(repressUpdate)
+      if @cilksanMod.currentState.state is "error"
+        return @statusBar.displayErrors(repressUpdate)
 
-    if @cilksanMod.currentState.state is "start"
-      return @statusBar.displayStart(repressUpdate)
+      if @cilksanMod.currentState.state is "start"
+        return @statusBar.displayStart(repressUpdate)
 
-    console.log("[project] status bar: fallthrough")
+    Debug.log("[project] status bar: fallthrough")
     @statusBar.displayNoErrors(repressUpdate)
 
     return
@@ -200,26 +202,26 @@ class Project
     @currentState.state = "ok"
 
   createDirectoryWatch: () ->
-    console.log("[project] in createDirectoryWatch")
+    Debug.log("[project] in createDirectoryWatch")
     return if @directoryWatch or not atom.config.get('cilkpride.watchDirectory', false)
 
     @directoryWatch = chokidar.watch(@path, {ignored: /[\/\\]\./, persistent: true})
 
     @directoryWatch.on('add', (filePath) =>
-      console.log("File #{filePath} has been added")
+      Debug.log("File #{filePath} has been added")
       if @settings.sshEnabled
         @fileSync.copyFile(path.relative(@settings.localBaseDir, normalizePath(filePath)), true, @settings, () =>
-          console.log("[project] Initializing timer with state as #{@currentState.state}")
+          Debug.log("[project] Initializing timer with state as #{@currentState.state}")
           @initializeTimer()
         )
       else
         @initializeTimer()
     )
     @directoryWatch.on('change', (filePath) =>
-      console.log("File #{filePath} has been changed")
+      Debug.log("File #{filePath} has been changed")
       if @settings.sshEnabled
         @fileSync.copyFile(path.relative(@settings.localBaseDir, normalizePath(filePath)), true, @settings, () =>
-          console.log("[project] Initializing timer with state as #{@currentState.state}")
+          Debug.log("[project] Initializing timer with state as #{@currentState.state}")
           @initializeTimer()
         )
       else
@@ -227,12 +229,12 @@ class Project
     )
     # TODO: For now, don't clean up, but consider removing old files on remote
     @directoryWatch.on('unlink', (filePath) =>
-      console.log("File #{filePath} has been removed")
+      Debug.log("File #{filePath} has been removed")
       if @settings.sshEnabled
         @fileSync.unlink(path.relative(@settings.localBaseDir, normalizePath(filePath)), @settings) if @fileSync
     )
     @directoryWatch.on('unlinkDir', (filePath) =>
-      console.log("[project] Directory #{filePath} has been removed")
+      Debug.log("[project] Directory #{filePath} has been removed")
       if @settings.sshEnabled
         @fileSync.rmdir(path.relative(@settings.localBaseDir, normalizePath(filePath)), @settings) if @fileSync
     )
@@ -251,7 +253,7 @@ class Project
     clearInterval(@idleTimeout) if @idleTimeout
     @idleTimeout = setTimeout(
       () =>
-        console.log("Idle timeout start! #{new Date()}")
+        Debug.log("Idle timeout start! #{new Date()}")
         @makeExecutable()
         @idleTimeout = null
       , atom.config.get('cilkpride.idleSeconds') * 1000
@@ -262,20 +264,24 @@ class Project
 
   refreshConfFile: () ->
     checkSettings = (settings) ->
-      console.log("[project] Checking settings...")
+      Debug.log("[project] Checking settings...")
       return false unless settings.cilksanCommand and settings.cilkprofCommand
       if settings.sshEnabled
         return false unless settings.username?.trim?().split(' ').length is 1
+        Debug.log("[project] passed username check")
         return false unless settings.hostname?.trim?().split(' ').length is 1
+        Debug.log("[project] passed hostname check")
         return false unless settings.localBaseDir # Windows can have spaces.
+        Debug.log("[project] passed localBaseDir check")
         return false unless settings.remoteBaseDir?.trim?().split(' ').length is 1
+        Debug.log("[project] passed remoteBaseDir check")
         return false unless typeof settings.port is "number"
         return false unless settings.syncIgnoreDir?.constructor is Array
         return false unless settings.syncIgnoreFile?.constructor is Array
       return true
 
     try
-      console.log(path.join(@path, 'cilkpride-conf.json'))
+      Debug.log(path.join(@path, 'cilkpride-conf.json'))
       @settings = JSON.parse(fs.readFileSync(
         path.join(@path, 'cilkpride-conf.json'),
         {
@@ -284,11 +290,12 @@ class Project
         }
       ))
       throw new Error() if not checkSettings(@settings)
-      console.log(@settings)
+      Debug.log(@settings)
       @currentState.state = "ok"
       @updateState()
       return true
     catch error
+      Debug.log(error)
       @currentState.state = "config_error"
       @updateState()
       atom.notifications.addError("Cilkpride was unable to read #{path.join(@path, 'cilkpride-conf.json')}.
@@ -308,7 +315,7 @@ class Project
     @cilkprofMod.startThread()
 
   killModules: () ->
-    console.log("Attempting to kill modules for path #{@path}...")
+    Debug.log("Attempting to kill modules for path #{@path}...")
     clearInterval(@idleTimeout)
 
     @cilksanMod.kill()
@@ -318,18 +325,18 @@ class Project
   # Hooks
 
   registerEditor: (editor) ->
-    console.log("[project] Trying to register an editor with project path #{@path}.")
-    console.log(editor)
+    Debug.log("[project] Trying to register an editor with project path #{@path}.")
+    Debug.log(editor)
     if editor.id not in @editorIds
       @editorIds.push(editor.id)
 
     if not atom.config.get('cilkpride.watchDirectory', false)
       saveDisposable = editor.onDidSave(()=>
-        console.log("Saved!")
+        Debug.log("Saved!")
 
         if @sshMod
           @fileSync.copyFile(path.relative(@settings.localBaseDir, normalizePath(editor.getPath())), true, @settings, () =>
-            console.log("[project] Initializing timer with state as #{@currentState.state}")
+            Debug.log("[project] Initializing timer with state as #{@currentState.state}")
             @initializeTimer()
           )
         else

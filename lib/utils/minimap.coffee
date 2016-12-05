@@ -4,6 +4,7 @@ $ = require('jquery')
 {CompositeDisposable} = require('atom')
 {normalizePath} = require('../utils/utils')
 path = require('path').posix
+Debug = require('./debug')
 
 NUM_PIXELS_PER_LINE = 6
 
@@ -43,7 +44,7 @@ class Minimap
     filenameDiv.textContent = path.relative(@projectPath, @filename)
     @element.appendChild(filenameDiv)
     $(filenameDiv).click((e) =>
-      console.log("Clicked on a file open div: #{filenameDiv.classList}")
+      Debug.log("Clicked on a file open div: #{filenameDiv.classList}")
       atom.workspace.open(@filename, {initialLine: 0, initialColumn: Infinity})
     )
 
@@ -62,15 +63,15 @@ class Minimap
     @currentId += 1
     @destroy()
     @editor = editor if editor
-    console.log("[minimap] Normalized path: #{normalizePath(atom.workspace.getActiveTextEditor().getPath())}")
+    Debug.log("[minimap] Normalized path: #{normalizePath(atom.workspace.getActiveTextEditor().getPath())}")
     @editor = atom.workspace.getActiveTextEditor() if normalizePath(atom.workspace.getActiveTextEditor().getPath()) is @filename
     if @editor
-      console.log("init started for #{@filename} minimap for editor #{@editor.id} for filename #{@filename}")
+      Debug.log("init started for #{@filename} minimap for editor #{@editor.id} for filename #{@filename}")
     else
-      console.log("init started for #{@filename} minimap for filename #{@filename}")
+      Debug.log("init started for #{@filename} minimap for filename #{@filename}")
       data = FileLineReader.readFile(@filename)
-      console.log("[minimap] reading data")
-      console.log(data)
+      Debug.log("[minimap] reading data")
+      Debug.log(data)
       hiddenEditor = @constructTextEditor({ mini: false })
       @editor = hiddenEditor
       @editor.setGrammar(atom.grammars.grammarForScopeName('source.c'))
@@ -90,11 +91,11 @@ class Minimap
         @minimap.setCharHeight(3)
         @minimap.setCharWidth(3)
         @minimap.onDidChange((obj) ->
-          console.log("minimap changed!")
-          console.log(obj)
+          Debug.log("minimap changed!")
+          Debug.log(obj)
         )
         @minimap.onDidDestroy((obj) =>
-          console.log("minimap destroyed!")
+          Debug.log("minimap destroyed!")
           @minimap = null
           return @init()
         )
@@ -118,29 +119,29 @@ class Minimap
         height = numLines * @minimap.getLineHeight()
         minimapElement.style.height = "#{height}px"
         minimapElement.style.width = "150px"
-        console.log(@minimap.getLineHeight())
-        console.log(@minimap.getVerticalScaleFactor())
-        console.log(@minimap.getScreenHeight())
-        console.log(@minimap.getTextEditorScaledHeight())
+        Debug.log(@minimap.getLineHeight())
+        Debug.log(@minimap.getVerticalScaleFactor())
+        Debug.log(@minimap.getScreenHeight())
+        Debug.log(@minimap.getTextEditorScaledHeight())
 
         resolve()
       )
     )
 
     @promise = @promise.then(() =>
-      console.log("#{@filename} minimap init promise returned")
-      console.log(@decorationQueue)
+      Debug.log("#{@filename} minimap init promise returned")
+      Debug.log(@decorationQueue)
       for range in @decorationQueue
         marker = @editor.markBufferRange(range, {id: 'cilkscreen-minimap'})
         @minimap.decorateMarker(marker, {type: 'line', scope: '.cilkscreen .minimap-marker', plugin: "cilkscreen", color: "#961B05"})
       @ready = true
-      console.log("#{@filename} minimap ready")
+      Debug.log("#{@filename} minimap ready")
 
       minimapView = atom.views.getView(@minimap)
       minimapView.requestForcedUpdate()
-      console.log(minimapView)
-      console.log(minimapView.shadowRoot)
-      console.log(minimapView.shadowRoot.children[0])
+      Debug.log(minimapView)
+      Debug.log(minimapView.shadowRoot)
+      Debug.log(minimapView.shadowRoot.children[0])
     )
 
 
@@ -150,9 +151,9 @@ class Minimap
     # parentLeft = @minimapOverlay.offsetLeft
     # left = Math.round(e.pageX - rect.left)
     # top = Math.round(e.pageY - rect.top)
-    # console.log("clicked: left: #{e.pageX - rect.left}, top: #{e.pageY - rect.top}")
+    # Debug.log("clicked: left: #{e.pageX - rect.left}, top: #{e.pageY - rect.top}")
     # violationId = e.target.getAttribute('violation-id')
-    # console.log("clicked on id: #{violationId}")
+    # Debug.log("clicked on id: #{violationId}")
 
     # if violationId
     #   @highlightViolation(e, +violationId, true)
@@ -160,8 +161,8 @@ class Minimap
     #   e.stopPropagation()
 
   updateScrollOverlay: () ->
-    # console.log(@minimap.getTextEditorScaledHeight())
-    # console.log(@minimap.getTextEditorScaledScrollTop())
+    # Debug.log(@minimap.getTextEditorScaledHeight())
+    # Debug.log(@minimap.getTextEditorScaledScrollTop())
     # TODO: this is bad performance
     try
       @minimapOverlay.style.height = "#{@minimap.getTextEditorScaledHeight()}px"
@@ -180,10 +181,10 @@ class Minimap
   addDecoration: (line) ->
     range = [[line - 1, 0], [line - 1, Infinity]]
     if not @ready
-      console.log("#{@filename} minimap not ready for decoration, adding to queue")
+      Debug.log("#{@filename} minimap not ready for decoration, adding to queue")
       @decorationQueue.push(range)
     else
-      console.log("#{@filename} minimap ready for decoration, adding directly")
+      Debug.log("#{@filename} minimap ready for decoration, adding directly")
       @decorationQueue.push(range)
       marker = @editor.markBufferRange(range, {id: 'cilkscreen-minimap'})
       @minimap.decorateMarker(marker, {type: 'line', scope: '.cilkscreen .minimap-marker', plugin: "cilkscreen", color: "#961B05"})

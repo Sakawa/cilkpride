@@ -1,13 +1,13 @@
 {
   "username": "gchau",
-  "remoteBaseDir": "/mit/gchau/test-folder",
-  "cilksanCommand": "make cilksan && ./cilksan",
+  "remoteBaseDir": "/mit/gchau/cilkpride/test",
+  "cilksanCommand": "make CILKSAN=1 && ./cilksan",
 
   "sshEnabled": true,
   "hostname": "athena.dialup.mit.edu",
   "port": 22,
   "launchInstance": false,
-  "localBaseDir": "C:/Users/Taiga/Documents/cilkpride/examples/simple-race",
-  "syncIgnoreFile": ["/cilkpride-conf.json"],
-  "syncIgnoreDir": ["/.git", "/log.awsrun"]
+  "localBaseDir": "C:/Users/Taiga/Documents/temp/simple-race",
+  "syncIgnoreFile": ["cilkpride-conf.json"],
+  "syncIgnoreDir": [".git", "log.awsrun"]
 }

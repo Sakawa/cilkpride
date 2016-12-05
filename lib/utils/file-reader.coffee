@@ -1,6 +1,7 @@
 fs = require('fs')
 
 CustomSet = require('./set')
+Debug = require('./debug')
 
 module.exports =
 class FileLineReader
@@ -48,8 +49,8 @@ class FileLineReader
     fileSet.add(readRequestArray)
     readRequestArray = fileSet.getContents()
 
-    console.log("Sending violations off to read: ")
-    console.log(readRequestArray)
+    Debug.log("Sending violations off to read: ")
+    Debug.log(readRequestArray)
 
     requests = readRequestArray.map((item) =>
       return new Promise((resolve) =>

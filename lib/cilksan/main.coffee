@@ -1,5 +1,9 @@
 CilkscreenView = require('./ui')
+<<<<<<< HEAD:lib/cilksan/main.coffee
 Parser = require('./parser')
+=======
+Debug = require('../utils/debug')
+>>>>>>> master:lib/cilkscreen/main.coffee
 
 module.exports =
 class CilkscreenModule
@@ -49,8 +53,8 @@ class CilkscreenModule
     })
 
     atom.commands.add('atom-workspace', 'cilkpride:debug', () =>
-      console.log("[debug]")
-      console.log(@currentState)
+      Debug.log("[debug]")
+      Debug.log(@currentState)
     )
 
   updateInstance: () ->
@@ -76,12 +80,12 @@ class CilkscreenModule
 
   runnerCallback: (err, output) ->
     settings = @getSettings(true)
-    console.log("[cilkscreen] Received code #{err}")
-    console.log("[cilkscreen] Received output #{output}")
+    Debug.log("[cilkscreen] Received code #{err}")
+    Debug.log("[cilkscreen] Received output #{output}")
     @currentState.output = output
     if err is 0
-      console.log("[cilkscreen] Killing old markers, if any...")
-      console.log("[cilkscreen] Parsing data...")
+      Debug.log("[cilkscreen] Killing old markers, if any...")
+      Debug.log("[cilkscreen] Parsing data...")
       Parser.processViolations(output, (results) =>
         @updateState(err, results)
         @generateUI(results)
@@ -96,14 +100,14 @@ class CilkscreenModule
   # State-based functions
 
   resetState: () ->
-    console.log("[cilksan] Resetting state.")
+    Debug.log("[cilksan] Resetting state.")
     @currentState.ready = true
     @currentState.startTime = null
     @onStateChange()
 
   # TODO: figure this out
   updateState: (err, results) ->
-    console.log("[cilksan] Update state.")
+    Debug.log("[cilksan] Update state.")
     @currentState.lastUpdated = Date.now()
 
     # Shortcircuit if err is actually null
@@ -125,7 +129,7 @@ class CilkscreenModule
     @onStateChange()
 
   startState: () ->
-    console.log("[cilksan] Start state.")
+    Debug.log("[cilksan] Start state.")
     @currentState.ready = false
     @currentState.startTime = Date.now()
     @tab.setState("busy")

@@ -2,6 +2,7 @@ path = require('path').posix
 
 CustomSet = require('../utils/set')
 FileLineReader = require('../utils/file-reader')
+Debug = require('../utils/debug')
 
 module.exports =
 class CilksanParser
@@ -15,7 +16,7 @@ class CilksanParser
   # Cilksan-related functions
   # TODO: could replace this with smart regex
   @parseCilksanOutput: (text, remoteDir, localDir) ->
-    console.log("[cilksan-parser] remote dir: #{remoteDir} | local dir: #{localDir}")
+    Debug.log("[cilksan-parser] remote dir: #{remoteDir} | local dir: #{localDir}")
     text = text.split('\n')
     violations = []
     currentViolation = null
@@ -32,12 +33,12 @@ class CilksanParser
         if line.indexOf("access at") isnt -1
           splitLine = line.trim().split(' ')
           accessType = splitLine[0]
-          # console.log(splitLine)
+          # Debug.log(splitLine)
           sourceCodeLine = splitLine[4].slice(1, -1)
-          # console.log(sourceCodeLine)
+          # Debug.log(sourceCodeLine)
           # There will be 5 elements if the line has a source code annotation.
           if splitLine.length is 5
-            # console.log(sourceCodeLine)
+            # Debug.log(sourceCodeLine)
             splitIndex = sourceCodeLine.lastIndexOf(':')
             sourceCodeFile = sourceCodeLine.substr(0, splitIndex)
             sourceCodeLine = +sourceCodeLine.substr(splitIndex + 1)
@@ -57,8 +58,8 @@ class CilksanParser
             rawText: line
           }
 
-          console.log("[cilksan-parser] Line data")
-          console.log(lineData)
+          Debug.log("[cilksan-parser] Line data")
+          Debug.log(lineData)
 
           if currentViolation.line1
             currentViolation.line2 = lineData
@@ -69,7 +70,7 @@ class CilksanParser
             lineId = lineData.filename + ":" + lineData.line
             currentViolation.stacktrace[lineId] = []
         # else if line.indexOf("called by") isnt -1
-        #   # console.log(currentViolation)
+        #   # Debug.log(currentViolation)
         #   currentStacktrace.push(line)
         else
           lineId = currentViolation.line2.filename + ":" + currentViolation.line2.line
@@ -93,8 +94,8 @@ class CilksanParser
     violationSet.add(violations, mergeStacktraces)
     violations = violationSet.getContents()
 
-    console.log("[cilksan-parser] Pruned violations...")
-    console.log(violations)
+    Debug.log("[cilksan-parser] Pruned violations...")
+    Debug.log(violations)
     return violations
 
   @getViolationLineCode: (violations, next) ->
@@ -131,9 +132,9 @@ class CilksanParser
   @groupCodeWithViolations: (violations, texts) ->
     for violation in violations
       codeSnippetsFound = 0
-      # console.log(violation)
+      # Debug.log(violation)
       for text in texts
-        # console.log(text)
+        # Debug.log(text)
         if codeSnippetsFound is 2
           break
         if violation.line1.filename is text.filename and violation.line1.line - 2 is text.lineRange[0]
@@ -145,6 +146,6 @@ class CilksanParser
           violation.line2.lineRange = text.lineRange
           codeSnippetsFound++
       if codeSnippetsFound < 2 and violation.line1.filename isnt null and violation.line2.filename isnt null
-        console.log("[cilksan-parser] groupCodeWithViolations: too few snippets found for a violation")
-    console.log("[cilksan-parser] Finished groupCodeWithViolations")
-    console.log(violations)
+        Debug.log("[cilksan-parser] groupCodeWithViolations: too few snippets found for a violation")
+    Debug.log("[cilksan-parser] Finished groupCodeWithViolations")
+    Debug.log(violations)
