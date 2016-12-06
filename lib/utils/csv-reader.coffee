@@ -1,3 +1,5 @@
+Debug = require('./debug')
+
 module.exports =
 class CSVReader
 
@@ -27,5 +29,5 @@ class CSVReader
     else
       output = entries
 
-    console.log(output)
+    Debug.log(output)
     return output

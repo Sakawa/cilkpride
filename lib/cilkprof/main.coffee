@@ -1,6 +1,7 @@
 Parser = require('./parser')
 CilkprofView = require('./ui')
 CilkprofMarkerView = require('./cilkprof-marker-view')
+Debug = require('../utils/debug')
 
 CILKPROF_START = "cilkpride:cilkprof_start"
 CILKPROF_END = "cilkpride:cilkprof_end"
@@ -78,8 +79,8 @@ class CilkprofModule
 
   runnerCallback: (err, output) ->
     settings = @getSettings(true)
-    console.log("[cilkprof] Received code #{err}")
-    console.log("[cilkprof] Received output #{output}")
+    Debug.log("[cilkprof] Received code #{err}")
+    Debug.log("[cilkprof] Received output #{output}")
     if output.indexOf(CILKPROF_START) isnt -1 and output.indexOf(CILKPROF_END)
       @currentState.output = output.substring(0, output.indexOf(CILKPROF_START))
       @currentState.output += output.substring(output.indexOf(CILKPROF_END) + CILKPROF_END.length)
@@ -94,20 +95,20 @@ class CilkprofModule
 
   generateUI: (parserResults) ->
     # @violations = parserResults
-    console.log(parserResults)
+    Debug.log(parserResults)
     @view.createUI(parserResults)
 
   # State-based functions
 
   resetState: () ->
-    console.log("[cilkprof] Resetting state.")
+    Debug.log("[cilkprof] Resetting state.")
     @currentState.ready = true
     @currentState.startTime = null
     @onStateChange()
 
   # TODO: figure this out
   updateState: (err, results) ->
-    console.log("[cilkprof] Update state.")
+    Debug.log("[cilkprof] Update state.")
     @currentState.lastUpdated = Date.now()
 
     # Shortcircuit if err is actually null
@@ -129,7 +130,7 @@ class CilkprofModule
     @onStateChange()
 
   startState: () ->
-    console.log("[cilkprof] Start state.")
+    Debug.log("[cilkprof] Start state.")
     @currentState.ready = false
     @currentState.startTime = Date.now()
     @tab.setState("busy")
@@ -161,7 +162,7 @@ class CilkprofModule
     if gutter = currentTE.gutterWithName('cilkpride-debug')
       gutter.destroy()
     newGutter = currentTE.addGutter({name: 'cilkpride-debug', priority: -101, visible: true})
-    console.log(newGutter)
+    Debug.log(newGutter)
 
     # Create gutter test
     cilkprofMarker = new CilkprofMarkerView(info)

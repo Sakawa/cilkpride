@@ -2,14 +2,10 @@ DEBUG_ON = false
 
 module.exports =
 class Debug
-  @log: (string) ->
-    console.log(string) if DEBUG_ON
+  if DEBUG_ON then @log = console.log.bind(window.console) else @log = () ->
 
-  @error: (string) ->
-    console.error(string) if DEBUG_ON
+  if DEBUG_ON then @error = console.error.bind(window.console) else @error = () ->
 
-  @info: (string) ->
-    console.info(string) if DEBUG_ON
+  if DEBUG_ON then @info = console.info.bind(window.console) else @info = () ->
 
-  @warn: (string) ->
-    console.warn(string) if DEBUG_ON
+  if DEBUG_ON then @warn = console.warn.bind(window.console) else @warn = () ->

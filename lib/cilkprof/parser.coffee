@@ -23,7 +23,7 @@ class CilkprofParser
       return null
 
     cilkprofOutput = cilkprofOutput.substring(cilkprofOutput.indexOf(CILKPROF_START) + CILKPROF_START.length, cilkprofOutput.indexOf(CILKPROF_END))
-    console.log(info)
+    Debug.log(info)
     return {
       work: Math.round(parseFloat(info[1]) * 1000000000),
       span: Math.round(parseFloat(info[2]) * 1000000000),

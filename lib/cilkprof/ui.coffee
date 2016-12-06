@@ -1,6 +1,7 @@
 {CompositeDisposable, Range} = require('atom')
 {normalizePath} = require('../utils/utils')
 CilkprofMarkerView = require('./cilkprof-marker-view')
+Debug = require('../utils/debug')
 
 $ = require('jquery')
 d3 = require('d3')
@@ -67,7 +68,7 @@ class CilkprofUI
     @element.appendChild(contentWrapper)
 
   createUI: (results) ->
-    console.log("[cilkprof] updating view - begin")
+    Debug.log("[cilkprof] updating view - begin")
     # make stuff here (table)
     if results.csv.length
       @createMarkers(results)
@@ -96,8 +97,8 @@ class CilkprofUI
     @contentContainer.appendChild(emptyContentDiv)
 
   createCilkprofTable: (results) ->
-    console.log("[cilkprof-ui] called createCilkprofTable")
-    console.log(results)
+    Debug.log("[cilkprof-ui] called createCilkprofTable")
+    Debug.log(results)
     results.csv.sort((a,b) ->
       return parseFloat(b["work on work"]) - parseFloat(a["work on work"])
     )
@@ -158,7 +159,7 @@ class CilkprofUI
           textWrapper.classList.add('cilkprof-table-file-line')
           do (result) =>
             $(textWrapper).on('click', (e) =>
-              console.log(result)
+              Debug.log(result)
               atom.workspace.open(path.join(@path, result["file"]), {initialLine: +result["line"] - 1, initialColumn: Infinity})
               e.stopPropagation()
             )
@@ -171,7 +172,7 @@ class CilkprofUI
     @contentContainer.appendChild(cilkprofTable)
 
     $(cilkprofTable).on('click', 'th', (e) =>
-      console.log(e)
+      Debug.log(e)
 
       index = $(e.target).index()
       isAsc = false
@@ -190,7 +191,7 @@ class CilkprofUI
         for header in tableData.getElementsByTagName('th')
           header.classList.remove('sort-asc', 'sort-desc')
         $("colgroup").each((index, element) ->
-          console.log(element)
+          Debug.log(element)
           element.classList.remove('highlighted')
         )
         e.target.classList.add('sort-desc')
@@ -301,15 +302,15 @@ class CilkprofUI
         cleanResults[id] = {}
         for header in ["work on work", "span on span", "count on work", "count on span", "span on work"]
           cleanResults[id][header] = parseFloat(line[header])
-    console.log("[cilkprof-ui]")
-    console.log(cleanResults)
+    Debug.log("[cilkprof-ui]")
+    Debug.log(cleanResults)
 
     for id in Object.getOwnPropertyNames(cleanResults)
       info = cleanResults[id]
       fileLineArray = id.split(':')
       filepath = path.join(@path, fileLineArray[0])
       fileline = +(fileLineArray[1])
-      console.log("[cilkprof-ui] checking filepath #{filepath} : #{fileline}")
+      Debug.log("[cilkprof-ui] checking filepath #{filepath} : #{fileline}")
       if info["work on work"] / results.work > 0.01
         @markers[id] = new CilkprofMarkerView({
             work: info["work on work"]
@@ -326,7 +327,7 @@ class CilkprofUI
           )
 
   createCilkprofMarker: (editor, id, line) ->
-    console.log("[cilkprof-marker] received #{line}")
+    Debug.log("[cilkprof-marker] received #{line}")
     cilkprofGutter = editor.gutterWithName('cilkprof')
     range = new Range([line - 1, 0], [line - 1, Infinity])
     marker = editor.markBufferRange(range, {id: 'cilkprof'})
@@ -336,12 +337,12 @@ class CilkprofUI
     return if not editorPath = normalizePath(editor.getPath?())
 
     for id in Object.getOwnPropertyNames(@markers)
-      console.log("[cilkprof-ui] checking id #{id}")
+      Debug.log("[cilkprof-ui] checking id #{id}")
       violation = @markers[id]
       fileLineArray = id.split(':')
       filepath = fileLineArray[0]
       fileline = +(fileLineArray[1])
-      console.log("[cilkprof-ui] checking filepath #{filepath} against #{editorPath}")
+      Debug.log("[cilkprof-ui] checking filepath #{filepath} against #{editorPath}")
 
       if path.join(@path, filepath) is editorPath
         @createCilkprofMarker(editor, id, fileline)
@@ -350,14 +351,14 @@ class CilkprofUI
   serialize: ->
 
   clearChildren: () ->
-    console.log("Clearing children...")
+    Debug.log("Clearing children...")
 
     $(@contentContainer).empty()
     $(@callgraphContainer).empty()
 
   # Tear down any state and detach
   destroy: ->
-    console.log("Destroying plugin view")
+    Debug.log("Destroying plugin view")
     @element.remove()
 
   getElement: () ->

@@ -1,5 +1,6 @@
 d3 = require('d3')
 $ = require('jquery')
+Debug = require('../utils/debug')
 
 module.exports =
 class CilkprofMarker
@@ -62,7 +63,7 @@ class CilkprofMarker
         .y((d) -> return y(d.time))
 
       data = @calculateWorkSpan(info.work, info.spanOnWork, info.totalWork, info.totalSpan)
-      console.info(data)
+      Debug.info(data)
       x.domain([1, MAX_CORES]);
       y.domain([0, 1]);
       g.append("path")
@@ -112,7 +113,7 @@ class CilkprofMarker
       bar.appendChild(innerBar)
       innerBar.appendChild(text)
       element.appendChild(bar)
-    console.log(element)
+    Debug.log(element)
     return element
 
   createBarGraphView: (raw, total, count, isWork, type) ->
