@@ -95,6 +95,7 @@ class Project
       runner: new Runner({
         getInstance: ((callback) => @getInstance(callback))
         getSettings: (() => return @settings)
+        moduleName: "cilksan"
       })
       path: @path
     })
@@ -106,6 +107,7 @@ class Project
       runner: new Runner({
         getInstance: ((callback) => @getInstance(callback))
         getSettings: (() => return @settings)
+        moduleName: "cilkprof"
       })
       path: @path
     })
@@ -131,7 +133,7 @@ class Project
       @sshMod.startConnection()
       @fileSync = new FileSync({getSFTP: ((callback) => @getSFTP(callback))})
     else
-      @createDirectoryWatch
+      @createDirectoryWatch()
 
   updateState: (repressUpdate, module) ->
     Debug.log("[project] Updating status bar for #{@path}, current path being #{@statusBar.getCurrentPath()}")
@@ -203,7 +205,7 @@ class Project
 
   createDirectoryWatch: () ->
     Debug.log("[project] in createDirectoryWatch")
-    return if @directoryWatch or not atom.config.get('cilkpride.watchDirectory', false)
+    return if @directoryWatch or not atom.config.get('cilkpride.generalSettings.watchDirectory', false)
 
     @directoryWatch = chokidar.watch(@path, {ignored: /[\/\\]\./, persistent: true})
 
@@ -330,7 +332,7 @@ class Project
     if editor.id not in @editorIds
       @editorIds.push(editor.id)
 
-    if not atom.config.get('cilkpride.watchDirectory', false)
+    if not atom.config.get('cilkpride.generalSettings.watchDirectory', false)
       saveDisposable = editor.onDidSave(()=>
         Debug.log("Saved!")
 

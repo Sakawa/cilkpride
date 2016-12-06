@@ -17,36 +17,62 @@
     "atom-package-deps": "4.3.1",
     "dateformat": "1.0.12",
     "chokidar": "1.6.1",
-    "d3": "4.3.0"
+    "d3": "4.4.0"
   },
   "package-deps": [
     "minimap"
   ],
   "configSchema": {
-    "idleSeconds": {
-      "type": "integer",
-      "default": 0,
-      "minimum": 0,
-      "title": "Idle Length",
-      "description": "Changes the number of seconds the text editor must be idle before running cilkscreen."
+    "tapirSettings": {
+      "type": "object",
+      "title": "Shell Settings",
+      "description": "If you are running Cilksan and Cilkprof locally, we will need information on where the compilers and libs are.",
+      "properties": {
+        "gccLocation": {
+          "type": "string",
+          "default": "",
+          "title": "GCC 4.8 Cilkplus Directory",
+          "description": "To run Tapir, we'll need the GCC 4.8 Cilkplus-enabled compiler. The location of where the compiler lives goes here. Separate directories with a colon."
+        },
+        "extraPathDirectories": {
+          "type": "string",
+          "default": "",
+          "title": "Extra Path Directories",
+          "description": "Place any additional directories needed for the $PATH variable. This includes Tapir, Cilksan, and Cilkprof locations. Separate directories with a colon."
+        },
+        "extraLibraryPathDirectories": {
+          "type": "string",
+          "default": "",
+          "title": "Extra Library Path Directories",
+          "description": "Place any additional directories needed for the $LIBRARY_PATH variable. This includes Tapir, Cilksan, and Cilkprof locations. Separate directories with a colon."
+        },
+        "extraLDLibraryPathDirectories": {
+          "type": "string",
+          "default": "",
+          "title": "Extra LD Library Path Directories",
+          "description": "Place any additional directories needed for the $LD_LIBRARY_PATH variable. This includes Tapir, Cilksan, and Cilkprof locations. Separate directories with a colon."
+        }
+      }
     },
-    "cilktoolsPath": {
-      "type": "string",
-      "default": "",
-      "title": "Cilktools Executable Path",
-      "description": "The location of the Cilktools executables, to run cilkscreen."
-    },
-    "cilkLibPath": {
-      "type": "string",
-      "default": "",
-      "title": "Cilk Library Path",
-      "description": "The location of the Cilk lib files, so that the plugin can appropriately build executables."
-    },
-    "watchDirectory": {
-      "type": "boolean",
-      "default": true,
-      "title": "Watch Project Directory",
-      "description": "Enable this to automatically upload when any file in the directory is changed, not only when you save from Atom. Also automatically syncs at the beginning, after SSHing."
+    "generalSettings": {
+      "type": "object",
+      "title": "General Settings",
+      "description": "Cilkpride-general settings can be found here.",
+      "properties": {
+        "idleSeconds": {
+          "type": "integer",
+          "default": 0,
+          "minimum": 0,
+          "title": "Idle Length",
+          "description": "Changes the number of seconds the text editor must be idle before running cilkscreen."
+        },
+        "watchDirectory": {
+          "type": "boolean",
+          "default": true,
+          "title": "Watch Project Directory",
+          "description": "Enable this to automatically upload when any file in the directory is changed, not only when you save from Atom. Also automatically syncs at the beginning, after SSHing."
+        }
+      }
     }
   },
   "consumedServices": {

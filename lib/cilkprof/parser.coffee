@@ -1,4 +1,9 @@
 CSVParser = require('../utils/csv-reader')
+Debug = require('../utils/debug')
+
+# These should be synced with those in main.coffee.
+CILKPROF_START = "cilkpride:cilkprof_start"
+CILKPROF_END = "cilkpride:cilkprof_end"
 
 module.exports =
 class CilkprofParser
@@ -10,11 +15,14 @@ class CilkprofParser
   # TODO: filter out the stuff we aren't using
   @parseResults: (cilkprofOutput) ->
     # Cut out the first line (which is the command)
-    cilkprofOutput = cilkprofOutput.split('\n')
-    workSpan = cilkprofOutput[1]
-    info = workSpan.match(workRegex)
-    cilkprofOutput.splice(0,2)
-    cilkprofOutput = cilkprofOutput.join('\n')
+    Debug.info("[cilkprof-parser] parsing...")
+    Debug.log(cilkprofOutput)
+    cilkprofArray = cilkprofOutput.split('\n')
+    info = cilkprofOutput.match(workRegex)
+    if not info or cilkprofOutput.indexOf(CILKPROF_START) is -1 or cilkprofOutput.indexOf(CILKPROF_END) is -1
+      return null
+
+    cilkprofOutput = cilkprofOutput.substring(cilkprofOutput.indexOf(CILKPROF_START) + CILKPROF_START.length, cilkprofOutput.indexOf(CILKPROF_END))
     console.log(info)
     return {
       work: Math.round(parseFloat(info[1]) * 1000000000),

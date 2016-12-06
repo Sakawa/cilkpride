@@ -1,9 +1,6 @@
 CilkscreenView = require('./ui')
-<<<<<<< HEAD:lib/cilksan/main.coffee
 Parser = require('./parser')
-=======
 Debug = require('../utils/debug')
->>>>>>> master:lib/cilkscreen/main.coffee
 
 module.exports =
 class CilkscreenModule
@@ -34,7 +31,7 @@ class CilkscreenModule
     @tab = props.tab
 
     @currentState = {
-      ready: false
+      ready: not @getSettings().sshEnabled
       state: "start"
       lastUpdated: null
       lastSuccessful: null

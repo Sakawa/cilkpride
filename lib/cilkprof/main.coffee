@@ -2,6 +2,9 @@ Parser = require('./parser')
 CilkprofView = require('./ui')
 CilkprofMarkerView = require('./cilkprof-marker-view')
 
+CILKPROF_START = "cilkpride:cilkprof_start"
+CILKPROF_END = "cilkpride:cilkprof_end"
+
 module.exports =
 class CilkprofModule
 
@@ -68,7 +71,7 @@ class CilkprofModule
       @resetState()
 
   startThread: () ->
-    @runner.spawn(@getSettings().cilkprofCommand, [], {}, (err, output) =>
+    @runner.spawn(@getSettings().cilkprofCommand + " && echo '#{CILKPROF_START}' && cat cilkprof_cs_0.csv && echo '#{CILKPROF_END}'", [], {}, (err, output) =>
       @runnerCallback(err, output)
     )
     @startState()
@@ -77,10 +80,15 @@ class CilkprofModule
     settings = @getSettings(true)
     console.log("[cilkprof] Received code #{err}")
     console.log("[cilkprof] Received output #{output}")
-    @currentState.output = output
+    if output.indexOf(CILKPROF_START) isnt -1 and output.indexOf(CILKPROF_END)
+      @currentState.output = output.substring(0, output.indexOf(CILKPROF_START))
+      @currentState.output += output.substring(output.indexOf(CILKPROF_END) + CILKPROF_END.length)
+    else
+      @currentState.output = output
     if err is 0
       results = Parser.parseResults(output)
       @generateUI(results)
+      @updateState(err, output)
     else
       @updateState(err, null)
 
@@ -112,7 +120,7 @@ class CilkprofModule
     else
       @currentState.lastSuccessful = Date.now()
       @currentState.lastRuntime = Date.now() - @currentState.startTime
-      if results.length > 0
+      if results is null
         @currentState.state = "error"
       else
         @currentState.state = "ok"

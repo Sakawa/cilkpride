@@ -3,7 +3,7 @@
 CilkprofMarkerView = require('./cilkprof-marker-view')
 
 $ = require('jquery')
-d3interpolate = require('d3-interpolate')
+d3 = require('d3')
 path = require('path').posix
 
 module.exports =
@@ -250,7 +250,7 @@ class CilkprofUI
     altText.classList.add('cilkprof-table-raw')
     altText.textContent = "#{parseFloat(raw).toLocaleString("en-US")}"
 
-    interpolator = d3interpolate.interpolateRgb.gamma(2.2)("green", "red")
+    interpolator = d3.interpolateRgb.gamma(2.2)("green", "red")
     innerBar.style.backgroundColor = interpolator(percent)
     innerBar.style.color = "white"
     bar.appendChild(innerBar)
