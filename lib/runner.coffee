@@ -30,6 +30,10 @@ class Runner
         readyCallback()
       )
       instance.on('data', (errCode, output) =>
+        # chop off the first line, which is the command
+        outputLines = output.split('\n')
+        outputLines.splice(0, 1)
+        output = outputLines.join('\n')
         @callback(errCode, output)
       )
     )
