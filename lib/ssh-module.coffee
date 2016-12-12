@@ -48,7 +48,6 @@ class SSHModule
     @state = "connecting"
     @onStateChange()
 
-
     conn.on('ready', () =>
       Debug.log("[ssh-module] Connection ready.")
       settings = @getSettings()
@@ -57,6 +56,7 @@ class SSHModule
       @state = "connected"
       @onStateChange()
       @consecFailedAttempts = 0
+      clearTimeout(@connectionTimeout) if @connectionTimeout
     ).on('close', (hadError) =>
       Debug.log("[ssh-module] SFTP :: closed")
       @clean(conn)

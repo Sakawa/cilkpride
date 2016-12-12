@@ -129,8 +129,8 @@ module.exports = Cilkpride =
 
     # Add the gutter to the newly registered editor. We do this to all
     # editors for consistency - otherwise there will be a flicker as the gutter appears.
-    editor.addGutter({name: 'cilksan-lint', priority: -1, visible: true}) if not editor.gutterWithName('cilksan-lint')
-    editor.addGutter({name: 'cilkprof', priority: -2, visible: true}) if not editor.gutterWithName('cilkprof')
+    editor.addGutter({name: 'cilksan-lint', priority: -2, visible: true}) if not editor.gutterWithName('cilksan-lint')
+    editor.addGutter({name: 'cilkprof', priority: -1, visible: true}) if not editor.gutterWithName('cilkprof')
 
     # Hook for when a file is renamed/deleted
     @subscriptions.add(editor.onDidChangePath(

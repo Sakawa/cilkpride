@@ -153,7 +153,10 @@ class CilkprofUI
         else
           textWrapper = document.createElement('div')
           textWrapper.classList.add('cilkprof-table-text-wrapper')
-          textWrapper.textContent = result[header.data]
+          if header.data isnt "file" and header.data isnt "line"
+            textWrapper.textContent = parseFloat(result[header.data]).toLocaleString("en-US")
+          else
+            textWrapper.textContent = result[header.data]
           entryRowEntry.appendChild(textWrapper)
         if header.data is "file" or header.data is "line"
           textWrapper.classList.add('cilkprof-table-file-line')
@@ -251,7 +254,7 @@ class CilkprofUI
     altText.classList.add('cilkprof-table-raw')
     altText.textContent = "#{parseFloat(raw).toLocaleString("en-US")}"
 
-    interpolator = d3.interpolateRgb.gamma(2.2)("green", "red")
+    interpolator = d3.interpolateRgbBasis(["green", "gray", "red"])
     innerBar.style.backgroundColor = interpolator(percent)
     innerBar.style.color = "white"
     bar.appendChild(innerBar)

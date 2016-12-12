@@ -112,6 +112,7 @@ class Project
     @consoleMod.tab = @detailPanel.registerModuleTab("Console", @consoleMod)
 
     if @settings.sshEnabled
+      Debug.warn("[project] CREATING SSHMODULE")
       @sshMod = new SSHModule({
         getSettings: (() => return @settings)
         onStateChange: (() => @updateState(false))

@@ -126,8 +126,11 @@ atom-text-editor::shadow .gutter[gutter-name=cilkprof] .decoration {
 
   .line {
     fill: none;
-    stroke: white;
     stroke-width: 2.5px;
+  }
+
+  .area {
+    opacity: 0.15;
   }
 
   .dashed-line {
@@ -135,10 +138,6 @@ atom-text-editor::shadow .gutter[gutter-name=cilkprof] .decoration {
     stroke: white;
     stroke-width: 2px;
     stroke-dasharay: '5, 5';
-  }
-
-  .area {
-    fill: #4a4a4a;
   }
 
   .axis {
@@ -204,7 +203,7 @@ atom-text-editor::shadow .gutter[gutter-name=cilkprof] .decoration {
           }
 
           th, td {
-            padding: 10px 5px;
+            padding: 10px 10px;
           }
 
           th {
@@ -232,6 +231,7 @@ atom-text-editor::shadow .gutter[gutter-name=cilkprof] .decoration {
 
           td {
             text-align: right;
+            color: @text-color-selected;
 
             .cilkprof-table-text-wrapper.cilkprof-table-file-line {
               cursor: pointer;
