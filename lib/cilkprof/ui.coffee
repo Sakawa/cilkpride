@@ -30,6 +30,7 @@ class CilkprofUI
 
     @subscriptions = new CompositeDisposable()
     @markers = {}
+    @decorations = []
 
     # Create root element
     @element = document.createElement('div')
@@ -69,6 +70,7 @@ class CilkprofUI
 
   createUI: (results) ->
     Debug.log("[cilkprof] updating view - begin")
+    @clearChildren()
     # make stuff here (table)
     if results.csv.length
       @createMarkers(results)
@@ -80,8 +82,6 @@ class CilkprofUI
   resetUI: () ->
 
   createEmptyBackgroundMessage: () ->
-    @clearChildren()
-
     callgraphEmptyContentDiv = document.createElement('ul')
     callgraphEmptyContentDiv.classList.add('background-message', 'centered', 'cilkpride-normal-whitespace', 'cilkpride-background-message')
     backgroundMessage = document.createElement('li')
@@ -103,7 +103,6 @@ class CilkprofUI
       return parseFloat(b["work on work"]) - parseFloat(a["work on work"])
     )
 
-    @clearChildren()
     cilkprofTable = document.createElement('table')
     cilkprofTable.classList.add('cilkprof-table')
 
@@ -333,8 +332,11 @@ class CilkprofUI
     Debug.log("[cilkprof-marker] received #{line}")
     cilkprofGutter = editor.gutterWithName('cilkprof')
     range = new Range([line - 1, 0], [line - 1, Infinity])
-    marker = editor.markBufferRange(range, {id: 'cilkprof'})
-    cilkprofGutter.decorateMarker(marker, {type: 'gutter', item: @markers[id]})
+    marker = editor.markBufferRange(range)
+    @decorations.push(cilkprofGutter.decorateMarker(
+      marker,
+      {type: 'gutter', item: @markers[id]}
+    ))
 
   createMarkersForEditor: (editor) ->
     return if not editorPath = normalizePath(editor.getPath?())
@@ -353,9 +355,16 @@ class CilkprofUI
   # Returns an object that can be retrieved when package is activated
   serialize: ->
 
+  destroyOldMarkers: () ->
+    if @decorations
+      for decoration in @decorations
+        decoration.destroy()
+    @decorations = []
+
   clearChildren: () ->
     Debug.log("Clearing children...")
 
+    @destroyOldMarkers()
     $(@contentContainer).empty()
     $(@callgraphContainer).empty()
 

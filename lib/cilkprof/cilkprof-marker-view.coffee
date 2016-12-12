@@ -11,8 +11,8 @@ module.exports =
 class CilkprofMarker
 
   # TODO: document this
-  currentType: 1
-  numTypes: 3
+  currentType: 0
+  numTypes: 2
 
   element: null
 
@@ -40,13 +40,15 @@ class CilkprofMarker
   createMarker: (info, type) ->
     if type is 0
       element = document.createElement('div')
+      element.classList.add('cilkprof-marker-type-0')
       element.appendChild(@createBarGraphView(info.work, info.totalWork, info.totalCount, true, type))
       element.appendChild(@createBarGraphView(info.span, info.totalSpan, info.spanCount, false, type))
+    # else if type is 1
+    #   element = document.createElement('div')
+    #   element.appendChild(@createBarGraphView(info.work, info.totalWork, info.totalCount, true, type))
     else if type is 1
       element = document.createElement('div')
-      element.appendChild(@createBarGraphView(info.work, info.totalWork, info.totalCount, true, type))
-    else if type is 2
-      element = document.createElement('div')
+      element.classList.add('cilkprof-marker-type-2')
       svgElement = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
       svgElement.setAttribute("width", "30px")
       svgElement.setAttribute("height", "24px")
@@ -99,6 +101,11 @@ class CilkprofMarker
         .attr("class", "axis axis--y")
         .style("stroke", "white")
         .call(d3.axisLeft(y))
+      execCountDiv = document.createElement('div')
+      execCountDiv.classList.add('badge')
+      execCountDiv.textContent = @truncateCount(info.totalCount).toLowerCase()
+      execCountDiv.style.backgroundColor = interpolator(percent)
+      element.appendChild(execCountDiv)
     # else if type is 3
     #   element = document.createElement('div')
     #   runningTime = (info.totalWork - info.totalSpan) / CURRENT_CORES + info.totalSpan

@@ -115,7 +115,7 @@ class CilksanUI
   createCilksanMarker: (editor, line, i) ->
     cilksanGutter = editor.gutterWithName('cilksan-lint')
     range = new Range([line - 1, 0], [line - 1, Infinity])
-    marker = editor.markBufferRange(range, {id: 'cilksan'})
+    marker = editor.markBufferRange(range)
     markerView = new MarkerView({
       index: i
       onMarkerClick: (index) => @onMarkerClickCallback(index)

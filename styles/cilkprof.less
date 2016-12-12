@@ -6,143 +6,166 @@
 @view-width: 100%;
 
 // Debug CSS goes here
-atom-text-editor::shadow .gutter[gutter-name=cilkprof] {
-  width: 60px;
+atom-text-editor .gutter[gutter-name=cilkprof] {
+  width: 80px;
   text-align: center;
 }
 
-atom-text-editor::shadow .gutter[gutter-name=cilkprof] .decoration {
-  .cilkprof-marker-test-0-work {
-    width: 50px;
-    height: 9px;
-    text-align: center;
-    border: @text-color-highlight 1px solid;
-    border-radius: 1px;
+atom-text-editor .gutter[gutter-name=cilkprof] .decoration {
 
-    .cilkprof-marker-test-0-work-inner {
+  .cilkprof-marker-type-0 {
+    margin: 1px 10px;
+
+    .cilkprof-marker-test-0-work {
+      width: 60px;
+      height: 11px;
+      text-align: center;
+      border: @text-color-highlight 1px solid;
+      border-radius: 1px;
+
+      .cilkprof-marker-test-0-work-inner {
+        position: relative;
+        height: 100%;
+        color: @text-color-selected;
+        background-color: darken(red, 10%);
+
+        .cilkprof-marker-test-0-work-bar-text {
+          font-family: Segoe UI;
+          position: absolute;
+          top: -3px;
+          font-size: 8pt;
+          width: 60px;
+          height: 11px;
+        }
+      }
+    }
+
+    .cilkprof-marker-test-0-span {
+      width: 60px;
+      height: 11px;
+      text-align: center;
+      border: @text-color-highlight 1px solid;
+      border-radius: 1px;
+
+      .cilkprof-marker-test-0-span-inner {
+        position: relative;
+        height: 100%;
+        color: @text-color-selected;
+        background-color: blue;
+
+        .cilkprof-marker-test-0-span-bar-text {
+          font-family: Segoe UI;
+          font-size: 8pt;
+          position: absolute;
+          top: -3px;
+          width: 60px;
+          height: 11px;
+        }
+      }
+    }
+  }
+
+  .cilkprof-marker-type-1 {
+    .cilkprof-marker-test-1-work {
+      width: 54px;
+      height: 16px;
+      margin: 3px 2px;
+      text-align: center;
+      border: @text-color-highlight 1px solid;
+      border-radius: 1px;
+
+      .cilkprof-marker-test-1-work-inner {
+        position: relative;
+        height: 100%;
+        color: @text-color-selected;
+        background-color: darken(red, 10%);
+
+        .cilkprof-marker-test-1-work-bar-text {
+          font-family: Segoe UI;
+          position: absolute;
+          font-size: 10pt;
+          top: -3px;
+          width: 54px;
+          height: 16px;
+        }
+      }
+    }
+  }
+
+  .cilkprof-marker-type-3 {
+    .cilkprof-marker-test-3 {
+      width: 54px;
+      height: 16px;
+      margin: 3px 2px;
+      text-align: center;
+      border: @text-color-highlight 1px solid;
+      border-radius: 1px;
       position: relative;
-      height: 100%;
-      color: @text-color-selected;
-      background-color: darken(red, 10%);
 
-      .cilkprof-marker-test-0-work-bar-text {
-        font-family: Segoe UI;
+      .cilkprof-marker-test-3-inner1 {
         position: absolute;
-        top: -3px;
-        font-size: 8pt;
-        width: 50px;
-        height: 9px;
+        left: 0;
+        height: 100%;
+        color: @text-color-selected;
+        background-color: darken(red, 10%);
+        display: inline-block;
+
+        .cilkprof-marker-test-3-bar-text {
+          font-family: Segoe UI;
+          position: absolute;
+          top: -3px;
+          font-size: 10pt;
+          width: 54px;
+          height: 16px;
+        }
+      }
+
+      .cilkprof-marker-test-3-inner2 {
+        background-color: green;
+        display: inline-block;
+        height: 100%;
+        position: absolute;
       }
     }
   }
 
-  .cilkprof-marker-test-0-span {
-    width: 50px;
-    height: 9px;
-    text-align: center;
-    border: @text-color-highlight 1px solid;
-    border-radius: 1px;
+  .cilkprof-marker-type-2 {
+    margin-left: 4px;
 
-    .cilkprof-marker-test-0-span-inner {
-      position: relative;
-      height: 100%;
-      color: @text-color-selected;
-      background-color: blue;
-
-      .cilkprof-marker-test-0-span-bar-text {
-        font-family: Segoe UI;
-        font-size: 8pt;
-        position: absolute;
-        top: -3px;
-        width: 50px;
-        height: 9px;
-      }
-    }
-  }
-
-  .cilkprof-marker-test-1-work {
-    width: 54px;
-    height: 16px;
-    margin: 3px 2px;
-    text-align: center;
-    border: @text-color-highlight 1px solid;
-    border-radius: 1px;
-
-    .cilkprof-marker-test-1-work-inner {
-      position: relative;
-      height: 100%;
-      color: @text-color-selected;
-      background-color: darken(red, 10%);
-
-      .cilkprof-marker-test-1-work-bar-text {
-        font-family: Segoe UI;
-        position: absolute;
-        font-size: 10pt;
-        top: -3px;
-        width: 54px;
-        height: 16px;
-      }
-    }
-  }
-
-  .cilkprof-marker-test-3 {
-    width: 54px;
-    height: 16px;
-    margin: 3px 2px;
-    text-align: center;
-    border: @text-color-highlight 1px solid;
-    border-radius: 1px;
-    position: relative;
-
-    .cilkprof-marker-test-3-inner1 {
-      position: absolute;
-      left: 0;
-      height: 100%;
-      color: @text-color-selected;
-      background-color: darken(red, 10%);
-      display: inline-block;
-
-      .cilkprof-marker-test-3-bar-text {
-        font-family: Segoe UI;
-        position: absolute;
-        top: -3px;
-        font-size: 10pt;
-        width: 54px;
-        height: 16px;
-      }
+    .badge {
+      vertical-align: super; // hack to get it to be somewhat in place
+      margin-left: 5px;
     }
 
-    .cilkprof-marker-test-3-inner2 {
-      background-color: green;
-      display: inline-block;
-      height: 100%;
-      position: absolute;
+    svg {
+      height: 24px;
+      width: 30px;
     }
-  }
 
-  .hidden {
-    display: none;
-  }
+    .hidden {
+      display: none;
+    }
 
-  .line {
-    fill: none;
-    stroke-width: 2.5px;
-  }
+    .line {
+      fill: none;
+      stroke-width: 2.5px;
+    }
 
-  .area {
-    opacity: 0.15;
-  }
+    .area {
+      opacity: 0.15;
+    }
 
-  .dashed-line {
-    fill: none;
-    stroke: white;
-    stroke-width: 2px;
-    stroke-dasharay: '5, 5';
-  }
-
-  .axis {
-    path {
+    .dashed-line {
+      fill: none;
       stroke: white;
+      stroke-width: 2px;
+      stroke-dasharay: '5, 5';
+    }
+
+    .axis {
+      path {
+        stroke: white;
+      }
     }
   }
 }
@@ -156,6 +179,7 @@ atom-text-editor::shadow .gutter[gutter-name=cilkprof] .decoration {
   height: 100%;
 
   .cilkprof-content-wrapper {
+    width: 100%;
     height: 100%;
     overflow: auto;
     display: table-row;

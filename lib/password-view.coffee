@@ -61,7 +61,7 @@ class PasswordView
     @passwordEditor.onDidChange(() =>
       string = @passwordEditor.getText().split('').map((() -> '*')).join('')
       passwordElement.find('#password-style').remove()
-      passwordElement.append('<style id="password-style">.password-lines .line span.text:before {content:"' + string + '";}</style>')
+      passwordElement.append('<style id="password-style">.password-lines .line span.syntax--text:before {content:"' + string + '";}</style>')
     )
     @subscriptions.add(atom.commands.add('atom-text-editor', 'core:confirm', () =>
       Debug.log("[password-view] Pressed enter")
