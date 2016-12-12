@@ -1,15 +1,25 @@
+###
+This class controls the Console module for Cilkpride, which simply shows
+raw output that the console gives back when running Cilkpride command line
+tools. Since this module only shows text, it is fairly simple.
+
+This is considered an 'essential' module, and must be initialized before any
+unessential modules so that those modules can register with this console class.
+###
+
 dateFormat = require('dateformat')
 
 module.exports =
 class Console
 
-  props: null
+  props: null       # Object containing parent-specified properties
 
-  element: null
-  outputs: null
+  element: null     # Element containing the entire console view
+  outputs: null     # Dictionary (module name -> console div for that module)
 
   # TODO: Fill this out
   constructor: (props) ->
+    @props = props
     @element = document.createElement('div')
     @element.classList.add('console-container')
 
@@ -38,7 +48,6 @@ class Console
     if not @outputs[name]
       throw new Error("Module was not correctly registered with the console.")
 
-    # TODO: update the last updated
     currentTime = dateFormat(new Date(), "h:MM TT")
 
     @outputs[name].children[0].textContent = "#{name} - last updated at #{currentTime}"

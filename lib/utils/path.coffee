@@ -1,8 +1,12 @@
+###
+A quick helper function to add a series of directories into
+an environment object, given a specific key. We expect the
+directories to be separated by colons.
+###
+
 module.exports =
 class PathUtils
-  # A quick helper function to add a series of directories into
-  # an environment object, given a specific key. We expect the
-  # directories to be separated by colons.
+
   @combine: (object, key, values) ->
     if key not in Object.getOwnPropertyNames(object)
       object[key] = values

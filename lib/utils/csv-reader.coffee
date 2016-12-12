@@ -1,3 +1,8 @@
+###
+Basic CSV parser that does a bit of postprocessing by trimming each cell
+and modifying -nan entries to Infinity. For use with Cilkprof results.
+###
+
 Debug = require('./debug')
 
 module.exports =

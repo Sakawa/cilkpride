@@ -1,26 +1,31 @@
+###
+The main class of the Cilkpride package. This file specifies the core actions
+of the package, including all setup and disassembly actions needed. Most
+Cilkpride-global functions can be found here, including singleton-UI items
+(status bar, detail panel).
+###
+
 {CompositeDisposable} = require('atom')
 fs = require('fs')
 path = require('path').posix
 
+Debug = require('./utils/debug')
 {normalizePath} = require('./utils/utils')
-
 Project = require('./project')
 StatusBarView = require('./status-bar-view')
-Debug = require('./utils/debug')
 
-module.exports = Cilkide =
-  projects: {}
-  subscriptions: null
+module.exports = Cilkpride =
+  projects: {}               # dictionary (project path -> Project object)
+  subscriptions: null        # CompositeDisposable for all editor hooks
 
-  # Editor/path bookkeeping
-  editorToPath: {}
-  pathToPath: {}
+  editorToPath: {}           # dictionary (editor ID -> project path)
+  pathToPath: {}             # dictionary (file path -> project path)
 
-  # Singleton global UI elements
-  detailPanel: null
-  panelPath: null
-  statusBarElement: null
-  statusBarTile: null
+  # Singleton UI elements
+  detailPanel: null          # CilkprideDetailPanel object, to house detailed info
+  panelPath: null            # project path of the info being shown in the detail panel
+  statusBarElement: null     # StatusBarView object, showing Cilkpride's status
+  statusBarTile: null        # status bar object from 3rd party status-bar package
 
   activate: (state) ->
     # Install dependencies first, if the user doesn't have them.
@@ -58,7 +63,7 @@ module.exports = Cilkide =
         @projects[editorPath].sync(false)
     )
 
-    Debug.log("Cilkscreen plugin activated!")
+    Debug.log("Cilkpride plugin activated!")
 
   deactivate: ->
     @subscriptions.dispose()
@@ -78,7 +83,6 @@ module.exports = Cilkide =
 
   updateStatusBar: () ->
     # The current pane is a non-text editor (settings view, etc.)
-    # The status bar should disappear and not be visible.
     if not editor = atom.workspace.getActiveTextEditor()
       @statusBarElement.updatePath(null)
       @statusBarElement.displayPluginDisabled()
@@ -98,14 +102,14 @@ module.exports = Cilkide =
 
   # Panel-based methods
 
-  changeDetailPanel: (tpath) ->
-    project = @projects[tpath]
-    if tpath isnt @panelPath or not @detailPanel
+  changeDetailPanel: (projectPath) ->
+    project = @projects[projectPath]
+    if projectPath isnt @panelPath or not @detailPanel
       if @detailPanel
         @detailPanel.destroy()
         Debug.log("Destroyed detail panel.")
       @detailPanel = atom.workspace.addBottomPanel(item: project.getDetailPanel(), visible: true)
-      @panelPath = tpath
+      @panelPath = projectPath
     else
       @detailPanel.show()
 
@@ -124,11 +128,11 @@ module.exports = Cilkide =
     return if @editorToPath[editor.id]
 
     # Add the gutter to the newly registered editor. We do this to all
-    # editors for consistency - otherwise there will be flashing.
+    # editors for consistency - otherwise there will be a flicker as the gutter appears.
     editor.addGutter({name: 'cilksan-lint', priority: -1, visible: true}) if not editor.gutterWithName('cilksan-lint')
-    # for cilkprof testing purposes
     editor.addGutter({name: 'cilkprof', priority: -2, visible: true}) if not editor.gutterWithName('cilkprof')
 
+    # Hook for when a file is renamed/deleted
     @subscriptions.add(editor.onDidChangePath(
       () =>
         Debug.log("Editor changed path: " + editor.id)
@@ -154,7 +158,7 @@ module.exports = Cilkide =
     @registerEditorWithProject(projectPath, editor)
 
   # Traverse the directories to determine if this file has a parent directory
-  # that contains a configuration file.
+  # that contains a cilkpride configuration file.
   findConfFile: (filePath) ->
     traversedPaths = []
     Debug.log("File path: #{filePath}")
@@ -195,7 +199,8 @@ module.exports = Cilkide =
     confPath = path.join(directory, 'cilkpride-conf.json')
     fs.open(confPath, 'wx', (err, fd) ->
       if err
-        # do some error handling here
+        # do some error handling here - currently assumes the only error is that
+        # the file already exists
         atom.notifications.addError("Cilkpride configuration file already exists in #{directory}.", {
           title: "Edit the existing configuration file, or delete it and re-register the directory."
         })
@@ -204,7 +209,8 @@ module.exports = Cilkide =
 {
   "username": "your athena username here",
   "remoteBaseDir": "full directory path of the project directory on the remote instance",
-  "cilksanCommand": "make cilksan && ./queens",
+  "cilksanCommand": "make CILKSAN=1 && ./queens",
+  "cilkprofCommand": "make CILKPROF=1 && ./queens",
 
   "sshEnabled": true,
   "hostname": "athena.dialup.mit.edu",
@@ -212,12 +218,12 @@ module.exports = Cilkide =
   "launchInstance": false,
   "localBaseDir": "#{directory}",
   "syncIgnoreFile": ["/cilkpride-conf.json"],
-  "syncIgnoreDir": ["/.git", "/log.awsrun", "/log.cqrun"]
+  "syncIgnoreDir": ["/.git", "/log.awsrun", "/log.cqrun", "/.cilksan", "/.cilkprof"]
 }
         """, {encoding: "utf8"}, (err, written, buffer) ->
           atom.workspace.open(confPath)
           atom.notifications.addSuccess("Cilkpride configuration file created for #{directory}.", {
-            title: "Customize the configuration for your particular project to start using the plugin!"
+            title: "Customize the configuration for your Cilkpride project to start using the plugin!"
           })
         )
     )

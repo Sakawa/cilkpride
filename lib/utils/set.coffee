@@ -1,8 +1,9 @@
 ###
-  This class is a simple set implementation that takes in a equality function
-  and implements a basic set interface. Note that the set does not clone
-  any objects, so beware when mutating objects returned from this set.
+This class is a simple set implementation that takes in a equality function
+and implements a basic set interface. Note that the set does not clone
+any objects, so beware when mutating objects returned from this set.
 ###
+
 module.exports =
 class CustomSet
   isEquals: null

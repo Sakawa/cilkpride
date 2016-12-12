@@ -20,15 +20,15 @@ ul.background-message.cilkpride-background-message {
   margin: 10px;
 }
 
-// Cilkide Detail Panel
-.cilkide-detail-resize {
+// Cilkpride Detail Panel
+.cilkpride-detail-resize {
   width: 100%;
   position: absolute;
   height: 8px;
   cursor: ns-resize;
 }
 
-.cilkide-detail-panel {
+.cilkpride-detail-panel {
   width: 100%;
   height: 400px;
   margin-bottom: 0px;
@@ -42,7 +42,7 @@ ul.background-message.cilkpride-background-message {
     border-bottom: 1px solid gray;
   }
 
-  .cilkide-tab {
+  .cilkpride-tab {
     color: @text-color-subtle;
     float: left;
     position: relative;
@@ -94,11 +94,11 @@ ul.background-message.cilkpride-background-message {
     padding: 5px 25px;
   }
 
-  .cilkide-module-view-container {
+  .cilkpride-module-view-container {
     height: 100%;
     overflow: hidden;
 
-    .cilkide-module-wrapper {
+    .cilkpride-module-wrapper {
       width: 100%;
       height: 100%;
       position: relative;
@@ -119,51 +119,34 @@ ul.background-message.cilkpride-background-message {
   }
 }
 
-// Cilkide status bar CSS
+// Cilkpride status bar CSS
 
-.cilkide-status-view {
+.cilkpride-status-view {
   vertical-align: top;
   overflow: hidden;
   white-space: nowrap;
   max-width: 20vw;
   text-overflow: ellipsis;
 
+  &:hover {
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
   span.icon-check {
     color: @background-color-success;
-
-    &:hover {
-      cursor: pointer;
-      text-decoration: underline;
-    }
   }
 
   span.icon-clock, span.icon-sync {
     color: @background-color-warning;
-
-    &:hover {
-      cursor: pointer;
-      text-decoration: underline;
-    }
   }
 
   span.icon-issue-opened {
     color: @background-color-error;
-
-    &:hover {
-      cursor: pointer;
-      text-decoration: underline;
-    }
   }
 
   span.icon-x {
     color: @text-color-error;
-
-    &.clickable {
-      &:hover {
-        cursor: pointer;
-        text-decoration: underline;
-      }
-    }
   }
 
   span.icon-question {
@@ -172,20 +155,10 @@ ul.background-message.cilkpride-background-message {
     &:before {
       margin-right: 5px;
     }
-
-    &:hover {
-      cursor: pointer;
-      text-decoration: underline;
-    }
   }
 
   span.icon-repo-create {
     color: @text-color;
-
-    &:hover {
-      cursor: pointer;
-      text-decoration: underline;
-    }
   }
 
   span.icon-plug {
@@ -193,11 +166,6 @@ ul.background-message.cilkpride-background-message {
 
     &:before {
       margin-right: 5px;
-    }
-
-    &:hover {
-      cursor: pointer;
-      text-decoration: underline;
     }
   }
 }

@@ -1,7 +1,7 @@
-Parser = require('./parser')
 CilkprofView = require('./ui')
 CilkprofMarkerView = require('./cilkprof-marker-view')
 Debug = require('../utils/debug')
+Parser = require('./parser')
 
 CILKPROF_START = "cilkpride:cilkprof_start"
 CILKPROF_END = "cilkpride:cilkprof_end"
@@ -9,9 +9,11 @@ CILKPROF_END = "cilkpride:cilkprof_end"
 module.exports =
 class CilkprofModule
 
+  @moduleName: "Cilkprof"
+  @id: "cilkprof"
+
   view: null
   currentState: null
-  name: "Cilkprof"
 
   props: null
   changePanel: null

@@ -1,4 +1,9 @@
-DEBUG_ON = false
+###
+Debug class. DEBUG_ON = true will show all console messages for debug purposes,
+while DEBUG_ON = false should be for production purposes.
+###
+
+DEBUG_ON = true
 
 module.exports =
 class Debug

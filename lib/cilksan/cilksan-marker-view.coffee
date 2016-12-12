@@ -1,11 +1,21 @@
+###
+Simple class specifying how Cilksan markers appear in the gutter.
+###
+
 $ = require('jquery')
 
 module.exports =
-class CilkscreenMarkerView
-  state: null
+class CilksanMarkerView
+  props: null            # object containing parent-specified properties
+  index: null            # the index of the violation this marker represents
+  onClickCallback: null  # callback when the marker is clicked
 
-  constructor: (state, onClickCallback) ->
-    @state = state
+  element: null          # the actual UI element shown in the gutter
+
+  constructor: (props) ->
+    @props = props
+    @index = props.index
+    @onClickCallback = props.onMarkerClick
 
     # Create root element
     @element = document.createElement('span')
@@ -13,7 +23,7 @@ class CilkscreenMarkerView
     @element.title = "Race condition detected at this line. Click for details."
 
     $(@element).on('click', (e) =>
-      onClickCallback(@state.index)
+      @onClickCallback(@index)
     )
 
   # Returns an object that can be retrieved when package is activated

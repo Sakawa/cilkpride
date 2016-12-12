@@ -1,10 +1,16 @@
-d3 = require('d3')
+###
+Class specifying how Cilkprof markers appear in the gutter.
+###
+
 $ = require('jquery')
+d3 = require('d3')
+
 Debug = require('../utils/debug')
 
 module.exports =
 class CilkprofMarker
 
+  # TODO: document this
   currentType: 0
   numTypes: 4
 

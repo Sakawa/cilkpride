@@ -1,15 +1,22 @@
+###
+Handles SSH file syncing, with the help of an SFTP object from the
+SSHModule file. Does not serve any purpose if the user is running
+everything locally.
+###
+
 fs = require('fs')
 path = require('path').posix
+
 Debug = require('./utils/debug')
 
 module.exports =
 class FileSync
 
-  sftp: null
-  getSettings: null
+  sftp: null         # an SFTP object (see ssh-module.coffee)
+  getSettings: null  # function that gets updated Cilkpride config settings
+  getSFTP: null      # function that gets a new SFTP object
 
   # Constructs a new FileSync object.
-  #   props.getSFTP - functions that retrieves a new SFTP object
   constructor: (props) ->
     @getSFTP = props.getSFTP
 

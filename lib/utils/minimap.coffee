@@ -1,35 +1,42 @@
-TextEditor = null
-FileLineReader = require('./file-reader')
+###
+Util class for creating a stand-alone minimap with overlay and decorations.
+Mainly used for the visual view of CilksanModule, which gives users a view
+of the files with race conditions in them.
+###
+
 $ = require('jquery')
 {CompositeDisposable} = require('atom')
-{normalizePath} = require('../utils/utils')
 path = require('path').posix
+TextEditor = null
+
 Debug = require('./debug')
+FileLineReader = require('./file-reader')
+{normalizePath} = require('../utils/utils')
 
 NUM_PIXELS_PER_LINE = 6
 
 module.exports =
 class Minimap
-  element: null
-  minimapElement: null
-  minimap: null
-  minimapOverlay: null
-  minimapContainer: null
+  element: null          # Element containing the minimap div
+  minimapElement: null   # The Minimap view object from the minimap package
+  minimap: null          # The Minimap model object from the minimap package
+  minimapOverlay: null   # Element containing the minimap overlay
+  minimapContainer: null # Element container for the minimap
 
-  editor: null
-  decorationQueue: null
-  promise: null
+  editor: null           # The text editor associated with the current minimap
+  decorationQueue: null  # Queue for decorations while the minimap is initializing
+  promise: null          # Promise for building the minimap using the minimap package
 
-  ready: false
-  destroyed: false
-  currentId: 0
+  ready: false           # Boolean - true if the minimap has finished initializing
+  destroyed: false       # Boolean - true if the minimap has been destroyed and is no longer usable
+  currentId: 0           # ID to keep track of the latest minimap request
 
-  subscriptions: null
+  subscriptions: null    # CompositeDisposable for events related to editor tracking
 
   # Properties from parent
-  props: null
-  filename: null
-  projectPath: null
+  props: null            # Object containing parent-specified properties
+  filename: null         # Absolute filepath for the file that the minimap is visualizing
+  projectPath: null      # Path of the Cilkpride project
 
   constructor: (props) ->
     @props = props
@@ -103,9 +110,6 @@ class Minimap
         @minimapOverlay = document.createElement('div')
         @minimapOverlay.classList.add('minimap-overlay')
         @minimapContainer.appendChild(@minimapOverlay)
-        $(@minimapOverlay).click((e) =>
-          @minimapOnClick(e)
-        )
 
         textEditorElement = atom.views.getView(@editor)
         @subscriptions.add(textEditorElement.onDidChangeScrollTop((() => @updateScrollOverlay())))
@@ -132,8 +136,8 @@ class Minimap
       Debug.log("#{@filename} minimap init promise returned")
       Debug.log(@decorationQueue)
       for range in @decorationQueue
-        marker = @editor.markBufferRange(range, {id: 'cilkscreen-minimap'})
-        @minimap.decorateMarker(marker, {type: 'line', scope: '.cilkscreen .minimap-marker', plugin: "cilkscreen", color: "#961B05"})
+        marker = @editor.markBufferRange(range, {id: 'cilksan-minimap'})
+        @minimap.decorateMarker(marker, {type: 'line', scope: '.cilksan .minimap-marker', plugin: "cilksan", color: "#961B05"})
       @ready = true
       Debug.log("#{@filename} minimap ready")
 
@@ -143,22 +147,6 @@ class Minimap
       Debug.log(minimapView.shadowRoot)
       Debug.log(minimapView.shadowRoot.children[0])
     )
-
-
-  minimapOnClick: (e) ->
-    # rect = @minimapOverlay.getBoundingClientRect();
-    # parentTop = @minimapOverlay.offsetTop
-    # parentLeft = @minimapOverlay.offsetLeft
-    # left = Math.round(e.pageX - rect.left)
-    # top = Math.round(e.pageY - rect.top)
-    # Debug.log("clicked: left: #{e.pageX - rect.left}, top: #{e.pageY - rect.top}")
-    # violationId = e.target.getAttribute('violation-id')
-    # Debug.log("clicked on id: #{violationId}")
-
-    # if violationId
-    #   @highlightViolation(e, +violationId, true)
-    # else
-    #   e.stopPropagation()
 
   updateScrollOverlay: () ->
     # Debug.log(@minimap.getTextEditorScaledHeight())
@@ -186,8 +174,8 @@ class Minimap
     else
       Debug.log("#{@filename} minimap ready for decoration, adding directly")
       @decorationQueue.push(range)
-      marker = @editor.markBufferRange(range, {id: 'cilkscreen-minimap'})
-      @minimap.decorateMarker(marker, {type: 'line', scope: '.cilkscreen .minimap-marker', plugin: "cilkscreen", color: "#961B05"})
+      marker = @editor.markBufferRange(range, {id: 'cilksan-minimap'})
+      @minimap.decorateMarker(marker, {type: 'line', scope: '.cilksan .minimap-marker', plugin: "cilksan", color: "#961B05"})
 
   getElement: () ->
     return @element

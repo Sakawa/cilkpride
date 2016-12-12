@@ -1,25 +1,35 @@
+###
+Password view for the popup that appears when asking for SSH password.
+###
+
 $ = require('jquery')
-{TextEditorUtil} = require('./utils/utils')
 {CompositeDisposable} = require('atom')
+
 Debug = require('./utils/debug')
+{TextEditorUtil} = require('./utils/utils')
 
 module.exports =
 class PasswordView
 
-  content: null
-  passwordEditor: null
-  panel: null
-  subscriptions: null
+  props: null             # object holding properties defined by parent class
+  element: null           # top-level password div
+  passwordEditor: null    # AtomTextEditor for users to type their SSH password
+  panel: null             # modal panel object that the password div appears in
+  subscriptions: null     # CompositeDisposable for prompt confirmation and cancellation
 
-  onEnter: null
-  onCancel: null
+  onEnter: null           # function run when user submits their password
+  onCancel: null          # function run when user cancels prompt (using ESC key)
+                          # caution: this callback may be overwritten when SSH auths timeout
 
   constructor: (props) ->
+    @props = props
+
     Debug.log("[password-view] Password modal created")
     @subscriptions = new CompositeDisposable()
     @onEnter = props.onEnter
-    @onCancel = props.onCancel # caution: these callbacks may be overwritten!
-    @content = document.createElement('div')
+    @onCancel = props.onCancel
+
+    @element = document.createElement('div')
 
     descriptionDiv = document.createElement('div')
     descriptionDiv.classList.add('password-view-descriptor')
@@ -36,14 +46,13 @@ class PasswordView
 
     descriptionDiv.appendChild(passwordPrompt)
     descriptionDiv.appendChild(disclaimerDiv)
-
-    @content.appendChild(descriptionDiv)
+    @element.appendChild(descriptionDiv)
 
     @passwordEditor = TextEditorUtil.constructTextEditor({
       mini: true
     })
     @passwordEditor.element.classList.add('password-view-editor')
-    @content.appendChild(@passwordEditor.element)
+    @element.appendChild(@passwordEditor.element)
 
     # Password workaround for TextEditor found from
     # https://discuss.atom.io/t/password-fields-when-using-editorview-subview/11061/8
@@ -69,7 +78,7 @@ class PasswordView
     @attach()
 
   attach: () ->
-    @panel ?= atom.workspace.addModalPanel(item: @content)
+    @panel ?= atom.workspace.addModalPanel(item: @element)
     @panel.show()
     $(@passwordEditor.element).focus()
     $(@passwordEditor.element).blur(() ->
@@ -83,4 +92,4 @@ class PasswordView
     @panel.destroy()
 
   getView: () ->
-    return @content
+    return @element

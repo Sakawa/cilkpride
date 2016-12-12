@@ -1,19 +1,27 @@
-process = require('process')
+###
+This class handles the execution of command line tools. There are two cases
+that this class handles: SSH and Local. For SSH, Runner receives an "instance"
+(see SSHModule) that represents a remote shell, which it uses to run the tools
+and parse the output. For Local, Runner uses NodeJS APIs to execute the tools.
+###
+
 exec = require('child_process').exec
+process = require('process')
+
 Debug = require('./utils/debug')
 PathUtils = require('./utils/path')
 
 module.exports =
 class Runner
 
-  instance: null
-  getInstance: null
-  callback: null
-  refreshConfFile: null
-  moduleName: null
+  instance: null            # For SSH-enabled projects, an Object representing a remote shell
+  getInstance: null         # Function that fetches an Instance object from SSHModule
+  callback: null            # Callback for when a command line tool finishes running
+  refreshConfFile: null     # Function that fetches an updated copy of the project config
+  moduleName: null          # Name of the module that this Runner is attached to
+                            # Used to access the appropriate make directory ('.cilksan', '.cilkprof')
 
-  thread: null
-  threadOutput: null
+  thread: null              # For SSH-disabled projects, the thread running the command line tool locally
 
   constructor: (props) ->
     @getInstance = props.getInstance

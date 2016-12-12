@@ -1,7 +1,13 @@
-TextEditor = null
-CustomSet = require('../utils/set')
+###
+View class for a single violation in the Cilksan detail panel. Consists of two
+source previews - one for each line involved in the race condition.
+###
+
 $ = require('jquery')
+
+CustomSet = require('../utils/set')
 Debug = require('../utils/debug')
+{TextEditorUtil} = require('../utils/utils')
 
 VERBS_PT = {
   "read": "read",
@@ -10,13 +16,13 @@ VERBS_PT = {
 
 module.exports =
 class DetailCodeView
-  element: null
+  element: null            # Element containing the view for a single violation
 
   # Properties from parent
-  props: null
-  violation: null
-  index: null
-  onViolationClickCallback: null
+  props: null              # Object containing parent-specified properties
+  violation: null          # Violation that this view is showing
+  index: null              # Violation index of the represented violation
+  onViolationClickCallback: null  # Callback when the violation is clicked
 
   constructor: (props) ->
     @props = props
@@ -36,7 +42,6 @@ class DetailCodeView
       Debug.log("[detail-code-view] violation view #{@index} clicked")
       @onViolationClickCallback(e, @index)
     )
-    # violationView.addEventListener("click", ((e) => @onViolationClickCallback(e, @index)), true)
     violationView.appendChild(@constructVisualPreview(@violation.line1, null, true))
     # currently no stack traces
     violationView.appendChild(@constructVisualPreview(@violation.line2, null, false))
@@ -55,9 +60,6 @@ class DetailCodeView
       divToAdd.classList.add('bottom')
 
     # First we check if there is a source annotation to use.
-    # Debug.log("LineInfoText: ")
-    # Debug.log(lineInfo.text)
-    # Debug.log(lineInfo.text is undefined)
     if lineInfo.text is undefined
       emptyDiv = document.createElement('div')
       emptyDiv.classList.add('empty')
@@ -172,20 +174,12 @@ class DetailCodeView
     return divToAdd
 
   createMiniEditorWithCode: (code) ->
-    lineEditor = @constructTextEditor({ mini: true })
+    lineEditor = TextEditorUtil.constructTextEditor({ mini: true })
     lineEditor.setGrammar(atom.grammars.grammarForScopeName('source.c'))
     lineEditorView = atom.views.getView(lineEditor)
     lineEditorView.removeAttribute('tabindex')
     lineEditor.setText(code)
     lineEditor.getDecorations({class: 'cursor-line', type: 'line'})[0].destroy()
-    return lineEditor
-
-  constructTextEditor: (params) ->
-    if atom.workspace.buildTextEditor?
-      lineEditor = atom.workspace.buildTextEditor(params)
-    else
-      TextEditor ?= require("atom").TextEditor
-      lineEditor= new TextEditor(params)
     return lineEditor
 
   parseStacktrace: (stacktrace) ->

@@ -1,3 +1,9 @@
+###
+SVG Util class for creating SVG objects and elements. Currently not being used,
+but originally designed to annotate the visual minimap representations in the
+Cilksan view.
+###
+
 module.exports =
 class SVG
   @createSVGObject = (xOffset, yOffset) ->

@@ -1,11 +1,11 @@
-{CompositeDisposable, Range} = require('atom')
-{normalizePath} = require('../utils/utils')
-CilkprofMarkerView = require('./cilkprof-marker-view')
-Debug = require('../utils/debug')
-
 $ = require('jquery')
+{CompositeDisposable, Range} = require('atom')
 d3 = require('d3')
 path = require('path').posix
+
+CilkprofMarkerView = require('./cilkprof-marker-view')
+Debug = require('../utils/debug')
+{normalizePath} = require('../utils/utils')
 
 module.exports =
 class CilkprofUI

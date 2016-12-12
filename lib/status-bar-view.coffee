@@ -1,3 +1,8 @@
+###
+Class representing the status bar view in the text editor. Mostly contains
+functions that wil change the displayed status, for other modules to call.
+###
+
 $ = require('jquery')
 path = require('path').posix
 
@@ -9,22 +14,22 @@ MILLI_IN_HOUR = MILLI_IN_MIN * 60
 
 module.exports =
 class StatusBarView
-  currentPath: null
-  currentText: null
-  interval: null
-  lastUpdatedTimer: null
-  lastUpdated: null
+  currentPath: null       # The path of the project that the active text editor belongs to
+  currentText: null       # The current text being shown in the status bar
+  interval: null          # Interval for updating the status bar on ETA countdowns
+  lastUpdatedTimer: null  # Timeout for updating the status bar last updated feature
+  lastUpdated: null       # Time (in Unix time milliseconds) of the last status update
 
   # UI elements
-  element: null
-  icon: null
-  tooltip: null
+  element: null           # Element for the status bar div
+  icon: null              # The visual icon next to the status bar text
+  tooltip: null           # Tooltip to be displayed on status bar hover
 
   # Properties from parents
-  props: null
-  onClickCallback: null
-  onRegisterProjectCallback: null
-  onConnectCallback: null
+  props: null                      # Object containing parent-specified properties
+  onClickCallback: null            # Callback when status bar is clicked
+  onRegisterProjectCallback: null  # Callback when user selects directory to create Cilkpride project in
+  onConnectCallback: null          # Callback when user clicks "Connect to SSH" status bar
 
   constructor: (props) ->
     @props = props
@@ -33,7 +38,7 @@ class StatusBarView
     @onConnectCallback = props.onConnectCallback
 
     @element = document.createElement('div')
-    @element.classList.add('cilkide-status-view', 'inline-block')
+    @element.classList.add('cilkpride-status-view', 'inline-block')
     @icon = document.createElement('span')
     @element.appendChild(@icon)
     @lastUpdated = Date.now()

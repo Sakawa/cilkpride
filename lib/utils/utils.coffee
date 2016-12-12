@@ -1,5 +1,14 @@
-TextEditor = null
+###
+A medley of small Util classes.
+
+MinimapUtil: Util class for figuring out the exact positioning of minimap lines.
+TextEditorUtil: Util class for creating an Atom TextEditor.
+extractLast: Extracts the last n characters in a string.
+normalizePath: Replaces all Windows-style '\' characters in a path with POSIX '/'.
+###
+
 path = require('path').posix
+TextEditor = null
 
 class MinimapUtil
   VERTICAL_PADDING = 5

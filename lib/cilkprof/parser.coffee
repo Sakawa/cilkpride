@@ -1,7 +1,14 @@
+###
+Parser that uses regex to process the Cilkprof output. Gets the total
+work, span, and parallelism and runs the CSV parser.
+###
+
 CSVParser = require('../utils/csv-reader')
 Debug = require('../utils/debug')
 
-# These should be synced with those in main.coffee.
+# These should be synced with those in main.coffee. These are used to identify
+# exactly where the Cilkprof CSV starts and ends, so we can look for these tags
+# to figure out where we should start parsing.
 CILKPROF_START = "cilkpride:cilkprof_start"
 CILKPROF_END = "cilkpride:cilkprof_end"
 
@@ -10,11 +17,9 @@ class CilkprofParser
 
   workRegex = /work ([0-9]*\.[0-9]*) Gcycles, span ([0-9]*\.[0-9]*) Gcycles, parallelism ([0-9]*\.[0-9]*)/
 
-  # This is the main function in the parser for cilkscreen results.
+  # This is the main function in the parser for Cilkprof results.
   # External classes should only call this function, and not any others.
-  # TODO: filter out the stuff we aren't using
   @parseResults: (cilkprofOutput) ->
-    # Cut out the first line (which is the command)
     Debug.info("[cilkprof-parser] parsing...")
     Debug.log(cilkprofOutput)
     cilkprofArray = cilkprofOutput.split('\n')

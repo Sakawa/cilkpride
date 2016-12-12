@@ -1,20 +1,25 @@
-MarkerView = require('./cilkscreen-marker-view')
-PluginView = require('./cilkscreen-plugin-view')
+###
+Class for general detail panel-related UI functionality. Also handles all of the
+gutter marker-related things here.
+###
 
-{normalizePath} = require('../utils/utils')
+{Range} = require('atom')
+
 Debug = require('../utils/debug')
+MarkerView = require('./cilksan-marker-view')
+{normalizePath} = require('../utils/utils')
+PluginView = require('./cilksan-plugin-view')
 
 module.exports =
-class CilkscreenUI
+class CilksanUI
 
-  props: null
-  changePanel: null
-  path: null
+  props: null                    # Object containing parent-specified properties
+  changePanel: null              # Callback for showing the Cilksan tab of the detail panel
+  path: null                     # Path for the project that this UI represents
 
-  pluginView: null
-  currentViolationIndex: null
-  currentViolations: null
-  currentHighlightedIndex: null
+  pluginView: null               # CilksanPluginView for the Cilksan detail panel
+  currentViolations: null        # Array of violations of the last run of Cilksan
+  currentHighlightedIndex: null  # Current index of the violation that is highlighted
 
   constructor: (props) ->
     @props = props
@@ -66,7 +71,7 @@ class CilkscreenUI
         if markerCache[id]
           violation.markers.push(markerCache[id])
         else
-          markerCache[id] = @createCilkscreenMarker(textEditor, line1, i)
+          markerCache[id] = @createCilksanMarker(textEditor, line1, i)
           violation.markers.push(markerCache[id])
       )
       editorCache[path2]?.forEach((textEditor) =>
@@ -74,7 +79,7 @@ class CilkscreenUI
         if markerCache[id]
           violation.markers.push(markerCache[id])
         else
-          markerCache[id] = @createCilkscreenMarker(textEditor, line2, i)
+          markerCache[id] = @createCilksanMarker(textEditor, line2, i)
           violation.markers.push(markerCache[id])
       )
 
@@ -94,29 +99,28 @@ class CilkscreenUI
         if markerCache[id]
           violation.markers.push(markerCache[id])
         else
-          markerCache[id] = @createCilkscreenMarker(editor, line1, i)
+          markerCache[id] = @createCilksanMarker(editor, line1, i)
           violation.markers.push(markerCache[id])
       if path2 is editorPath
         id = editor.id + ":" + path2 + ":" + line2
         if markerCache[id]
           violation.markers.push(markerCache[id])
         else
-          markerCache[id] = @createCilkscreenMarker(editor, line2, i)
+          markerCache[id] = @createCilksanMarker(editor, line2, i)
           violation.markers.push(markerCache[id])
 
     if @currentHighlightedIndex isnt null
       @highlightMarkers(@currentHighlightedIndex)
 
-  createCilkscreenMarker: (editor, line, i) ->
-    cilkscreenGutter = editor.gutterWithName('cilksan-lint')
-    range = [[line - 1, 0], [line - 1, Infinity]]
-    marker = editor.markBufferRange(range, {id: 'cilkscreen'})
-    markerView = new MarkerView(
-      {index: i},
-      (index) =>
-        @onMarkerClickCallback(index)
-    )
-    return cilkscreenGutter.decorateMarker(marker, {type: 'gutter', item: markerView})
+  createCilksanMarker: (editor, line, i) ->
+    cilksanGutter = editor.gutterWithName('cilksan-lint')
+    range = new Range([line - 1, 0], [line - 1, Infinity])
+    marker = editor.markBufferRange(range, {id: 'cilksan'})
+    markerView = new MarkerView({
+      index: i
+      onMarkerClick: (index) => @onMarkerClickCallback(index)
+    })
+    return cilksanGutter.decorateMarker(marker, {type: 'gutter', item: markerView})
 
   onMarkerClickCallback: (index) ->
     @changePanel()

@@ -1,3 +1,7 @@
+###
+Basic file reader to read source code from disk.
+###
+
 fs = require('fs')
 
 CustomSet = require('./set')

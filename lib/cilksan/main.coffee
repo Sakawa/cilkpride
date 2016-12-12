@@ -1,24 +1,31 @@
-CilkscreenView = require('./ui')
-Parser = require('./parser')
+###
+Main class for the Cilksan module. Controls most of the core non-UI related
+functionality of the Cilksan mod.
+###
+
+CilksanView = require('./ui')
 Debug = require('../utils/debug')
+Parser = require('./parser')
 
 module.exports =
-class CilkscreenModule
+class CilksanModule
 
-  view: null
-  currentState: null
-  name: "Cilksan"
+  @moduleName: "Cilksan"   # Public-facing descriptor for this class
+  @id: "cilksan"           # Private-facing descriptor for this class
 
-  props: null
-  changePanel: null
-  getSettings: null
-  onStateChange: null
+  view: null               # CilksanView object for the Cilksan detail panel
+  currentState: null       # Object containing lots of state-related info
 
-  violations: null
-  path: null
+  props: null              # Object containing parent-specified properties
+  changePanel: null        # Callback to show the Cilksan detail panel for current project
+  getSettings: null        # Function to retrieve updated project config settings
+  onStateChange: null      # Callback to let Project class know that this module's state has changed
 
-  runner: null
-  tab: null
+  violations: null         # Violations detected from the last run of Cilksan
+  path: null               # Path of the Cilkpride project this is running
+
+  runner: null             # Runner object to run command line tools
+  tab: null                # Tab object to update status on the detail panel tabs
 
   constructor: (props) ->
     @props = props
@@ -41,7 +48,7 @@ class CilkscreenModule
       initialized: not @getSettings().sshEnabled
     }
 
-    @view = new CilkscreenView({
+    @view = new CilksanView({
       changePanel: (() =>
         @changePanel()
         @tab.click()
@@ -68,7 +75,6 @@ class CilkscreenModule
     if @runner.kill()
       @resetState()
 
-  # TODO: the modules should push updates to the project class, which will manage everything
   startThread: () ->
     @runner.spawn(@getSettings().cilksanCommand, [], {}, (err, output) =>
       @runnerCallback(err, output)
@@ -77,12 +83,12 @@ class CilkscreenModule
 
   runnerCallback: (err, output) ->
     settings = @getSettings(true)
-    Debug.log("[cilkscreen] Received code #{err}")
-    Debug.log("[cilkscreen] Received output #{output}")
+    Debug.log("[cilksan] Received code #{err}")
+    Debug.log("[cilksan] Received output #{output}")
     @currentState.output = output
     if err is 0
-      Debug.log("[cilkscreen] Killing old markers, if any...")
-      Debug.log("[cilkscreen] Parsing data...")
+      Debug.log("[cilksan] Killing old markers, if any...")
+      Debug.log("[cilksan] Parsing data...")
       Parser.processViolations(output, (results) =>
         @updateState(err, results)
         @generateUI(results)

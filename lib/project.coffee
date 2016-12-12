@@ -1,48 +1,56 @@
+###
+This file represents a Cilkpride project, and handles all project-level actions.
+A Cilkpride project consists of a directory that contains a Cilkpride config
+file and all subdirectories.
+###
+
+chokidar = require('chokidar')
 {CompositeDisposable} = require('atom')
 fs = require('fs')
 path = require('path').posix;
-chokidar = require('chokidar')
 
-{normalizePath} = require('./utils/utils')
-
-CilkideDetailPanel = require('./cilkide-detail-panel')
+CilkprideDetailPanel = require('./cilkpride-detail-panel')
 CilksanModule = require('./cilksan/main')
 CilkprofModule = require('./cilkprof/main')
-SSHModule = require('./ssh-module')
-FileSync = require('./file-sync')
-Runner = require('./runner')
 Console = require('./console/console')
 Debug = require('./utils/debug')
+FileSync = require('./file-sync')
+{normalizePath} = require('./utils/utils')
+Runner = require('./runner')
+SSHModule = require('./ssh-module')
+
+# The non-essential modules are declared here. Since the goal of these modules
+# is to be fairly plug-and-play, if additional modules are created, they should
+# be placed in this array and initialized automatically.
+MODULES_ENABLED = [CilksanModule, CilkprofModule]
 
 module.exports =
 class Project
-  idleTimeout: null
-  currentState: null
-  subscriptions: null
-  editorSubscriptions: null
-  editorIds: null
-  settings: null
-  configWatch: null
-
-  directoryWatch: null
+  idleTimeout: null           # timeout before the project starts running the modules
+  currentState: null          # string representing the current state of the project
+  subscriptions: null         # CompositeDisposable for text editor hooks
+  editorSubscriptions: null   # dictionary (editor ID -> text editor Disposables)
+  editorIds: null             # Array containing editor IDs for this project
+  settings: null              # Object containing the config file settings for this project
+  configWatch: null           # FileWatch for the project config file
+  directoryWatch: null        # FileWatch for the project directory/subdirectories
 
   # Properties from parent
-  props: null
-  changeDetailPanel: null
-  onPanelCloseCallback: null
-  onDestroy: null
-  path: null
-  statusBar: null
+  props: null                 # Object containing parent-specified properties
+  changeDetailPanel: null     # Callback to show this project's detail panel
+  onPanelCloseCallback: null  # Callback to hide this project's detail panel
+  onDestroy: null             # Callback when this project is destroyed
+  path: null                  # String for this project's root directory (where the config file is)
+  statusBar: null             # StatusBar to control the displayed status in the editor
 
   # Module imports
-  cilksanMod: null
-  cilkprofMod: null
-  sshMod: null
-  fileSync: null
-  consoleMod: null
+  modules: null               # Array containing the initialized non-essential modules
+  sshMod: null                # (Essential) Module for SSH connections
+  consoleMod: null            # (Essential) Module for displaying console output
+  fileSync: null              # (Essential) Module for SFTP file syncing
 
   # ui
-  detailPanel: null
+  detailPanel: null           # Element containing this project's detail panel UI
 
   constructor: (props) ->
     @props = props
@@ -55,12 +63,10 @@ class Project
     @editorSubscriptions = {}
     @editorIds = []
     @subscriptions = new CompositeDisposable()
-    @detailPanel = new CilkideDetailPanel({
+    @detailPanel = new CilkprideDetailPanel({
         onCloseCallback: (() => @onPanelCloseCallback())
     })
-    @currentState = {
-      state: "start"
-    }
+    @currentState = "start"
 
     @refreshConfFile()
 
@@ -69,57 +75,41 @@ class Project
     @configWatch.on('change', (path) =>
       Debug.log("[project] Received watch (change) notification on config")
       @refreshConfFile()
-      Debug.log("Refreshed config file, state is #{@currentState.state}")
-      if @currentState.state is "ok" and not @cilksanMod
+      Debug.log("Refreshed config file, state is #{@currentState}")
+      if @currentState is "ok" and not @modules
         @init()
     ).on('unlink', (path) =>
       Debug.log("[project] Received watch (unlink) notification on config")
       @onDestroy()
     )
 
-    atom.commands.add('atom-workspace', 'cilkpride:debug', () =>
-      Debug.log("[debug] Wow! Debug!")
-    )
-
     @init()
 
   init: () ->
     # Check the configuration file for errors first.
-    return if @currentState.state is "config_error"
-
-    # For each module, create a tab for it and initialize the module.
-    @cilksanMod = new CilksanModule({
-      changePanel: (() => @changeDetailPanel(@path))
-      getSettings: (() => return @settings)
-      onStateChange: (() => @updateState(false, @cilksanMod))
-      runner: new Runner({
-        getInstance: ((callback) => @getInstance(callback))
-        getSettings: (() => return @settings)
-        moduleName: "cilksan"
-      })
-      path: @path
-    })
-
-    @cilkprofMod = new CilkprofModule({
-      changePanel: (() => @changeDetailPanel(@path))
-      getSettings: (() => return @settings)
-      onStateChange: (() => @updateState(false, @cilkprofMod))
-      runner: new Runner({
-        getInstance: ((callback) => @getInstance(callback))
-        getSettings: (() => return @settings)
-        moduleName: "cilkprof"
-      })
-      path: @path
-    })
+    return if @currentState is "config_error"
 
     @consoleMod = new Console({})
 
-    @cilksanMod.tab = @detailPanel.registerModuleTab("Cilksan", @cilksanMod.getView())
-    @cilkprofMod.tab = @detailPanel.registerModuleTab("Cilkprof", @cilkprofMod.getView())
-    @consoleMod.tab = @detailPanel.registerModuleTab("Console", @consoleMod)
+    # For each module, create a tab for it and initialize the module.
+    @modules = MODULES_ENABLED.map((obj) =>
+      module = new obj({
+        changePanel: (() => @changeDetailPanel(@path))
+        getSettings: (() => return @settings)
+        onStateChange: (() => @updateState(false, module))
+        runner: new Runner({
+          getInstance: ((callback) => @getInstance(callback))
+          getSettings: (() => return @settings)
+          moduleName: obj.id
+        })
+        path: @path
+      })
+      module.tab = @detailPanel.registerModuleTab(obj.moduleName, module.getView())
+      @consoleMod.registerModule(obj.moduleName)
+      return module
+    )
 
-    @consoleMod.registerModule(@cilksanMod.name)
-    @consoleMod.registerModule(@cilkprofMod.name)
+    @consoleMod.tab = @detailPanel.registerModuleTab("Console", @consoleMod)
 
     if @settings.sshEnabled
       @sshMod = new SSHModule({
@@ -137,19 +127,18 @@ class Project
 
   updateState: (repressUpdate, module) ->
     Debug.log("[project] Updating status bar for #{@path}, current path being #{@statusBar.getCurrentPath()}")
-    Debug.log("[project] Current state is #{@currentState.state}")
+    Debug.log("[project] Current state is #{@currentState}")
     Debug.log(@settings)
-    Debug.log(@sshMod)
 
     if module and module.currentState.output
-      @consoleMod.updateOutput(module.name, module.currentState.output)
+      @consoleMod.updateOutput(module.constructor.moduleName, module.currentState.output)
 
     if @path isnt @statusBar.getCurrentPath()
       Debug.log("[project] status bar: path mismatch")
       return
 
     # Global project states take priority - config errors, etc.
-    if @currentState.state is "config_error"
+    if @currentState is "config_error"
       Debug.log("[project] status bar: config error")
       return @statusBar.displayConfigError(repressUpdate)
 
@@ -169,22 +158,31 @@ class Project
     # 2. Any module is reporting a execution error
     # 3. Any module is reporting a error
     # 4. All modules are reporting start.
-    # 4. All modules are reporting OK.
-    if @cilksanMod
-      if not @cilksanMod.currentState.ready
-        if @cilksanMod.currentState.lastRuntime
-          return @statusBar.displayCountdown(@cilksanMod.currentState.startTime +
-            @cilksanMod.currentState.lastRuntime)
+    # 5. All modules are reporting OK.
+    if @modules
+      # Priority 1 - we need to find the longest ETA and display that.
+      longestETA = -1
+      etaModule = null
+      for module in @modules
+        if not module.currentState.ready and module.currentState.lastRuntime > longestETA
+          longestETA = module.currentState.lastRuntime
+          etaModule = module
+      if etaModule
+        if longestETA > 0
+          return @statusBar.displayCountdown(etaModule.currentState.startTime +
+            longestETA)
         else
           return @statusBar.displayCountdown()
 
-      if @cilksanMod.currentState.state is "execution_error"
+      # Priorities 2-5
+      statuses = @modules.map((module) -> return module.currentState.state)
+      if "execution_error" in statuses
         return @statusBar.displayExecutionError(repressUpdate)
 
-      if @cilksanMod.currentState.state is "error"
+      if "error" in statuses
         return @statusBar.displayErrors(repressUpdate)
 
-      if @cilksanMod.currentState.state is "start"
+      if "start" in statuses
         return @statusBar.displayStart(repressUpdate)
 
     Debug.log("[project] status bar: fallthrough")
@@ -198,10 +196,9 @@ class Project
   signalModules: () ->
     # Start watching directories when FileSync is good to go.
     @fileSync.updateSFTP((() => @createDirectoryWatch()))
-    @cilksanMod.updateInstance()
-    @cilkprofMod.updateInstance()
+    module.updateInstance() for module in @modules
 
-    @currentState.state = "ok"
+    @currentState = "ok"
 
   createDirectoryWatch: () ->
     Debug.log("[project] in createDirectoryWatch")
@@ -213,7 +210,7 @@ class Project
       Debug.log("File #{filePath} has been added")
       if @settings.sshEnabled
         @fileSync.copyFile(path.relative(@settings.localBaseDir, normalizePath(filePath)), true, @settings, () =>
-          Debug.log("[project] Initializing timer with state as #{@currentState.state}")
+          Debug.log("[project] Initializing timer with state as #{@currentState}")
           @initializeTimer()
         )
       else
@@ -223,7 +220,7 @@ class Project
       Debug.log("File #{filePath} has been changed")
       if @settings.sshEnabled
         @fileSync.copyFile(path.relative(@settings.localBaseDir, normalizePath(filePath)), true, @settings, () =>
-          Debug.log("[project] Initializing timer with state as #{@currentState.state}")
+          Debug.log("[project] Initializing timer with state as #{@currentState}")
           @initializeTimer()
         )
       else
@@ -256,7 +253,7 @@ class Project
     @idleTimeout = setTimeout(
       () =>
         Debug.log("Idle timeout start! #{new Date()}")
-        @makeExecutable()
+        @startModules()
         @idleTimeout = null
       , atom.config.get('cilkpride.idleSeconds') * 1000
     )
@@ -267,6 +264,8 @@ class Project
   refreshConfFile: () ->
     checkSettings = (settings) ->
       Debug.log("[project] Checking settings...")
+      # TODO: For now, require users to give a cilksan and cilkprof command.
+      # In the future, this should be optional and should turn off modules as necessary.
       return false unless settings.cilksanCommand and settings.cilkprofCommand
       if settings.sshEnabled
         return false unless settings.username?.trim?().split(' ').length is 1
@@ -292,36 +291,29 @@ class Project
         }
       ))
       throw new Error() if not checkSettings(@settings)
+      Debug.log("[project] Passed settings check.")
       Debug.log(@settings)
-      @currentState.state = "ok"
+      @currentState = "ok"
       @updateState()
       return true
     catch error
       Debug.log(error)
-      @currentState.state = "config_error"
+      @currentState = "config_error"
       @updateState()
       atom.notifications.addError("Cilkpride was unable to read #{path.join(@path, 'cilkpride-conf.json')}.
         Please make sure the configuration file is correctly formatted, and the appropriate fields are filled out.")
       return false
 
-  # Uses the cilkscreen target in the Makefile to make the executable so that
-  # we can use cilkscreen on the executable.
-  makeExecutable: () ->
-    # Refresh the configuration to make sure it's up to date.
-    return if @currentState.state is "config_error"
-
-    @startModules()
-
+  # Starts running the command line tools, unless the configuration is broken.
   startModules: () ->
-    @cilksanMod.startThread()
-    @cilkprofMod.startThread()
+    return if @currentState is "config_error"
+    module.startThread() for module in @modules
 
   killModules: () ->
     Debug.log("Attempting to kill modules for path #{@path}...")
     clearInterval(@idleTimeout)
 
-    @cilksanMod.kill()
-    @cilkprofMod.kill()
+    module.kill() for module in @modules
     return true
 
   # Hooks
@@ -338,7 +330,7 @@ class Project
 
         if @sshMod
           @fileSync.copyFile(path.relative(@settings.localBaseDir, normalizePath(editor.getPath())), true, @settings, () =>
-            Debug.log("[project] Initializing timer with state as #{@currentState.state}")
+            Debug.log("[project] Initializing timer with state as #{@currentState}")
             @initializeTimer()
           )
         else
@@ -347,8 +339,7 @@ class Project
 
       @editorSubscriptions[editor.id] = saveDisposable
       @subscriptions.add(saveDisposable)
-    @cilksanMod.registerEditor(editor) if @cilksanMod
-    @cilkprofMod.registerEditor(editor) if @cilkprofMod
+    module.registerEditor(editor) for module in @modules
 
   unregisterEditor: (editorId) ->
     @subscriptions.remove(@editorSubscriptions[editorId])
@@ -363,8 +354,7 @@ class Project
   destroy: () ->
     @subscriptions.dispose()
 
-    @cilksanMod.destroy() if @cilksanMod
-    @cilkprofMod.destroy() if @cilkprofMod
+    module.destroy() for module in @modules
     @sshMod.destroy() if @sshMod
     @fileSync.destroy() if @fileSync
     @consoleMod.destroy() if @consoleMod

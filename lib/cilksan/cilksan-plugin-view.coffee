@@ -1,32 +1,34 @@
+###
+View class for the Cilksan detail panel view.
+###
+
 $ = require('jquery')
 {CompositeDisposable} = require('atom')
 
-FileLineReader = require('../utils/file-reader')
+Debug = require('../utils/debug')
 DetailCodeView = require('./detail-code-view')
+FileLineReader = require('../utils/file-reader')
 MinimapView = require('../utils/minimap')
 {MinimapUtil, normalizePath} = require('../utils/utils')
 SVG = require('../utils/svg')
-Debug = require('../utils/debug')
 
 module.exports =
-class CilkscreenPluginView
-  element: null
-  subscriptions: null
-  violationContainer: null
-  violationContentWrapper: null
+class CilksanPluginView
+  element: null                  # Element for the entire Cilksan detail panel view
+  subscriptions: null            # CompositeDisposable for minimap tracking hook (active editor)
+  violationContainer: null       # Container for the list of violations
+  violationContentWrapper: null  # Inner container for the list of violations
 
-  minimapContainer: null
-  minimaps: null
-  minimapIndex: null
+  minimapContainer: null         # Container for the minimap visualizations
+  minimaps: null                 # Dictionary (file path -> Minimap)
+  minimapIndex: null             # Dictionary (file path -> minimap position index)
 
-  currentMinimap: null
+  currentMinimap: null           # Number of minimaps
 
   # Properties from parents
-  props: null
-  highlightCallback: null
-  path: null
-
-  HALF_CONTEXT: 2
+  props: null                    # Object containing parent-specified properties
+  highlightCallback: null        # Callback for when a violation is clicked on and highlighted
+  path: null                     # Path for the Cilkpride project
 
   constructor: (props) ->
     @props = props
@@ -37,7 +39,7 @@ class CilkscreenPluginView
 
     # Create root element
     @element = document.createElement('div')
-    @element.classList.add('cilkscreen-detail-view', 'table')
+    @element.classList.add('cilksan-detail-view', 'table')
 
     violationWrapper = document.createElement('div')
     violationWrapper.classList.add('violation-wrapper')
@@ -214,7 +216,7 @@ class CilkscreenPluginView
       DetailCodeView.attachFileOpenListener(lineOverlay, violationLine.filename, violationLine.line)
 
       # Create a marker next to the minimap as well
-      Debug.log("[cilkscreen-plugin-view] Adding markers")
+      Debug.log("[cilksan-plugin-view] Adding markers")
       marker = document.createElement('div')
       marker.classList.add('icon', 'alert', 'cilksan-marker')
       marker.style.top = (MinimapUtil.getLineTop(violationLine.line, -8)) + "px"

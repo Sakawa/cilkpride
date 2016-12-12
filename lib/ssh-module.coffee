@@ -1,27 +1,34 @@
+###
+This file contains a few classes: SSHModule, SFTP, and Instance.
+SSHModule controls the core SSH-related functionality - it establishes
+the SSH connection and provides the interface for other modules to get
+SFTP and Instance objects.
+###
+
 Client = require('ssh2').Client
 EventEmitter = require('events')
 
+Debug = require('./utils/debug')
 {extractLast} = require('./utils/utils')
 PasswordView = require('./password-view')
-Debug = require('./utils/debug')
 
 class SSHModule
 
-  props: null
-  getSettings: null
-  onStateChange: null
+  props: null                  # Object containing parent-specified properties
+  getSettings: null            # Function to retrieve updated project config settings
+  onStateChange: null          # Callback for when the SSH connection changes (disconnect, connect, etc.)
 
-  connection: null
-  connectionTimeout: null
-  consecFailedAttempts: null
-  eventEmitter: null
+  connection: null             # Client object representing the SSH connection
+  connectionTimeout: null      # Timeout for the next connection attempt after a number of failed attempts
+  consecFailedAttempts: null   # Number of consecutive failed SSH attempts
+  eventEmitter: null           # EventEmitter for ready declaration
 
-  state: null
+  state: null                  # String representing current SSHModule state
 
-  destroyed: false
+  destroyed: false             # True if the SSHModule is destroyed and no longer usable
 
-  password: null
-  passwordView: null
+  password: null               # Cached password for SSH auth in case of spontaneous disconnect
+  passwordView: null           # PasswordView UI for user password prompt
 
   constructor: (props) ->
     Debug.log("[ssh-module] Created a new instance of SSHModule")
@@ -150,6 +157,7 @@ class SSHModule
 
     @clean(@connection)
 
+    # TODO: should change this to an backoff approach
     if @consecFailedAttempts > 3
       Debug.log("[ssh-module] >3 consecutive failed attempts, pausing for 30 seconds")
       clearTimeout(@connectionTimeout) if @connectionTimeout
@@ -180,48 +188,52 @@ class SSHModule
     @passwordView.detach() if @passwordView
 
 ###
-Wrapper class for using FTP to transfer files
+Wrapper class for using SFTP to transfer files.
 ###
 
 class SFTP
 
-  sftp: null
-  settings: null
+  props: null             # Object containing parent-specified properties
+  sftp: null              # SFTP connection interface (from SSHModule)
+  getSettings: null       # Function to retrieve updated project config settings
 
   constructor: (props) ->
+    @props = props
     @sftp = props.sftp
     @getSettings = props.getSettings
 
 ###
-Wrapper class for using an instance [6.172 launch-instance]
-Extends EventEmitter to emulate being a thread
+Wrapper class for using a remote SSH shell.
+Extends EventEmitter to emulate being a thread.
 ###
 
-# This regex allows us to quickly grab the exit code.
-regex = /cilkide exit code: ([0-9]+)/
+# Regex for quickly grabbing the exit code.
+regex = /cilkpride exit code: ([0-9]+)/
 
 class Instance extends EventEmitter
 
-  instance: null
-  initialized: false
-  passwordFlag: false
-  getSettings: null
-  ready: false
-  killFlag: false
+  props: null          # Object containing parent-specified properties
+  instance: null       # SSH connection interface (from SSHModule)
+  initialized: false   # Boolean - true if the SSH interface is fully setup and functional
+  passwordFlag: false  # Boolean - used if we're doing a double-SSH (6.172 launch-instance, for example)
+                       #           to keep track of which SSH we're in
+  getSettings: null    # Function to retrieve updated project config settings
+  ready: false         # Boolean - true if the SSH interface is ready to take another command
 
-  output: null
-  command: null
+  output: null         # String containing the output of the current command running
+  command: null        # String containing the next command queued
 
   constructor: (props) ->
     Debug.log('[instance] Instance constructed')
+    @props = props
     @instance = props.instance
-    @stderr = @instance.stderr
     @getSettings = props.getSettings
 
     settings = @getSettings()
     if settings.launchInstance
       @instance.write('launch-instance\n')
     else
+      # We run bash so that the command prompt looks like ~$
       @instance.write('bash\n')
     @output = ''
     # 'ready' event denotes that the instance is ready to process another command
@@ -280,10 +292,6 @@ class Instance extends EventEmitter
       @destroy()
     )
 
-    @instance.stderr.on('data', (data) ->
-      Debug.log('STDERR: ' + data)
-    )
-
   spawn: (command, args, options) ->
     # TODO: Should we ignore commands that are input when the network isn't ready?
     Debug.log("[instance] received spawn request: init: #{@initialized} | ready: #{@ready}")
@@ -296,7 +304,7 @@ class Instance extends EventEmitter
       commandString += "cd #{options.pwd}; "
     commandString += command + " " + args.join(' ')
     Debug.log("[instance] running #{commandString};")
-    @instance.write("#{commandString}; echo cilkide exit code: $?\n")
+    @instance.write("#{commandString}; echo cilkpride exit code: $?\n")
 
   kill: () ->
     if @instance and @initialized and not @ready
@@ -310,7 +318,7 @@ class Instance extends EventEmitter
   parseExitCode: (output) ->
     results = regex.exec(output)
     if results is null
-      Debug.log("[instance] no cilkide exit code found")
+      Debug.log("[instance] no cilkpride exit code found")
       return false
     else
       Debug.log("[instance] found exit code #{parseInt(results[1])}")

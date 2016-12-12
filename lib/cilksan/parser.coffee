@@ -1,8 +1,16 @@
+###
+Parser that steps through Cilksan output line-by-line and processes
+the text output into an array of objects, one object for each violation detected
+by Cilksan.
+
+Also fetches source code as part of post-processing.
+###
+
 path = require('path').posix
 
 CustomSet = require('../utils/set')
-FileLineReader = require('../utils/file-reader')
 Debug = require('../utils/debug')
+FileLineReader = require('../utils/file-reader')
 
 module.exports =
 class CilksanParser
@@ -16,6 +24,7 @@ class CilksanParser
   # Cilksan-related functions
   # TODO: could replace this with smart regex
   @parseCilksanOutput: (text, remoteDir, localDir) ->
+    remoteDir = path.join(remoteDir, '.cilksan')
     Debug.log("[cilksan-parser] remote dir: #{remoteDir} | local dir: #{localDir}")
     text = text.split('\n')
     violations = []
