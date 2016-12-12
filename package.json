@@ -12,12 +12,13 @@
     "atom": ">=1.13.0 <2.0.0"
   },
   "dependencies": {
-    "jquery": "3.1.1",
-    "ssh2": "0.5.4",
     "atom-package-deps": "4.3.1",
-    "dateformat": "1.0.12",
     "chokidar": "1.6.1",
-    "d3": "4.4.0"
+    "d3": "4.4.0",
+    "dateformat": "1.0.12",
+    "debounce": "1.0.0",
+    "jquery": "3.1.1",
+    "ssh2": "0.5.4"
   },
   "package-deps": [
     "minimap"

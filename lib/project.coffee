@@ -6,6 +6,7 @@ file and all subdirectories.
 
 chokidar = require('chokidar')
 {CompositeDisposable} = require('atom')
+debounce = require('debounce')
 fs = require('fs')
 path = require('path').posix;
 
@@ -34,6 +35,7 @@ class Project
   settings: null              # Object containing the config file settings for this project
   configWatch: null           # FileWatch for the project config file
   directoryWatch: null        # FileWatch for the project directory/subdirectories
+  startModules: null          # A debounced function to start command line modules
 
   # Properties from parent
   props: null                 # Object containing parent-specified properties
@@ -59,6 +61,7 @@ class Project
     @onPanelCloseCallback = @props.onPanelCloseCallback
     @statusBar = @props.statusBar
     @onDestroy = @props.onDestroy
+    @startModules = debounce(@undebouncedStartModules, 100)
 
     @editorSubscriptions = {}
     @editorIds = []
@@ -306,7 +309,8 @@ class Project
       return false
 
   # Starts running the command line tools, unless the configuration is broken.
-  startModules: () ->
+  # DO NOT RUN THIS DIRECTLY, AS THIS FUNCTION IS NOT DEBOUNCED.
+  undebouncedStartModules: () ->
     return if @currentState is "config_error"
     module.startThread() for module in @modules
 
