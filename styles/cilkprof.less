@@ -152,7 +152,11 @@ atom-text-editor .gutter[gutter-name=cilkprof] .decoration {
     }
 
     .area {
-      opacity: 0.15;
+      opacity: 1.0;
+
+      &.transparent {
+        opacity: 0.4;
+      }
     }
 
     .dashed-line {
@@ -166,6 +170,36 @@ atom-text-editor .gutter[gutter-name=cilkprof] .decoration {
       path {
         stroke: white;
       }
+    }
+  }
+}
+
+.cilkprof-tooltip-svg {
+
+  svg {
+    height: 240px;
+    width: 300px;
+  }
+
+  .line {
+    fill: none;
+    stroke-width: 2.5px;
+  }
+
+  .area.transparent {
+      opacity: 0.4;
+  }
+
+  .dashed-line {
+    fill: none;
+    stroke: white;
+    stroke-width: 2px;
+    stroke-dasharay: '5, 5';
+  }
+
+  .axis {
+    path {
+      stroke: white;
     }
   }
 }

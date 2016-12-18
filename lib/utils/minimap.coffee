@@ -136,7 +136,7 @@ class Minimap
       Debug.log("#{@filename} minimap init promise returned")
       Debug.log(@decorationQueue)
       for range in @decorationQueue
-        marker = @editor.markBufferRange(range, {id: 'cilksan-minimap'})
+        marker = @editor.markBufferRange(range)
         @minimap.decorateMarker(marker, {type: 'line', scope: '.cilksan .minimap-marker', plugin: "cilksan", color: "#961B05"})
       @ready = true
       Debug.log("#{@filename} minimap ready")
@@ -174,7 +174,7 @@ class Minimap
     else
       Debug.log("#{@filename} minimap ready for decoration, adding directly")
       @decorationQueue.push(range)
-      marker = @editor.markBufferRange(range, {id: 'cilksan-minimap'})
+      marker = @editor.markBufferRange(range)
       @minimap.decorateMarker(marker, {type: 'line', scope: '.cilksan .minimap-marker', plugin: "cilksan", color: "#961B05"})
 
   getElement: () ->

@@ -16,8 +16,8 @@ class CilkprofMarker
 
   element: null
 
-  MAX_CORES = 32
-  CURRENT_CORES = 8
+  MAX_CORES = 1024
+  CURRENT_CORES = 32
 
   constructor: (info) ->
     @element = document.createElement('div')
@@ -101,11 +101,113 @@ class CilkprofMarker
         .attr("class", "axis axis--y")
         .style("stroke", "white")
         .call(d3.axisLeft(y))
+
+      # Execution count div + tooltip
       execCountDiv = document.createElement('div')
       execCountDiv.classList.add('badge')
       execCountDiv.textContent = @truncateCount(info.totalCount).toLowerCase()
       execCountDiv.style.backgroundColor = interpolator(percent)
       element.appendChild(execCountDiv)
+      atom.tooltips.add(execCountDiv, {
+        title: "This line was executed #{info.totalCount.toLocaleString('en-US')} times."
+        trigger: 'hover'
+        delay: 0
+      })
+
+      # D3 tooltip closeup
+      tooltipSVGContainer = document.createElement('div')
+      tooltipSVGContainer.classList.add('cilkprof-tooltip-svg')
+      tooltipSVGElement = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+      tooltipSVGElement.setAttribute("width", "300px")
+      tooltipSVGElement.setAttribute("height", "240px")
+      tooltipSVGContainer.appendChild(tooltipSVGElement)
+
+      tooltipSVG = d3.select(tooltipSVGElement)
+      width = 260
+      height = 200
+      g = tooltipSVG.append("g")
+        .attr("transform", "translate(" + 20 + "," + 10 + ")");
+
+      x = d3.scaleLog().base(2).rangeRound([0, width])
+      y = d3.scaleLinear().rangeRound([height, 0])
+
+      area = d3.area()
+        .x((d) -> return x(d.index))
+        .y0(height)
+        .y1((d) -> return y(d.time))
+      line = d3.line()
+        .x((d) -> return x(d.index))
+        .y((d) -> return y(d.time))
+
+      ideal = @calculateIdealParallelismCurve(info.work, info.totalWork)
+      x.domain([1, MAX_CORES]);
+      y.domain([0, 1]);
+      g.append("path")
+          .datum(data)
+          .attr("class", "area transparent")
+          .attr("d", area)
+          .attr("fill", "#{interpolator(percent)}")
+          .attr("data-legend", "Projected Speedup")
+      g.append("path")
+          .datum(ideal)
+          .attr("class", "line")
+          .attr("d", line)
+          .attr("stroke", "black")
+          .attr("data-legend", "Ideal Speedup (work/cores)")
+      g.append("path")
+          .datum(data)
+          .attr("class", "line")
+          .attr("d", line)
+          .attr("stroke", "#{interpolator(percent)}")
+      g.append("path")
+          .datum([{index: CURRENT_CORES, time: 0}, {index: CURRENT_CORES, time: 1}])
+          .attr("class", "dashed-line")
+          .attr("stroke-dasharray", "1,4")
+          .attr("d", line)
+      g.append("text")
+          .attr("class", "label")
+          .attr("fill", "white")
+          .attr("stroke", "none")
+          .style("font-size", "8pt")
+          .style("text-anchor", "end")
+          .attr("transform", "rotate(-90)")
+          .attr("dx", 0)
+          .attr("dy", width / 2 + 10)
+          .text("#{CURRENT_CORES} cores")
+      g.append("g")
+          .attr("class", "axis axis--x")
+          .attr("transform", "translate(0," + height + ")")
+          .style("stroke", "white")
+          .call(d3.axisBottom(x).ticks(7))
+        .append("text")
+          .attr("class", "x label")
+          .attr("fill", "white")
+          .attr("stroke", "none")
+          .style("font-size", "8pt")
+          .style("text-anchor", "middle")
+          .attr("x", width / 2)
+          .attr("y", 28)
+          .text("# of cores (log scale)")
+      g.append("g")
+          .attr("class", "axis axis--y")
+          .style("stroke", "white")
+          .call(d3.axisLeft(y).ticks(0))
+        .append("text")
+          .attr("fill", "white")
+          .attr("stroke", "none")
+          .style("font-size", "8pt")
+          .attr("transform", "rotate(-90)")
+          .attr("x", -height / 2)
+          .attr("y", -10)
+          .style("text-anchor", "middle")
+          .text("% of work")
+      atom.tooltips.add(svgElement, {
+        html: true
+        placement: 'right'
+        trigger: 'hover'
+        delay: 0
+        title: tooltipSVGContainer.outerHTML
+      })
     # else if type is 3
     #   element = document.createElement('div')
     #   runningTime = (info.totalWork - info.totalSpan) / CURRENT_CORES + info.totalSpan
@@ -172,10 +274,18 @@ class CilkprofMarker
     return count.slice(0, -12) + "T"
 
   calculateWorkSpan: (work, span, totalWork, totalSpan) ->
-    return [1 .. 64].map((currentValue, index, array) =>
+    return [1 .. MAX_CORES].map((currentValue, index, array) =>
       return {
         index: currentValue,
         time: @calculateWorkSpanForCore(work, span, totalWork, totalSpan, currentValue)
+      }
+    )
+
+  calculateIdealParallelismCurve: (work, totalWork) ->
+    return [1 .. MAX_CORES].map((currentValue, index, array) =>
+      return {
+        index: currentValue,
+        time: (work / currentValue) / totalWork
       }
     )
 
