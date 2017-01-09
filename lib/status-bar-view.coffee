@@ -66,7 +66,7 @@ class StatusBarView
 
   displayErrors: (update) ->
     @resetState()
-    @icon.classList.add('icon', 'icon-issue-opened')
+    @icon.classList.add('icon', 'icon-issue-opened', 'error')
     @currentText = "Errors reported"
     $(@icon).on('click', (e) => @onClickCallback())
     @lastUpdated = Date.now() unless update

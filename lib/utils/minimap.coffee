@@ -143,9 +143,9 @@ class Minimap
 
       minimapView = atom.views.getView(@minimap)
       minimapView.requestForcedUpdate()
-      Debug.log(minimapView)
-      Debug.log(minimapView.shadowRoot)
-      Debug.log(minimapView.shadowRoot.children[0])
+      # Debug.log(minimapView)
+      # Debug.log(minimapView.shadowRoot)
+      # Debug.log(minimapView.shadowRoot.children[0])
     )
 
   updateScrollOverlay: () ->
