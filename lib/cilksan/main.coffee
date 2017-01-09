@@ -89,10 +89,14 @@ class CilksanModule
     if err is 0
       Debug.log("[cilksan] Killing old markers, if any...")
       Debug.log("[cilksan] Parsing data...")
+      if not settings.sshEnabled
+        remoteBaseDir = settings.localBaseDir
+      else
+        remoteBaseDir = settings.remoteBaseDir
       Parser.processViolations(output, (results) =>
         @updateState(err, results)
         @generateUI(results)
-      , settings.remoteBaseDir, settings.localBaseDir)
+      , remoteBaseDir, settings.localBaseDir)
     else
       @updateState(err, null)
 

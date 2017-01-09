@@ -72,7 +72,7 @@ class CilkprofUI
     Debug.log("[cilkprof] updating view - begin")
     @clearChildren()
     # make stuff here (table)
-    if results.csv.length
+    if results?.csv.length
       @createMarkers(results)
       @createCilkprofTable(results)
       # @createCallgraph
