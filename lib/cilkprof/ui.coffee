@@ -253,7 +253,7 @@ class CilkprofUI
     altText.classList.add('cilkprof-table-raw')
     altText.textContent = "#{parseFloat(raw).toLocaleString("en-US")}"
 
-    interpolator = d3.interpolateRgbBasis(["green", "gray", "red"])
+    interpolator = d3.interpolateRgbBasis(["#226522", "gray", "#b72020"])
     innerBar.style.backgroundColor = interpolator(percent)
     innerBar.style.color = "white"
     bar.appendChild(innerBar)
