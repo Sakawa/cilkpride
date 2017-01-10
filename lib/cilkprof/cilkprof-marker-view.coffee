@@ -14,12 +14,15 @@ class CilkprofMarker
   currentType: 0
   numTypes: 2
 
+  currentCores: 32
+  maxCores: 32 * 32
+
   element: null
 
-  MAX_CORES = 1024
-  CURRENT_CORES = 32
-
-  constructor: (info) ->
+  constructor: (info, numCores) ->
+    if numCores
+      @currentCores = numCores
+      @maxCores = numCores * numCores
     @element = document.createElement('div')
     for i in [0 ... @numTypes]
       @element.appendChild(@createMarker(info, i))
@@ -76,7 +79,7 @@ class CilkprofMarker
 
       data = @calculateWorkSpan(info.work, info.spanOnWork, info.totalWork, info.totalSpan)
       Debug.info(data)
-      x.domain([1, MAX_CORES]);
+      x.domain([1, @maxCores]);
       y.domain([0, 1]);
       g.append("path")
         .datum(data)
@@ -89,7 +92,7 @@ class CilkprofMarker
         .attr("d", line)
         .attr("stroke", "#{interpolator(percent)}")
       g.append("path")
-        .datum([{index: CURRENT_CORES, time: 0}, {index: CURRENT_CORES, time: 1}])
+        .datum([{index: @currentCores, time: 0}, {index: @currentCores, time: 1}])
         .attr("class", "dashed-line")
         .attr("stroke-dasharray", "1,4")
         .attr("d", line)
@@ -141,7 +144,7 @@ class CilkprofMarker
         .y((d) -> return y(d.time))
 
       ideal = @calculateIdealParallelismCurve(info.work, info.totalWork)
-      x.domain([1, MAX_CORES]);
+      x.domain([1, @maxCores]);
       y.domain([0, 1]);
       g.append("path")
           .datum(data)
@@ -161,7 +164,7 @@ class CilkprofMarker
           .attr("d", line)
           .attr("stroke", "#{interpolator(percent)}")
       g.append("path")
-          .datum([{index: CURRENT_CORES, time: 0}, {index: CURRENT_CORES, time: 1}])
+          .datum([{index: @currentCores, time: 0}, {index: @currentCores, time: 1}])
           .attr("class", "dashed-line")
           .attr("stroke-dasharray", "1,4")
           .attr("d", line)
@@ -174,7 +177,7 @@ class CilkprofMarker
           .attr("transform", "rotate(-90)")
           .attr("dx", 0)
           .attr("dy", width / 2 + 10)
-          .text("#{CURRENT_CORES} cores")
+          .text("#{@currentCores} cores")
       g.append("g")
           .attr("class", "axis axis--x")
           .attr("transform", "translate(0," + height + ")")
@@ -211,8 +214,8 @@ class CilkprofMarker
       })
     # else if type is 3
     #   element = document.createElement('div')
-    #   runningTime = (info.totalWork - info.totalSpan) / CURRENT_CORES + info.totalSpan
-    #   percent1 = (info.work - info.spanOnWork) / CURRENT_CORES / runningTime
+    #   runningTime = (info.totalWork - info.totalSpan) / @currentCores + info.totalSpan
+    #   percent1 = (info.work - info.spanOnWork) / @currentCores / runningTime
     #   percent2 = info.spanOnWork / runningTime
     #   bar = document.createElement('div')
     #   bar.classList.add("cilkprof-marker-test-#{type}")
@@ -275,7 +278,7 @@ class CilkprofMarker
     return count.slice(0, -12) + "T"
 
   calculateWorkSpan: (work, span, totalWork, totalSpan) ->
-    return [1 .. MAX_CORES].map((currentValue, index, array) =>
+    return [1 .. @maxCores].map((currentValue, index, array) =>
       return {
         index: currentValue,
         time: @calculateWorkSpanForCore(work, span, totalWork, totalSpan, currentValue)
@@ -283,7 +286,7 @@ class CilkprofMarker
     )
 
   calculateIdealParallelismCurve: (work, totalWork) ->
-    return [1 .. MAX_CORES].map((currentValue, index, array) =>
+    return [1 .. @maxCores].map((currentValue, index, array) =>
       return {
         index: currentValue,
         time: (work / currentValue) / totalWork

@@ -218,7 +218,8 @@ module.exports = Cilkpride =
   "launchInstance": false,
   "localBaseDir": "#{directory}",
   "syncIgnoreFile": ["/cilkpride-conf.json"],
-  "syncIgnoreDir": ["/.git", "/log.awsrun", "/log.cqrun", "/.cilksan", "/.cilkprof"]
+  "syncIgnoreDir": ["/.git", "/log.awsrun", "/log.cqrun", "/.cilksan", "/.cilkprof"],
+  "targetNumberOfCores": 8
 }
         """, {encoding: "utf8"}, (err, written, buffer) ->
           atom.workspace.open(confPath)

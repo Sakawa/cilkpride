@@ -13,6 +13,7 @@ class CilkprofUI
   props: null
   changePanel: null
   path: null
+  getSettings: null
 
   element: null
   subscriptions: null
@@ -27,6 +28,7 @@ class CilkprofUI
     @props = props
     @changePanel = props.changePanel
     @path = props.path
+    @getSettings = props.getSettings
 
     @subscriptions = new CompositeDisposable()
     @markers = {}
@@ -322,7 +324,7 @@ class CilkprofUI
             totalSpan: results.span
             totalCount: info["count on work"]
             spanCount: info["count on span"]
-        })
+        }, @getSettings().targetNumberOfCores)
         do (id, fileline) =>
           editorCache[filepath]?.forEach((textEditor) =>
             @createCilkprofMarker(textEditor, id, fileline)

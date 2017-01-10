@@ -52,6 +52,7 @@ class CilkprofModule
         @tab.click()
       )
       path: @path
+      getSettings: (() => return @getSettings())
     })
 
     # debug below
