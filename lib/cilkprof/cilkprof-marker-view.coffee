@@ -55,7 +55,8 @@ class CilkprofMarker
       element.appendChild(svgElement)
 
       percent = parseFloat(info.work) / info.totalWork
-      interpolator = d3.interpolateRgbBasis(["green", "gray", "red"])
+      # This should be the same as the interpolator found in ui.coffee.
+      interpolator = d3.interpolateRgbBasis(["#226522", "gray", "#b72020"])
 
       svg = d3.select(svgElement)
       width = 30
@@ -200,7 +201,7 @@ class CilkprofMarker
           .attr("x", -height / 2)
           .attr("y", -10)
           .style("text-anchor", "middle")
-          .text("% of work")
+          .text("time consumed")
       atom.tooltips.add(svgElement, {
         html: true
         placement: 'right'
