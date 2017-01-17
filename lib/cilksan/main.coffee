@@ -93,11 +93,13 @@ class CilksanModule
       else
         remoteBaseDir = settings.remoteBaseDir
       Parser.processViolations(output, (results) =>
-        if results.length
+        if results.length > 0
           @updateState(err, results)
           @generateUI(results)
         else if err isnt 0
           @updateState(err, null)
+        else
+          @updateState(err, results)
       , remoteBaseDir, settings.localBaseDir)
     else
       @updateState(err, null)
