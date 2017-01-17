@@ -113,7 +113,7 @@ class DetailCodeView
       editorOverlay.classList.add('editor-overlay')
       editorContainer.appendChild(editorOverlay)
       editorOverlay.title = "Click to go to line."
-      DetailCodeView.attachFileOpenListener(editorOverlay, lineInfo.filename, originalLineNum, true)
+      DetailCodeView.attachFileOpenListener(editorOverlay, lineInfo.filename, originalLineNum, false)
       $(editorOverlay).mousemove((e) ->
         e.stopPropagation()
       )
