@@ -94,8 +94,8 @@ class Project
 
     @consoleMod = new Console({})
 
-    @modules = []
-    for obj in MODULES_ENABLED
+    # For each module, create a tab for it and initialize the module.
+    @modules = MODULES_ENABLED.map((obj) =>
       module = new obj({
         changePanel: (() => @changeDetailPanel(@path))
         getSettings: (() => return @settings)
@@ -109,8 +109,8 @@ class Project
       })
       module.tab = @detailPanel.registerModuleTab(obj.moduleName, module.getView())
       @consoleMod.registerModule(obj.moduleName)
-
-      @modules.push(module)
+      return module
+    )
 
     @consoleMod.tab = @detailPanel.registerModuleTab("Console", @consoleMod)
 
@@ -133,6 +133,7 @@ class Project
     Debug.log("[project] Updating status bar for #{@path}, current path being #{@statusBar.getCurrentPath()}")
     Debug.log("[project] Current state is #{@currentState}")
     Debug.log(@settings)
+    Debug.log(module)
 
     if module and module.currentState.output
       @consoleMod.updateOutput(module.constructor.moduleName, module.currentState.output)
