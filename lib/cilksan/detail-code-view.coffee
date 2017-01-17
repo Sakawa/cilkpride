@@ -97,8 +97,8 @@ class DetailCodeView
     lineNumberCode.textContent = "#{originalLineNum}"
     lineNumberDiv.appendChild(lineNumberCode)
 
-    DetailCodeView.attachFileOpenListener(filenameDivText, lineInfo.filename, originalLineNum) if originalLineNum isnt '??'
-    DetailCodeView.attachFileOpenListener(lineNumberCode, lineInfo.filename,originalLineNum) if originalLineNum isnt '??'
+    DetailCodeView.attachFileOpenListener(filenameDivText, lineInfo.filename, originalLineNum, false) if originalLineNum isnt '??'
+    DetailCodeView.attachFileOpenListener(lineNumberCode, lineInfo.filename,originalLineNum, false) if originalLineNum isnt '??'
     codeLineDiv.appendChild(lineNumberDiv)
 
     #### Text Editor
@@ -113,7 +113,7 @@ class DetailCodeView
       editorOverlay.classList.add('editor-overlay')
       editorContainer.appendChild(editorOverlay)
       editorOverlay.title = "Click to go to line."
-      DetailCodeView.attachFileOpenListener(editorOverlay, lineInfo.filename, originalLineNum)
+      DetailCodeView.attachFileOpenListener(editorOverlay, lineInfo.filename, originalLineNum, true)
       $(editorOverlay).mousemove((e) ->
         e.stopPropagation()
       )
@@ -139,7 +139,7 @@ class DetailCodeView
           stacktraceHolder.appendChild(firstLineDiv)
           firstLineDiv.innerHTML = "called by: <span class='entity name function c'>#{st[0].functionName}</span> (<span class='stacktrace-line-ref'>#{st[0].filename}:#{st[0].lineNum}</span>)"
           stacktraceLocationSpan = firstLineDiv.children[1]
-          DetailCodeView.attachFileOpenListener(stacktraceLocationSpan, st[0].rawFilename, st[0].lineNum)
+          DetailCodeView.attachFileOpenListener(stacktraceLocationSpan, st[0].rawFilename, st[0].lineNum, true)
 
           additionalInfoContainer = document.createElement('div')
           additionalInfoContainer.classList.add('additional-stacktrace')
@@ -150,7 +150,7 @@ class DetailCodeView
           additionalInfoContainer.innerHTML = html.slice(0, -1)
           for i in [1 ... additionalInfoContainer.children.length] by 2
             stacktraceIndex = Math.ceil(i / 2)
-            DetailCodeView.attachFileOpenListener(additionalInfoContainer.children[i], st[stacktraceIndex].rawFilename, st[stacktraceIndex].lineNum)
+            DetailCodeView.attachFileOpenListener(additionalInfoContainer.children[i], st[stacktraceIndex].rawFilename, st[stacktraceIndex].lineNum, true)
 
           if st.length > 1
             additionalInfoButton = document.createElement('div')
@@ -219,11 +219,12 @@ class DetailCodeView
       stacktrace[file] = stSet.getContents()
     return stacktrace
 
-  @attachFileOpenListener: (node, filename, lineNum) ->
+  @attachFileOpenListener: (node, filename, lineNum, cancelPropagation) ->
     $(node).click((e) ->
       Debug.log("Clicked on a file open div: #{node.classList}")
       atom.workspace.open(filename, {initialLine: +lineNum - 1, initialColumn: Infinity})
-      e.stopPropagation()
+      if cancelPropagation
+        e.stopPropagation()
     )
 
   parseAbsolutePathname: (filename) ->

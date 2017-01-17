@@ -94,8 +94,8 @@ class Project
 
     @consoleMod = new Console({})
 
-    # For each module, create a tab for it and initialize the module.
-    @modules = MODULES_ENABLED.map((obj) =>
+    @modules = []
+    for obj in MODULES_ENABLED
       module = new obj({
         changePanel: (() => @changeDetailPanel(@path))
         getSettings: (() => return @settings)
@@ -109,8 +109,8 @@ class Project
       })
       module.tab = @detailPanel.registerModuleTab(obj.moduleName, module.getView())
       @consoleMod.registerModule(obj.moduleName)
-      return module
-    )
+
+      @modules.push(module)
 
     @consoleMod.tab = @detailPanel.registerModuleTab("Console", @consoleMod)
 
@@ -268,8 +268,6 @@ class Project
   refreshConfFile: () ->
     checkSettings = (settings) ->
       Debug.log("[project] Checking settings...")
-      # TODO: For now, require users to give a cilksan and cilkprof command.
-      # In the future, this should be optional and should turn off modules as necessary.
       return false unless settings.cilksanCommand and settings.cilkprofCommand
       if settings.sshEnabled
         return false unless settings.username?.trim?().split(' ').length is 1

@@ -86,16 +86,18 @@ class CilksanModule
     Debug.log("[cilksan] Received code #{err}")
     Debug.log("[cilksan] Received output #{output}")
     @currentState.output = output
-    if err is 0
-      Debug.log("[cilksan] Killing old markers, if any...")
+    if err isnt 130
       Debug.log("[cilksan] Parsing data...")
       if not settings.sshEnabled
         remoteBaseDir = settings.localBaseDir
       else
         remoteBaseDir = settings.remoteBaseDir
       Parser.processViolations(output, (results) =>
-        @updateState(err, results)
-        @generateUI(results)
+        if results.length
+          @updateState(err, results)
+          @generateUI(results)
+        else if err isnt 0
+          @updateState(err, null)
       , remoteBaseDir, settings.localBaseDir)
     else
       @updateState(err, null)
@@ -122,15 +124,14 @@ class CilksanModule
       @onStateChange()
       return
 
-    if err
+    if results?.length > 0
+      @currentState.state = "error"
+    else if err
       @currentState.state = "execution_error"
     else
       @currentState.lastSuccessful = Date.now()
       @currentState.lastRuntime = Date.now() - @currentState.startTime
-      if results.length > 0
-        @currentState.state = "error"
-      else
-        @currentState.state = "ok"
+      @currentState.state = "ok"
     @tab.setState(@currentState.state)
     @resetState()
     @onStateChange()
