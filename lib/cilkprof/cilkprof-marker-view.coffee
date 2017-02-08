@@ -10,14 +10,16 @@ Debug = require('../utils/debug')
 module.exports =
 class CilkprofMarker
 
-  # TODO: document this
-  currentType: 0
-  numTypes: 2
+  # There are currently two types of markers, but only one is visible to the user.
+  # The other one (which can be accessed in-editor by pressing CTRL+ALT+B) is for
+  # debug purposes. Feel free to remove it at any point.
+  currentType: 0     # current type of marker shown
+  numTypes: 2        # number of different types of markers available
 
-  currentCores: 32
-  maxCores: 32 * 32
+  currentCores: 32   # default number of cores for the graph view
+  maxCores: 32 * 32  # the largest number of cores shown in the graph view
 
-  element: null
+  element: null      # element containing the marker HTML element
 
   constructor: (info, numCores) ->
     if numCores
@@ -46,9 +48,6 @@ class CilkprofMarker
       element.classList.add('cilkprof-marker-type-0')
       element.appendChild(@createBarGraphView(info.work, info.totalWork, info.totalCount, true, type))
       element.appendChild(@createBarGraphView(info.span, info.totalSpan, info.spanCount, false, type))
-    # else if type is 1
-    #   element = document.createElement('div')
-    #   element.appendChild(@createBarGraphView(info.work, info.totalWork, info.totalCount, true, type))
     else if type is 1
       element = document.createElement('div')
       element.classList.add('cilkprof-marker-type-2')
@@ -212,30 +211,6 @@ class CilkprofMarker
         delay: 0
         title: tooltipSVGContainer.outerHTML
       })
-    # else if type is 3
-    #   element = document.createElement('div')
-    #   runningTime = (info.totalWork - info.totalSpan) / @currentCores + info.totalSpan
-    #   percent1 = (info.work - info.spanOnWork) / @currentCores / runningTime
-    #   percent2 = info.spanOnWork / runningTime
-    #   bar = document.createElement('div')
-    #   bar.classList.add("cilkprof-marker-test-#{type}")
-    #   percent1001 = Math.round(percent1 * 10000) / 100
-    #   percent1002 = Math.round(percent2 * 10000) / 100
-    #   innerBar = document.createElement('div')
-    #   innerBar.classList.add("cilkprof-marker-test-#{type}-inner1")
-    #   innerBar.style.width = "#{percent1001}%"
-    #   innerBar2 = document.createElement('div')
-    #   innerBar2.classList.add("cilkprof-marker-test-#{type}-inner2")
-    #   innerBar2.style.width = "#{percent1002}%"
-    #   innerBar2.style.left = "#{percent1001}%"
-    #   text = document.createElement('div')
-    #   text.classList.add("cilkprof-marker-test-#{type}-bar-text")
-    #   text.textContent = "#{@truncateCount(info.totalCount)}"
-    #   innerBar.style.color = "white"
-    #   bar.appendChild(innerBar2)
-    #   bar.appendChild(innerBar)
-    #   innerBar.appendChild(text)
-    #   element.appendChild(bar)
     Debug.log(element)
     return element
 

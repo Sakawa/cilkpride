@@ -15,6 +15,7 @@ CILKPROF_END = "cilkpride:cilkprof_end"
 module.exports =
 class CilkprofParser
 
+  # Should be updated if the Cilkprof expected output ever changes.
   workRegex = /work ([0-9]*\.[0-9]*) Gcycles, span ([0-9]*\.[0-9]*) Gcycles, parallelism ([0-9]*\.[0-9]*)/
 
   # This is the main function in the parser for Cilkprof results.

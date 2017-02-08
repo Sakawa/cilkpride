@@ -1,29 +1,36 @@
+###
+Main class for the Cilkprof module. Controls most of the core non-UI related
+functionality of the Cilkprof mod.
+###
+
 CilkprofView = require('./ui')
 CilkprofMarkerView = require('./cilkprof-marker-view')
 Debug = require('../utils/debug')
 Parser = require('./parser')
 
+# Strings for parsing out the Cilkprof CSV easily. Should be synced with the
+# variables in CilkprofParser.
 CILKPROF_START = "cilkpride:cilkprof_start"
 CILKPROF_END = "cilkpride:cilkprof_end"
 
 module.exports =
 class CilkprofModule
 
-  @moduleName: "Cilkprof"
-  @id: "cilkprof"
+  @moduleName: "Cilkprof"  # Public-facing descriptor for this class
+  @id: "cilkprof"          # Private-facing descriptor for this class
 
-  view: null
-  currentState: null
+  view: null               # CilkprofUI object for the UI
+  currentState: null       # Dictionary holding current state info on the module
 
-  props: null
-  changePanel: null
-  getSettings: null
-  onStateChange: null
+  props: null              # Parent-specified properties
+  changePanel: null        # Function that changes panel to Cilkprof view
+  getSettings: null        # Function that retrieves updated settings
+  onStateChange: null      # Function called when Cilkprof's state changes
 
-  path: null
+  path: null               # Path for the project this module is acting on
 
-  runner: null
-  tab: null
+  runner: null             # Runner object to execute Cilkprof on
+  tab: null                # Tab object for the Cilkpride detail panel
 
   constructor: (props) ->
     @props = props
@@ -54,11 +61,6 @@ class CilkprofModule
       path: @path
       getSettings: (() => return @getSettings())
     })
-
-    # debug below
-    # atom.commands.add('atom-workspace', 'cilkpride:debug', (event) =>
-    #   @debugTest()
-    # )
 
   updateInstance: () ->
     @currentState.initialized = false
@@ -109,7 +111,6 @@ class CilkprofModule
     @currentState.startTime = null
     @onStateChange()
 
-  # TODO: figure this out
   updateState: (err, results) ->
     Debug.log("[cilkprof] Update state.")
     @currentState.lastUpdated = Date.now()
@@ -147,39 +148,3 @@ class CilkprofModule
 
   registerEditor: (editor) ->
     @view.createMarkersForEditor(editor)
-
-  ####
-  debugTest: () ->
-    info = {
-      work: 90
-      totalWork: 100
-      span: 50
-      totalSpan: 100
-      totalCount: 1000000000
-      spanCount: 500
-    }
-
-    currentTE = atom.workspace.getActiveTextEditor()
-    for marker in currentTE.findMarkers()
-        marker.destroy()
-    if gutter = currentTE.gutterWithName('cilkpride-debug')
-      gutter.destroy()
-    newGutter = currentTE.addGutter({name: 'cilkpride-debug', priority: -101, visible: true})
-    Debug.log(newGutter)
-
-    # Create gutter test
-    cilkprofMarker = new CilkprofMarkerView(info)
-    marker = currentTE.markBufferRange([[1, 0], [1, Infinity]])
-    newGutter.decorateMarker(marker, {type: 'gutter', item: cilkprofMarker})
-
-    info2 = {
-      work: 10
-      totalWork: 100
-      span: 30
-      totalSpan: 100
-      totalCount: 10000
-      spanCount: 98
-    }
-    cilkprofMarker2 = new CilkprofMarkerView(info2)
-    marker2 = currentTE.markBufferRange([[2,0], [2, Infinity]])
-    newGutter.decorateMarker(marker2, {type: 'gutter', item: cilkprofMarker2})

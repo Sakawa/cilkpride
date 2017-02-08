@@ -1,3 +1,8 @@
+###
+Class for general detail panel-related UI functionality. Also handles all of the
+gutter marker-related things here.
+###
+
 $ = require('jquery')
 {CompositeDisposable, Range} = require('atom')
 d3 = require('d3')
@@ -10,19 +15,18 @@ Debug = require('../utils/debug')
 module.exports =
 class CilkprofUI
 
-  props: null
-  changePanel: null
-  path: null
-  getSettings: null
+  props: null                # Parent-specified properties
+  changePanel: null          # Change detail panel to Cilkprof view
+  path: null                 # Directory path for this UI's project
+  getSettings: null          # Function that retrieves updated project settings
 
-  element: null
-  subscriptions: null
+  element: null              # HTML element for the detail view
 
-  markers: null
+  markers: null              # Markers dictionary, indexed by file:line
 
-  contentContainer: null
-  tableContentWrapper: null
-  callgraphContainer: null
+  contentContainer: null     # HTML element for detail view (temporary)
+  tableContentWrapper: null  # HTML element for detail view table (temporary)
+  callgraphContainer: null   # HTML element for callgraph container (defunct)
 
   constructor: (props) ->
     @props = props
@@ -30,7 +34,6 @@ class CilkprofUI
     @path = props.path
     @getSettings = props.getSettings
 
-    @subscriptions = new CompositeDisposable()
     @markers = {}
     @decorations = []
 
